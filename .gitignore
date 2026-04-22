@@ -1,0 +1,3 @@
+# Ignore all files in tmp/ except the directory itself
+/tmp/*
+!tmp/
