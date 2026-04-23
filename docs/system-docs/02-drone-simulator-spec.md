@@ -5,7 +5,7 @@
 | 欄位 | 內容 |
 |------|------|
 | **文件編號** | 02 |
-| **版本** | v0.1 |
+| **版本** | v0.2 |
 | **日期** | 2026-04-22 |
 | **作者** | 系統架構小組 |
 | **狀態** | 草稿 |
@@ -42,6 +42,16 @@ UDS 提供兩個獨立輸出介面，各自服務不同的消費端：
 - **部署位置**：MacBook Pro 本機（`127.0.0.1`）
 - **無需真實硬體**：UDS 完全取代 EchoShield 實體雷達與 Sentrycs 的位置資料來源
 - **單一 Python 程式**：`unified_drone_simulator.py`，以 asyncio 同時驅動兩個輸出介面
+
+### 1.4 與 Map Simulator 的關係
+
+Unified Drone Simulator 與 Map Simulator 形成「推送-登錄」關係：
+
+1. **UDS 是資料生產者**：負責計算無人機飛行軌跡與狀態
+2. **Map Simulator 是資料中介**：維護中央物件登錄表，供感測器模擬器查詢
+3. **感測器模擬器是消費者**：EchoShield Simulator 和 Sentrycs Simulator 只向 Map Simulator 查詢，不直接與 UDS 互動（接管指令除外）
+
+UDS 在每次主迴圈更新（1/update_hz 秒）後，呼叫 `POST /objects/update` 將所有活躍無人機的最新狀態推送至 Map Simulator（預設 localhost:8090）。
 
 ---
 
@@ -199,6 +209,8 @@ stateDiagram-v2
 ---
 
 ## 6. Sentrycs Query & Command API（REST Port 8080）
+
+> **架構更新說明（v0.2）**：`GET /status/{drone_id}` 位置查詢功能已由 **Map Simulator（:8090）** 承接。感測器模擬器（EchoShield Simulator、Sentrycs Simulator）改向 Map Simulator 查詢物件位置。UDS 的 :8080 REST API 現在僅保留 **接管指令**（`POST /command/takeover`）和 **列出無人機**（`GET /drones`）功能。
 
 ### 6.1 GET /status/{drone_id}
 
@@ -689,10 +701,12 @@ class CommandApiServer:
 
 class UnifiedDroneSimulator:
 
-    def __init__(self, scenario_file: str, echo_port: int = 9000, api_port: int = 8080, update_hz: float = 10.0):
+    def __init__(self, scenario_file: str, echo_port: int = 9000, api_port: int = 8080,
+                 map_sim_url: str = "http://localhost:8090", update_hz: float = 10.0):
         self.scenario_file = scenario_file
         self.echo_port = echo_port
         self.api_port = api_port
+        self.map_sim_url = map_sim_url
         self.update_hz = update_hz
         self.flight_manager = FlightManager()
 
@@ -726,10 +740,34 @@ class UnifiedDroneSimulator:
                 self.flight_manager.update_all(dt)
                 await asyncio.sleep(dt)
 
+        async def push_loop():
+            """每秒 push 所有無人機狀態至 Map Simulator"""
+            import aiohttp
+            while True:
+                async with aiohttp.ClientSession() as session:
+                    for drone in self.flight_manager.drones.values():
+                        payload = {
+                            "drone_id": drone.drone_id,
+                            "lat": drone.lat,
+                            "lon": drone.lon,
+                            "alt_m": drone.alt_m,
+                            "speed_ms": drone.velocity_ms,
+                            "heading_deg": drone.heading_deg,
+                            "status": drone.flight_state.name,
+                            "timestamp": datetime.now(timezone.utc).strftime(
+                                "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+                        }
+                        try:
+                            await session.post(f"{self.map_sim_url}/objects/update", json=payload)
+                        except Exception as e:
+                            logger.warning(f"UDS: push to Map Simulator failed: {e}")
+                await asyncio.sleep(1.0)
+
         await asyncio.gather(
             echo_server.start(),
             api_server.start(),
             update_loop(),
+            push_loop(),
         )
 ```
 
@@ -749,8 +787,9 @@ python unified_drone_simulator.py \
 # --scenario   場景 YAML 設定檔路徑（必要）
 # --echo-port  EchoShield TCP 輸出 Port（預設 9000）
 # --api-port   Sentrycs Query & Command API Port（預設 8080）
-# --hz         更新頻率 Hz（預設 10，範圍 1-20）
-# --verbose    詳細日誌輸出
+# --hz             更新頻率 Hz（預設 10，範圍 1-20）
+# --map-sim-url    Map Simulator URL（預設 http://localhost:8090）
+# --verbose        詳細日誌輸出
 ```
 
 ---

@@ -5,8 +5,8 @@
 | 欄位 | 內容 |
 |------|------|
 | **文件編號** | 01 |
-| **版本** | v0.4 |
-| **日期** | 2026-04-22（修訂：Sentrycs 改由 HTTP JSON Status API :7070 輸出，由 CoT Gateway SentrycsAdapter 輪詢）|
+| **版本** | v0.5 |
+| **日期** | 2026-04-22（修訂：新增 Map Simulator 物件登錄表）|
 | **作者** | 系統架構小組 |
 | **狀態** | 草稿 |
 | **機密等級** | PoC 內部使用 |
@@ -55,13 +55,15 @@
 
 flowchart TB
     subgraph SENSE["感測層 (Sensing Layer)"]
-        UDS["Unified Drone Simulator\n(Python)\nEchoShield Feed :9000\nREST API :8080"]
+        UDS["Unified Drone Simulator\n(Python)\nCommand API :8080"]
+        MS["Map Simulator\n(Python)\n物件登錄表 :8090"]
+        ES_SIM["EchoShield Simulator\n(Python)\nTCP Feed :9000"]
         SC["Sentrycs Simulator\n(Python)\nStatus API :7070"]
         DS["場景 YAML\n(無人機飛行設定)"]
     end
 
     subgraph COMM["通訊層 (Communication Layer)"]
-        TCP_SIM["TCP Port 9000\n(UDS → EchodyneAdapter)"]
+        TCP_SIM["TCP Port 9000\n(EchoShield Sim → EchodyneAdapter)"]
         
         TCP_SSL["TCP SSL Port 8089\n(CoT to TAK Server)"]
         UDP_42["UDP Port 4242\n(作戰模式，備用)"]
@@ -89,8 +91,11 @@ flowchart TB
     end
 
     DS --> UDS
-    SC -->|GET /status + POST /takeover| UDS
-    UDS -->|TCP JSON :9000| TCP_SIM
+    UDS -->|POST /objects/update| MS
+    MS -->|GET /objects?radius_m=4800| ES_SIM
+    MS -->|GET /objects?radius_m=8000| SC
+    SC -->|POST /command/takeover| UDS
+    ES_SIM -->|TCP JSON :9000| TCP_SIM
     SC -->|"HTTP :7070"| SA
 
     SA -->|Track 物件| TC
@@ -113,8 +118,10 @@ flowchart TB
 
 | 元件 | 技術 | 職責 | 備註 |
 |------|------|------|------|
-| **Unified Drone Simulator** | Python asyncio + aiohttp | 維護無人機飛行狀態；提供 EchoShield TCP Feed（:9000）供 EchodyneAdapter 消費；提供 REST API（:8080）供 Sentrycs 模擬器查詢位置與發送接管指令 | PoC 替代兩種真實感測器的位置來源 |
-| **Sentrycs Simulator** | Python asyncio | 向統一模擬器查詢無人機位置（GET /status）；在接管時呼叫 REST API（POST /takeover）；維護偵測狀態機（DETECTED/MITIGATING/NEUTRALIZED）；以 aiohttp HTTP Server 對外提供 JSON Status API（:7070）供 CoT Gateway SentrycsAdapter 輪詢消費 | 不再直通 TAK Server |
+| **Unified Drone Simulator** | Python asyncio + aiohttp | 維護無人機飛行狀態；每秒 POST 狀態至 Map Simulator（:8090）；提供 REST API（:8080）供 Sentrycs 發送接管指令 | PoC 無人機飛行引擎 |
+| **Map Simulator** | Python asyncio + aiohttp | 物件狀態中央登錄表；接收 UDS 狀態推送；提供地理範圍查詢 API（:8090）供 EchoShield / Sentrycs 查詢偵測範圍內物件；TTL 自動清理 | Single Source of Truth，解耦感測器與位置資料 |
+| **EchoShield Simulator** | Python asyncio TCP Server | 向 Map Simulator 查詢雷達範圍內物件（4.8km）；加入雷達誤差模擬（±5m 位置噪點）；計算方位角/仰角；以 10 Hz TCP JSON Feed 輸出給 EchodyneAdapter | 雷達特性模擬（誤差、角度、偵測距離限制）|
+| **Sentrycs Simulator** | Python asyncio + aiohttp client | 維護 RF 偵測狀態機；向 Map Simulator 查詢 RF 偵測範圍（8km）內物件；觸發接管時呼叫 UDS POST /command/takeover；輸出 HTTP JSON Status API（:7070）供 SentrycsAdapter 輪詢 | 透過 Map Simulator 取得位置，不再直接查詢 UDS |
 | **SentrycsAdapter** | Python asyncio HTTP Client | 以 1 Hz 輪詢 Sentrycs Simulator HTTP :7070，解析 JSON，轉換為統一 Track 物件（含 drone_model、detection_status、operator_lat/lon）| CoT Gateway 模組之一 |
 | **EchodyneAdapter** | Python asyncio TCP Client | 連接 EchoShield TCP API，解析 JSON，轉換為統一 Track 物件 | 負責連線管理與重連 |
 | **SimulatedDroneAdapter** | Python | 連接統一無人機模擬器（Unified Drone Simulator）EchoShield TCP Feed（:9000），共用 EchodyneAdapter 介面 | PoC 模擬模式下使用 |
@@ -282,8 +289,9 @@ sequenceDiagram
 
 | 元件 | 位置 | IP | Port | 協定 | 用途 |
 |------|------|-----|------|------|------|
-| Unified Drone Simulator | MacBook（本機）| 127.0.0.1 | 9000 | TCP | EchoShield JSON Feed 輸出 |
-| Unified Drone Simulator | MacBook（本機）| 127.0.0.1 | 8080 | HTTP | Sentrycs Query & Command REST API |
+| Unified Drone Simulator | MacBook（本機）| 127.0.0.1 | 8080 | HTTP | Command REST API（接管指令）|
+| Map Simulator | MacBook（本機）| 127.0.0.1 | 8090 | HTTP | 物件狀態登錄表查詢 API |
+| EchoShield Simulator | MacBook（本機）| 127.0.0.1 | 9000 | TCP | EchoShield JSON Feed 輸出 |
 | CoT Gateway | MacBook（本機）| 127.0.0.1 | — | — | TCP Client，連接 Sim & TAK |
 | Sentrycs Simulator | MacBook（本機）| 127.0.0.1 | 7070 | HTTP | JSON Status API Server（供 SentrycsAdapter 輪詢）|
 | TAK Server | MacBook（本機）| `127.0.0.1`（本機）/ `<MacBook-LAN-IP>`（Android 裝置用）| 8087 | TCP | 測試用（無 SSL）|
@@ -300,7 +308,9 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     subgraph MACBOOK["MacBook Pro（PoC 主機）"]
-        UDS["Unified Drone Simulator\n:9000 (EchoShield Feed)\n:8080 (REST API)"]
+        UDS["Unified Drone Simulator\n:8080 (Command API)"]
+        MS["Map Simulator\n:8090"]
+        ES_SIM2["EchoShield Simulator\n:9000 (TCP Feed)"]
         SC["Sentrycs Simulator\n:7070 HTTP"]
         GW["CoT Gateway\n(EchodyneAdapter + SentrycsAdapter)"]
         TAKSVR["TAK Server（Docker）\n:8087 :8089 :8443 :8446"]
@@ -313,7 +323,10 @@ flowchart LR
         AP["ATAK（手機）"]
     end
 
-    UDS -->|"TCP :9000"| GW
+    UDS -->|"POST :8090"| MS
+    MS -->|"GET /objects"| ES_SIM2
+    MS -->|"GET /objects"| SC
+    ES_SIM2 -->|"TCP :9000"| GW
     SC -->|"HTTP :7070"| GW
     GW -->|"TCP SSL :8089"| TAKSVR
     TAKSVR --- PSQL

@@ -5,8 +5,8 @@
 | 欄位 | 內容 |
 |------|------|
 | **文件編號** | 03 |
-| **版本** | v0.3 |
-| **日期** | 2026-04-22（修訂：改為 HTTP JSON Status API :7070，由 CoT Gateway SentrycsAdapter 輪詢）|
+| **版本** | v0.4 |
+| **日期** | 2026-04-22（修訂：改從 Map Simulator 取得無人機位置，不再直接查詢 UDS）|
 | **作者** | 系統架構小組 |
 | **狀態** | 草稿 |
 
@@ -46,11 +46,24 @@ Unified Drone Simulator (:8080 REST API)
 ### 1.3 與統一模擬器的關係（保持原有設計）
 
 Sentrycs 模擬器仍負責：
-- 向統一無人機模擬器（Port 8080）查詢無人機位置（`GET /status/{drone_id}`）
+- **位置查詢**：定期向 **Map Simulator（Port 8090）** 查詢 RF 偵測範圍（≤8km）內的物件（`GET /objects?lat=&lon=&radius_m=8000`），取代直接呼叫 UDS `/status/{drone_id}`
 - 在 MITIGATING 時呼叫 `POST /command/takeover` 觸發接管
 - 監測 `is_landed` 狀態，轉換為 NEUTRALIZED
 
 差異：過去直接生成 CoT XML 推送 TAK Server，現在提供 HTTP JSON Status API（:7070），由 CoT Gateway 負責後續的 CoT 生成與推送。
+
+### 1.4 與 Map Simulator 的關係
+
+Sentrycs Simulator 改向 Map Simulator 查詢物件位置，而非直接呼叫 UDS：
+
+| 操作 | 舊架構（直接查 UDS）| 新架構（透過 Map Simulator）|
+|------|-------------------|-----------------------------|
+| 查詢無人機位置 | `GET /status/{drone_id}` @ UDS :8080 | `GET /objects?lat=&lon=&radius_m=8000` @ Map Sim :8090 |
+| 取得無人機列表 | `GET /drones` @ UDS :8080 | `GET /objects/all` @ Map Sim :8090（或 GET /objects）|
+| 發送接管指令 | `POST /command/takeover` @ UDS :8080 | **不變**，仍呼叫 UDS :8080 |
+| 落地偵測 | UDS `is_landed: true` | Map Sim `status: LANDED`（UDS push 狀態到 Map Sim）|
+
+查詢中心（`lat/lon`）設為感測器安裝位置（場景設定），`radius_m=8000` 對應 Sentrycs 最大偵測距離 8km。
 
 ---
 
@@ -68,7 +81,7 @@ Sentrycs 模擬器仍負責：
 | FR-SC-008 | 狀態變化時立即輸出 JSON；穩定狀態下每秒輸出一次 | 必要 |
 | FR-SC-009 | TCP Server 支援多 Client 同時連線；Client 斷線不影響其他 Client；Server 在無 Client 時繼續運行 | 必要 |
 | FR-SC-010 | 提供 CLI 介面，支援 --scenario, --verbose 參數 | 必要 |
-| FR-SC-011 | 向統一無人機模擬器 REST API（Port 8080）定期查詢無人機狀態（每 0.5 秒）| 必要 |
+| FR-SC-011 | 向 Map Simulator REST API（Port 8090）定期查詢 RF 偵測範圍內物件（每 0.5 秒，GET /objects?radius_m=8000）| 必要 |
 | FR-SC-012 | 當觸發 MITIGATING 時，呼叫 `POST /command/takeover` 發送接管指令給統一模擬器 | 必要 |
 | FR-SC-013 | 持續監測統一模擬器回傳的 `is_landed` 欄位，一旦為 `true` 即推送 Neutralized CoT | 必要 |
 
@@ -421,10 +434,16 @@ scenario:
   sentrycs_api:
       host: "0.0.0.0"    # 本機所有介面
       port: 7070          # CoT Gateway SentrycsAdapter 輪詢此 Port
+  map_simulator:
+      host: "localhost"
+      port: 8090
+      poll_interval_s: 0.5
+      sensor_lat: 25.0330    # Sentrycs 感測器位置（場景設定）
+      sensor_lon: 121.5654
+      detection_radius_m: 8000  # RF 偵測範圍（公尺）
   unified_drone_simulator:
       host: "localhost"
-      api_port: 8080
-      poll_interval_s: 0.5
+      command_api_port: 8080   # 僅用於接管指令
 
   drones:
     - model: "DJI Mavic 3"
@@ -512,21 +531,48 @@ python sentrycs_sim.py --scenario scenarios/dji_mavic3.yaml --api-port 7070 --ve
 ```python
 import aiohttp
 
-class UnifiedSimulatorClient:
-    """與 Unified Drone Simulator REST API 通訊的客戶端"""
+class MapSimulatorClient:
+    """與 Map Simulator REST API 通訊的客戶端（查詢 RF 偵測範圍內物件）"""
+
+    def __init__(self, host: str = "localhost", port: int = 8090):
+        self.base_url = f"http://{host}:{port}"
+
+    async def get_objects_in_range(
+        self,
+        center_lat: float,
+        center_lon: float,
+        radius_m: float = 8000.0
+    ) -> list:
+        """GET /objects?lat=&lon=&radius_m= - 查詢 RF 偵測範圍內無人機"""
+        params = {"lat": center_lat, "lon": center_lon, "radius_m": radius_m}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{self.base_url}/objects", params=params) as resp:
+                data = await resp.json()
+                return data.get("objects", [])
+
+    async def get_all_objects(self) -> list:
+        """GET /objects/all - 取得所有物件（除錯用）"""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{self.base_url}/objects/all") as resp:
+                data = await resp.json()
+                return data.get("objects", [])
+
+
+class UdsCommandClient:
+    """與 Unified Drone Simulator REST API 通訊的客戶端（僅用於接管指令）"""
 
     def __init__(self, host: str = "localhost", port: int = 8080):
         self.base_url = f"http://{host}:{port}"
 
-    async def get_drone_status(self, drone_id: str) -> dict:
-        """GET /status/{drone_id} - 查詢無人機當前狀態"""
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{self.base_url}/status/{drone_id}") as resp:
-                return await resp.json()
-
-    async def send_takeover(self, drone_id: str, target_lat: float, target_lon: float,
-                             target_alt_m: float = 0.0, descent_speed_ms: float = 3.0) -> dict:
-        """POST /command/takeover - 發送接管指令"""
+    async def send_takeover(
+        self,
+        drone_id: str,
+        target_lat: float,
+        target_lon: float,
+        target_alt_m: float = 0.0,
+        descent_speed_ms: float = 3.0
+    ) -> dict:
+        """POST /command/takeover - 發送接管指令（改變無人機航線至降落點）"""
         body = {
             "drone_id": drone_id,
             "target_lat": target_lat,
@@ -572,7 +618,8 @@ class SentrycsSimulator:
 
     async def _run_drone(self, drone_cfg: dict) -> None:
         """執行單一無人機的偵測-接管流程（含統一模擬器互動）"""
-        client = UnifiedSimulatorClient(self.uds_host, self.uds_port)
+        map_client = MapSimulatorClient(self.map_sim_host, self.map_sim_port)
+        uds_client = UdsCommandClient(self.uds_host, self.uds_port)
 
         # 等待 detected_at_s
         await asyncio.sleep(drone_cfg["detected_at_s"])
@@ -583,7 +630,7 @@ class SentrycsSimulator:
 
         # 發送接管指令給統一模擬器
         lp = drone_cfg["landing_point"]
-        await client.send_takeover(
+        await uds_client.send_takeover(
             drone_id=drone_cfg["uid"],
             target_lat=lp["lat"],
             target_lon=lp["lon"],
@@ -591,16 +638,21 @@ class SentrycsSimulator:
         )
         await self._transition_to(drone_cfg, "MITIGATING")
 
-        # 輪詢直到落地
+        # 輪詢直到落地（從 Map Simulator 查詢物件狀態）
         while True:
-            status = await client.get_drone_status(drone_cfg["uid"])
-            if status.get("is_landed"):
+            objects = await map_client.get_objects_in_range(
+                center_lat=drone_cfg["lat"],
+                center_lon=drone_cfg["lon"],
+                radius_m=100,
+            )
+            drone = next((o for o in objects if o["drone_id"] == drone_cfg["uid"]), None)
+            if drone is None or drone.get("status") == "LANDED":
                 await self._transition_to(drone_cfg, "NEUTRALIZED")
                 break
-            # 同步更新 CoT 的位置為統一模擬器的最新位置
-            drone_cfg["lat"] = status["lat"]
-            drone_cfg["lon"] = status["lon"]
-            drone_cfg["alt_m"] = status["alt_m"]
+            # 同步更新 CoT 的位置為 Map Simulator 的最新位置
+            drone_cfg["lat"] = drone["lat"]
+            drone_cfg["lon"] = drone["lon"]
+            drone_cfg["alt_m"] = drone["alt_m"]
             await asyncio.sleep(self.poll_interval_s)
 
     async def _state_loop(self, detection: DroneDetection) -> None:
