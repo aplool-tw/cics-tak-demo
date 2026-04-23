@@ -4,8 +4,8 @@
 
 | 欄位 | 內容 |
 |------|------|
-| **版本** | v0.4 |
-| **日期** | 2026-04-22 |
+| **版本** | v0.5 |
+| **日期** | 2026-04-22（修訂：三層架構，移除通訊層與 SimulatedDroneAdapter）|
 | **狀態** | 草稿 |
 
 ---
@@ -15,7 +15,7 @@
 | 編號 | 檔名 | 名稱 | 說明 | 狀態 |
 |------|------|------|------|------|
 | 00 | `00-index.md` | 文件索引 | 本文件，所有文件的入口與說明 | 草稿 |
-| 01 | `01-system-architecture.md` | 系統架構文件 | 四層架構、資料流、技術棧、網路拓樸、安全設計、效能設計 | 草稿 |
+| 01 | `01-system-architecture.md` | 系統架構文件 | 三層架構、資料流、技術棧、網路拓樸、安全設計、效能設計 | 草稿 |
 | 02 | `02-drone-simulator-spec.md` | 統一無人機模擬器規格 | Unified Drone Simulator 的完整開發規格：EchoShield TCP Feed、Sentrycs REST Query/Command API、接管閉環設計、飛行狀態機 | 草稿 |
 | 02b | `02b-map-simulator-spec.md` | Map Simulator 規格 | 物件狀態中央登錄表的完整規格：REST API（:8090）、DroneObject dataclass、ObjectRegistry TTL 管理、與 UDS 整合的推送介面 | 草稿 |
 | 03 | `03-sentrycs-simulator-spec.md` | Sentrycs 模擬器規格 | Sentrycs C-UAS 模擬器開發規格，含狀態機、JSON Status API（HTTP :7070）、CoT Gateway 整合 | 草稿 |
@@ -56,17 +56,16 @@
 
 ---
 
-## 四層架構摘要
+## 三層架構摘要
 
 ```
-感測層  →  通訊層  →  指管層  →  顯示層
+感測層  →  指管層  →  顯示層
 ```
 
 | 層次 | 元件 |
 |------|------|
-| 感測層 | Unified Drone Simulator（飛行引擎）、Map Simulator（物件登錄表 :8090）、EchoShield Simulator（雷達 TCP :9000）、Sentrycs Simulator（RF :7070）|
-| 通訊層 | TCP SSL 8089（CoT Gateway→TAK Server）、HTTP 7070（Sentrycs Status API）、REST HTTP 8080（UDS 指令）|
-| 指管層 | CoT Gateway（Python）、TAK Server（MacBook Pro Docker Desktop）|
+| 感測層 | UDS（飛行引擎 :8080）、Map Simulator（物件登錄表 :8090）、EchoShield Simulator（雷達 TCP :9000）、Sentrycs Simulator（RF :7070）|
+| 指管層 | CoT Gateway（EchodyneAdapter :9000 + SentrycsAdapter :7070 → TCP SSL :8089）、TAK Server（MacBook Pro Docker Desktop）|
 | 顯示層 | ATAK Android（平板/手機，同 Wi-Fi 網段）|
 
 ---

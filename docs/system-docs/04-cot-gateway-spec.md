@@ -5,8 +5,8 @@
 | 欄位 | 內容 |
 |------|------|
 | **文件編號** | 04 |
-| **版本** | v0.3 |
-| **日期** | 2026-04-22 |
+| **版本** | v0.4 |
+| **日期** | 2026-04-22（修訂：移除 SimulatedDroneAdapter，EchodyneAdapter 直接連接 EchoShield Simulator）|
 | **作者** | 系統架構小組 |
 | **狀態** | 草稿 |
 
@@ -38,7 +38,6 @@ flowchart TD
 
         subgraph ADAPTERS["Adapter 層"]
             EA["EchodyneAdapter\n(TCP Client :9000 → Track)"]
-            SDA["SimulatedDroneAdapter\n(TCP Client :9000 → Track)"]
             SC_A["SentrycsAdapter\n(HTTP Poll :7070 → Track 物件)"]
         end
 
@@ -52,15 +51,13 @@ flowchart TD
         end
     end
 
-    ES_SIM["Unified Drone Simulator\n(EchoShield Feed :9000)"]
+    ES_SIM["EchoShield Simulator\n(TCP Feed :9000)"]
     SC_SIM["Sentrycs Simulator\n:7070 HTTP"] -->|HTTP JSON :7070| SC_A
     TAK["TAK Server\n:8089 SSL"]
 
-    ES_SIM -->|TCP JSON stream| EA
-    ES_SIM -->|TCP JSON stream| SDA
+    ES_SIM -->|"TCP JSON stream (10 Hz)"| EA
     SC_A -->|Track 物件（SENTRYCS）| TC
     EA -->|Track 物件（ECHOSHIELD）| TC
-    SDA -->|Track 物件（ECHOSHIELD）| TC
     TC -->|Track 物件（含 FUSED）| CG
     CG -->|CoT XML| TT
     TT -->|TCP SSL| TAK
@@ -73,7 +70,7 @@ flowchart TD
 
 GatewayMain 使用 asyncio 事件迴圈，各模組以獨立 coroutine 並行運行：
 
-- **EchodyneAdapter coroutine**：持續讀取 EchoShield TCP JSON 資料流，非同步放入 Queue
+- **EchodyneAdapter coroutine**：持續讀取 EchoShield Simulator TCP JSON 資料流（:9000），非同步放入 Queue；PoC 與生產模式連線目標不同，格式完全相同
 - **SentrycsAdapter coroutine**：以 1 Hz 輪詢 Sentrycs Simulator HTTP :7070（GET /detections），解析 JSON，轉換為 Track（source=SENTRYCS），放入同一 Queue
 - **TrackCorrelator TTL task**：每秒執行一次，清除過期航跡
 - **TakTransmitter send loop**：消費 CoT Queue，非同步發送至 TAK Server
@@ -273,31 +270,31 @@ class EchodyneAdapter:
 
 ---
 
-## 5. SimulatedDroneAdapter 規格
+## 5. EchodyneAdapter 雙模式設計（PoC / 生產）
 
-SimulatedDroneAdapter 與 EchodyneAdapter 共用完全相同的介面，差別僅在於：
+EchodyneAdapter 同時支援 PoC 模式（連接 EchoShield Simulator）與生產模式（連接真實 EchoShield 硬體），無需切換 Adapter 類別，僅需在設定檔中修改 `host` 與 `port`：
 
-- 連線目標為**統一無人機模擬器（Unified Drone Simulator）的 EchoShield TCP Feed（Port 9000）**，而非獨立的 EchoShield Simulator
-- 不使用 SSL（UDS EchoShield Feed 為明文 TCP，本機通訊）
+| 模式 | 連線目標 | Host | Port | 加密 |
+|------|---------|------|------|------|
+| PoC | EchoShield Simulator（本機）| `127.0.0.1` | 9000 | 無（本機通訊）|
+| 生產 | 真實 EchoShield 硬體 | 雷達設備 IP | 依硬體規格 | 依硬體設定 |
 
-```python
-class SimulatedDroneAdapter(EchodyneAdapter):
-    """
-    Unified Drone Simulator（EchoShield Feed）連線用 Adapter
-    繼承 EchodyneAdapter，連接 UDS TCP Port 9000 的 EchoShield JSON Feed
-    PoC 模式下，use_simulator=true 時使用此 Adapter
-    """
-    pass  # 完全繼承 EchodyneAdapter，無需修改
-```
-
-在 Gateway 設定檔中以 `use_simulator: true` 切換：
+兩種模式輸出格式完全相同（EchoShield JSON TCP Feed），EchodyneAdapter 無需任何代碼修改。
 
 ```yaml
+# PoC 模式（EchoShield Simulator）
 gateway:
   echoshield:
-    use_simulator: true   # true: SimulatedDroneAdapter, false: EchodyneAdapter (真實硬體)
     host: "127.0.0.1"
     port: 9000
+    reconnect_interval_s: 5
+
+# 生產模式（真實 EchoShield 硬體）
+gateway:
+  echoshield:
+    host: "192.168.1.50"   # 雷達設備 LAN IP
+    port: 9000              # 依 EchoShield 硬體規格
+    reconnect_interval_s: 5
 ```
 
 ---
@@ -309,7 +306,7 @@ gateway:
 ### 6.1 職責
 
 - 維護三個字典：`radar_tracks`（EchoShield）、`rf_tracks`（Sentrycs，來自 SentrycsAdapter）、`fused_tracks`
-- 統一接收來自 `EchodyneAdapter`/`SimulatedDroneAdapter` 和 `SentrycsAdapter` 的 Track 物件（透過同一 `track_queue`，由 source 欄位區分）
+- 統一接收來自 `EchodyneAdapter` 和 `SentrycsAdapter` 的 Track 物件（透過同一 `track_queue`，由 source 欄位區分）
 - 每次收到新的 EchoShield Track 時，嘗試與現有 RF Tracks（source=SENTRYCS）關聯
 - 若關聯成功，建立 FUSED Track（雷達提供位置/速度，RF 提供型號/分類）
 - 每秒執行 TTL 清理，超過 10s 未更新的航跡標記為 LOST
@@ -721,7 +718,7 @@ class GatewayMain:
         self._running = False
 
         # 模組初始化
-        self.adapter = SimulatedDroneAdapter(
+        self.adapter = EchodyneAdapter(
             host=self.config["gateway"]["echoshield"]["host"],
             port=self.config["gateway"]["echoshield"]["port"],
             track_queue=self.track_queue,
@@ -839,7 +836,6 @@ gateway:
     host: "127.0.0.1"
     port: 9000
     reconnect_interval_s: 5
-    use_simulator: true
   sentrycs:
     host: "localhost"
     port: 7070
@@ -946,8 +942,8 @@ cot_gateway/
 ├── gateway_main.py              # CLI 入口與 GatewayMain
 ├── adapters/
 │   ├── __init__.py
-│   ├── echoshield_adapter.py    # EchodyneAdapter
-│   └── simulated_adapter.py    # SimulatedDroneAdapter
+│   ├── echoshield_adapter.py    # EchodyneAdapter（PoC + 生產雙模式）
+│   └── sentrycs_adapter.py      # SentrycsAdapter
 ├── core/
 │   ├── __init__.py
 │   ├── track.py                 # Track dataclass, TrackSource, TrackStatus

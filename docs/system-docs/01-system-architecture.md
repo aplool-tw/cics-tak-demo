@@ -5,8 +5,8 @@
 | 欄位 | 內容 |
 |------|------|
 | **文件編號** | 01 |
-| **版本** | v0.5 |
-| **日期** | 2026-04-22（修訂：新增 Map Simulator 物件登錄表）|
+| **版本** | v0.6 |
+| **日期** | 2026-04-22（修訂：三層架構（移除通訊層），移除 SimulatedDroneAdapter）|
 | **作者** | 系統架構小組 |
 | **狀態** | 草稿 |
 | **機密等級** | PoC 內部使用 |
@@ -38,15 +38,14 @@
 
 ---
 
-## 2. 整體架構（四層）
+## 2. 整體架構（三層）
 
 ### 2.1 架構說明
 
-系統採「感測層 → 通訊層 → 指管層 → 顯示層」四層架構，各層職責明確分離：
+系統採「感測層 → 指管層 → 顯示層」三層架構，各層職責明確分離；通訊協議（TCP / HTTP / SSL）標注於各元件之間的連線上：
 
-- **感測層**：負責偵測無人機並提供原始資料
-- **通訊層**：負責資料的可靠傳輸（TCP SSL / UDP）
-- **指管層**：負責資料處理、格式轉換、航跡關聯與 CoT 分發
+- **感測層**：負責偵測無人機並提供原始資料（EchoShield JSON Feed / Sentrycs JSON API）
+- **指管層**：負責資料處理、格式轉換、航跡關聯、CoT 生成與 TAK 分發
 - **顯示層**：負責戰術圖資的視覺化呈現
 
 ### 2.2 架構圖
@@ -62,17 +61,9 @@ flowchart TB
         DS["場景 YAML\n(無人機飛行設定)"]
     end
 
-    subgraph COMM["通訊層 (Communication Layer)"]
-        TCP_SIM["TCP Port 9000\n(EchoShield Sim → EchodyneAdapter)"]
-        
-        TCP_SSL["TCP SSL Port 8089\n(CoT to TAK Server)"]
-        UDP_42["UDP Port 4242\n(作戰模式，備用)"]
-    end
-
     subgraph C2["指管層 (C2 Layer)"]
         subgraph GW["CoT Gateway (Python)"]
             EA["EchodyneAdapter\n(TCP Client :9000)"]
-            SDA["SimulatedDroneAdapter"]
             SA["SentrycsAdapter\n(HTTP Poll :7070)"]
             TC["TrackCorrelator\n(距離≤50m, 時間≤3s)"]
             CG["CotGenerator\n(MIL-STD-2525C)"]
@@ -91,25 +82,21 @@ flowchart TB
     end
 
     DS --> UDS
-    UDS -->|POST /objects/update| MS
-    MS -->|GET /objects?radius_m=4800| ES_SIM
-    MS -->|GET /objects?radius_m=8000| SC
-    SC -->|POST /command/takeover| UDS
-    ES_SIM -->|TCP JSON :9000| TCP_SIM
-    SC -->|"HTTP :7070"| SA
-
-    SA -->|Track 物件| TC
-    TCP_SIM --> SDA
-    EA --> TC
-    SDA --> TC
-    TC --> CG
-    CG --> TT
-    TT -->|TCP SSL 8089| TCP_SSL
-    TCP_SSL --> TAKSVR
+    UDS -->|"HTTP POST /objects/update"| MS
+    MS -->|"HTTP GET /objects?radius_m=4800"| ES_SIM
+    MS -->|"HTTP GET /objects?radius_m=8000"| SC
+    SC -->|"HTTP POST /command/takeover"| UDS
+    ES_SIM -->|"TCP :9000 JSON (10 Hz)"| EA
+    SC -->|"HTTP :7070 JSON (1 Hz poll)"| SA
+    SA -->|Track 物件（SENTRYCS）| TC
+    EA -->|Track 物件（ECHOSHIELD）| TC
+    TC -->|Track 物件（含 FUSED）| CG
+    CG -->|CoT XML| TT
+    TT -->|"TCP SSL :8089"| TAKSVR
     TAKSVR --- PSQL
-    TAKSVR -->|TCP SSL 8089| ATAK_C
-    TAKSVR -->|TCP SSL 8089| ATAK_T
-    TAKSVR -->|TCP SSL 8089| ATAK_P
+    TAKSVR -->|"TCP SSL :8089"| ATAK_C
+    TAKSVR -->|"TCP SSL :8089"| ATAK_T
+    TAKSVR -->|"TCP SSL :8089"| ATAK_P
 ```
 
 ---
@@ -123,8 +110,7 @@ flowchart TB
 | **EchoShield Simulator** | Python asyncio TCP Server | 向 Map Simulator 查詢雷達範圍內物件（4.8km）；加入雷達誤差模擬（±5m 位置噪點）；計算方位角/仰角；以 10 Hz TCP JSON Feed 輸出給 EchodyneAdapter | 雷達特性模擬（誤差、角度、偵測距離限制）|
 | **Sentrycs Simulator** | Python asyncio + aiohttp client | 維護 RF 偵測狀態機；向 Map Simulator 查詢 RF 偵測範圍（8km）內物件；觸發接管時呼叫 UDS POST /command/takeover；輸出 HTTP JSON Status API（:7070）供 SentrycsAdapter 輪詢 | 透過 Map Simulator 取得位置，不再直接查詢 UDS |
 | **SentrycsAdapter** | Python asyncio HTTP Client | 以 1 Hz 輪詢 Sentrycs Simulator HTTP :7070，解析 JSON，轉換為統一 Track 物件（含 drone_model、detection_status、operator_lat/lon）| CoT Gateway 模組之一 |
-| **EchodyneAdapter** | Python asyncio TCP Client | 連接 EchoShield TCP API，解析 JSON，轉換為統一 Track 物件 | 負責連線管理與重連 |
-| **SimulatedDroneAdapter** | Python | 連接統一無人機模擬器（Unified Drone Simulator）EchoShield TCP Feed（:9000），共用 EchodyneAdapter 介面 | PoC 模擬模式下使用 |
+| **EchodyneAdapter** | Python asyncio TCP Client | 連接 EchoShield Simulator TCP :9000（PoC）或真實 EchoShield 硬體（生產），解析 JSON，轉換為統一 Track 物件 | 兩種模式輸出格式相同，無需切換 Adapter |
 | **TrackCorrelator** | Python | 接收雷達與 RF 航跡，依距離≤50m/時間≤3s 條件進行融合，維護 TTL 10s | 核心業務邏輯 |
 | **CotGenerator** | Python | 將 Track 物件轉換為 CoT XML，依 MIL-STD-2525C 選擇正確 type | 支援 a-u-A-M-F-Q-r 及 a-h-A-M-F-Q-r |
 | **TakTransmitter** | Python TCP Socket | 將 CoT XML 透過 TCP SSL 8089 推送至 TAK Server，含指數退避重連 | |
@@ -136,10 +122,10 @@ flowchart TB
 
 ## 4. 資料流
 
-### 4.1 路徑一：EchoShield Feed（UDS）→ CoT Gateway → TAK Server → 顯示端
+### 4.1 路徑一：EchoShield Simulator → CoT Gateway → TAK Server → 顯示端
 
-1. 統一無人機模擬器（UDS）依 10 Hz 輸出 EchoShield JSON 航跡資料至 TCP Port 9000
-2. EchodyneAdapter 接收 JSON，驗證格式，轉換為 Track 物件
+1. EchoShield Simulator 向 Map Simulator 查詢雷達範圍（4.8km）內物件，加入雷達誤差後，以 10 Hz TCP JSON Feed 輸出至 Port 9000
+2. EchodyneAdapter 接收 JSON，驗證格式，轉換為 Track 物件（source=ECHOSHIELD）
 3. TrackCorrelator 接收 Track，更新 radar_tracks 字典，嘗試與現有 RF Tracks 關聯
 4. CotGenerator 依 Track.source 選擇 CoT type，生成 CoT XML
 5. TakTransmitter 透過 TCP SSL 8089 推送 CoT XML 至 TAK Server
