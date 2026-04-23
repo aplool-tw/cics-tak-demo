@@ -71,7 +71,6 @@ flowchart TB
         end
         subgraph TAK["TAK Server (展示環境主機)"]
             TAKSVR["TAK Server\n(Docker)"]
-            PSQL["TAK Server DB\n(Docker)"]
         end
     end
 
@@ -114,7 +113,7 @@ flowchart TB
 | **CotGenerator** | Python | 將 Track 物件轉換為 CoT XML，依 MIL-STD-2525C 選擇正確 type | 支援 a-u-A-M-F-Q-r 及 a-h-A-M-F-Q-r |
 | **TakTransmitter** | Python TCP Socket | 將 CoT XML 透過 TCP SSL 8089 推送至 TAK Server，含指數退避重連 | |
 | **GatewayMain** | Python asyncio | CoT Gateway 主程式進入點，協調所有模組，處理 SIGINT/SIGTERM | |
-| **TAK Server** | Java (Docker), 本地 Docker 環境 | 接收所有 CoT 訊息，分發給已連線的 TAK 顯示端 | 含資料庫持久化（細部設計決定）|
+| **TAK Server** | Java (Docker), 本地 Docker 環境 | 接收所有 CoT 訊息，分發給已連線的 TAK 顯示端 | |
 | **ATAK** | Android 應用程式（平板/手機）| 戰術圖資顯示，支援指揮端（ATAK 平板）與單兵（ATAK 手機）角色 | TCP SSL 8089 連線，需與 展示主機同 Wi-Fi 網段 |
 
 ---
@@ -256,8 +255,7 @@ sequenceDiagram
 | 日誌 | structlog | ≥ 23.0 | 結構化日誌輸出 |
 | 指管層 | Python CoT Gateway | 自研 | 資料處理與 TAK 整合 |
 | TAK Server | TAK Server | 最新穩定版 | CoT 分發平台 |
-| 資料庫 | 關聯式資料庫（視部署需求選擇）| — | TAK Server 持久化（細部設計決定）|
-| 容器化 | Docker + docker-compose | 24.x | TAK Server & DB 部署 |
+| 容器化 | Docker + docker-compose | 24.x | TAK Server 部署 |
 | 本機平台 | 展示環境主機 | Docker Desktop for Mac | TAK Server 運行環境 |
 | 作業系統 | macOS | Sequoia / Sonoma | 本機 OS（Docker 容器內為 Linux）|
 | 顯示端 | ATAK | 最新版 | Android 戰術顯示（平板/手機，需同 Wi-Fi 網段）|
@@ -299,7 +297,6 @@ flowchart LR
         SC["Sentrycs Simulator\n:7070 HTTP"]
         GW["CoT Gateway\n(EchodyneAdapter + SentrycsAdapter)"]
         TAKSVR["TAK Server（Docker）\n:8087 :8089 :8443 :8446"]
-        PSQL["TAK Server DB\n(Docker)"]
     end
 
     subgraph WIFI["Wi-Fi 區域網路（同一 AP）"]
@@ -314,7 +311,6 @@ flowchart LR
     ES_SIM2 -->|"TCP :9000"| GW
     SC -->|"HTTP :7070"| GW
     GW -->|"TCP SSL :8089"| TAKSVR
-    TAKSVR --- PSQL
     TAKSVR -->|"TCP SSL :8089\n<HOST-LAN-IP>"| AT_C
     TAKSVR -->|"TCP SSL :8089\n<HOST-LAN-IP>"| AT_T
     TAKSVR -->|"TCP SSL :8089\n<HOST-LAN-IP>"| AP
