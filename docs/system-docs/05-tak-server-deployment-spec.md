@@ -301,15 +301,7 @@ cd /opt/tak/certs/files
 # 產生：atak-tablet.p12, atak-phone.p12
 ```
 
-### 5.6 Step 5：建立 Sentrycs Simulator 客戶端憑證
-
-```bash
-./makeCert.sh client sentrycs
-# 密碼：atakatak
-# 產生：sentrycs.p12
-```
-
-### 5.7 憑證複製至 MacBook 主機並分發
+### 5.6 憑證複製至 MacBook 主機並分發
 
 ```bash
 # 從 Container 複製至 MacBook（在 MacBook Terminal 執行）
@@ -321,8 +313,8 @@ ls -la ~/tak-poc/certs/files/*.p12
 # 憑證分發（所有服務都在同一台 MacBook，直接複製）
 cp ~/tak-poc/certs/files/gateway.p12      ~/cot_gateway/certs/
 cp ~/tak-poc/certs/files/truststore.p12   ~/cot_gateway/certs/
-cp ~/tak-poc/certs/files/sentrycs.p12     ~/sentrycs_simulator/certs/
-cp ~/tak-poc/certs/files/truststore.p12   ~/sentrycs_simulator/certs/
+# 注意：Sentrycs Simulator 改走 HTTP JSON API，不再直連 TAK Server
+# 無需 sentrycs.p12
 
 # ATAK 憑證傳送到 Android 裝置（USB / Wi-Fi 傳輸）
 # 將 atak-tablet.p12 / atak-phone.p12 / truststore.p12 傳至 Android

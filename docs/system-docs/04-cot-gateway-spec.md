@@ -5,7 +5,7 @@
 | 欄位 | 內容 |
 |------|------|
 | **文件編號** | 04 |
-| **版本** | v0.2 |
+| **版本** | v0.3 |
 | **日期** | 2026-04-22 |
 | **作者** | 系統架構小組 |
 | **狀態** | 草稿 |
@@ -16,13 +16,13 @@
 
 CoT Gateway 是本系統的指管層核心，負責：
 
-1. **接收** EchoShield 雷達的 TCP JSON 資料流（透過 EchodyneAdapter）
+1. **接收** EchoShield 雷達的 TCP JSON 資料流（透過 EchodyneAdapter）並輪詢 Sentrycs Simulator HTTP :7070（透過 SentrycsAdapter）
 2. **轉換** 為統一的 Track 物件
 3. **關聯** 雷達航跡與 RF 航跡（TrackCorrelator）
 4. **生成** 符合 MIL-STD-2525C 的 CoT XML（CotGenerator）
 5. **推送** CoT XML 至 TAK Server（TakTransmitter）
 
-**不在範圍內**：Sentrycs 的 CoT 直接由 Sentrycs Simulator 推送，不經過 Gateway。
+**不在範圍內**：真實 EchoShield 硬體整合（PoC 使用統一無人機模擬器替代）。
 
 ---
 
@@ -37,8 +37,9 @@ flowchart TD
         GM["GatewayMain\n(asyncio 主迴圈)"]
 
         subgraph ADAPTERS["Adapter 層"]
-            EA["EchodyneAdapter\n(TCP Client → Track 物件)"]
-            SDA["SimulatedDroneAdapter\n(TCP Client → Track 物件)"]
+            EA["EchodyneAdapter\n(TCP Client :9000 → Track)"]
+            SDA["SimulatedDroneAdapter\n(TCP Client :9000 → Track)"]
+            SC_A["SentrycsAdapter\n(HTTP Poll :7070 → Track 物件)"]
         end
 
         subgraph CORE["核心處理層"]
@@ -52,12 +53,14 @@ flowchart TD
     end
 
     ES_SIM["Unified Drone Simulator\n(EchoShield Feed :9000)"]
+    SC_SIM["Sentrycs Simulator\n:7070 HTTP"] -->|HTTP JSON :7070| SC_A
     TAK["TAK Server\n:8089 SSL"]
 
     ES_SIM -->|TCP JSON stream| EA
     ES_SIM -->|TCP JSON stream| SDA
-    EA -->|Track 物件| TC
-    SDA -->|Track 物件| TC
+    SC_A -->|Track 物件（SENTRYCS）| TC
+    EA -->|Track 物件（ECHOSHIELD）| TC
+    SDA -->|Track 物件（ECHOSHIELD）| TC
     TC -->|Track 物件（含 FUSED）| CG
     CG -->|CoT XML| TT
     TT -->|TCP SSL| TAK
@@ -70,7 +73,8 @@ flowchart TD
 
 GatewayMain 使用 asyncio 事件迴圈，各模組以獨立 coroutine 並行運行：
 
-- **EchodyneAdapter coroutine**：持續讀取 TCP JSON 資料流，非同步放入 Queue
+- **EchodyneAdapter coroutine**：持續讀取 EchoShield TCP JSON 資料流，非同步放入 Queue
+- **SentrycsAdapter coroutine**：以 1 Hz 輪詢 Sentrycs Simulator HTTP :7070（GET /detections），解析 JSON，轉換為 Track（source=SENTRYCS），放入同一 Queue
 - **TrackCorrelator TTL task**：每秒執行一次，清除過期航跡
 - **TakTransmitter send loop**：消費 CoT Queue，非同步發送至 TAK Server
 - **Graceful shutdown**：收到 SIGINT/SIGTERM 後優雅關閉所有 coroutine
@@ -128,6 +132,10 @@ class Track:
     correlation_id: Optional[str] = None  # 融合後的關聯 ID
     radar_track_id: Optional[str] = None  # 對應的雷達 track_id
     rf_track_id: Optional[str] = None     # 對應的 RF track_id
+
+    # 操控者位置（來自 Sentrycs）
+    operator_lat: Optional[float] = None   # 操控者估計緯度（WGS84）
+    operator_lon: Optional[float] = None   # 操控者估計經度（WGS84）
 
     # 元資料
     received_at: datetime = field(default_factory=datetime.utcnow)  # Gateway 收到的時間
@@ -294,12 +302,15 @@ gateway:
 
 ---
 
+---
+
 ## 6. TrackCorrelator 規格（最詳細）
 
 ### 6.1 職責
 
-- 維護三個字典：`radar_tracks`、`rf_tracks`、`fused_tracks`
-- 每次收到新的 EchoShield Track 時，嘗試與現有 RF Tracks 關聯
+- 維護三個字典：`radar_tracks`（EchoShield）、`rf_tracks`（Sentrycs，來自 SentrycsAdapter）、`fused_tracks`
+- 統一接收來自 `EchodyneAdapter`/`SimulatedDroneAdapter` 和 `SentrycsAdapter` 的 Track 物件（透過同一 `track_queue`，由 source 欄位區分）
+- 每次收到新的 EchoShield Track 時，嘗試與現有 RF Tracks（source=SENTRYCS）關聯
 - 若關聯成功，建立 FUSED Track（雷達提供位置/速度，RF 提供型號/分類）
 - 每秒執行 TTL 清理，超過 10s 未更新的航跡標記為 LOST
 
@@ -715,6 +726,12 @@ class GatewayMain:
             port=self.config["gateway"]["echoshield"]["port"],
             track_queue=self.track_queue,
         )
+        self.sentrycs_adapter = SentrycsAdapter(
+            host=self.config["gateway"]["sentrycs"]["host"],
+            port=self.config["gateway"]["sentrycs"]["port"],
+            track_queue=self.track_queue,
+            poll_interval_s=self.config["gateway"]["sentrycs"]["poll_interval_s"],
+        )
         self.correlator = TrackCorrelator(
             distance_threshold_m=self.config["gateway"]["correlator"]["distance_threshold_m"],
             time_window_s=self.config["gateway"]["correlator"]["time_window_s"],
@@ -738,6 +755,7 @@ class GatewayMain:
 
         tasks = [
             asyncio.create_task(self.adapter.start(), name="adapter"),
+            asyncio.create_task(self.sentrycs_adapter.start(), name="sentrycs_adapter"),
             asyncio.create_task(self._processing_loop(), name="processing"),
             asyncio.create_task(self._ttl_loop(), name="ttl"),
         ]
@@ -821,7 +839,12 @@ gateway:
     host: "127.0.0.1"
     port: 9000
     reconnect_interval_s: 5
-    use_simulator: true            # true=SimulatedDroneAdapter, false=EchodyneAdapter
+    use_simulator: true
+  sentrycs:
+    host: "localhost"
+    port: 7070
+    reconnect_interval_s: 5
+    enabled: true
 
   correlator:
     distance_threshold_m: 50       # 關聯距離閾值（公尺）
@@ -908,6 +931,7 @@ gateway:
 # requirements.txt
 asyncio             # stdlib（Python 3.11+）
 aiofiles>=23.0      # 非同步檔案 I/O（日誌 rotate 用）
+aiohttp>=3.9        # HTTP polling client for SentrycsAdapter (GET /detections at 1 Hz)
 PyYAML>=6.0         # 設定檔解析
 geopy>=2.3          # Haversine 計算輔助
 structlog>=23.0     # 結構化日誌

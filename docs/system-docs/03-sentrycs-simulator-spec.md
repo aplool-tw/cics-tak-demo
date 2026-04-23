@@ -5,8 +5,8 @@
 | 欄位 | 內容 |
 |------|------|
 | **文件編號** | 03 |
-| **版本** | v0.2 |
-| **日期** | 2026-04-22 |
+| **版本** | v0.3 |
+| **日期** | 2026-04-22（修訂：改為 HTTP JSON Status API :7070，由 CoT Gateway SentrycsAdapter 輪詢）|
 | **作者** | 系統架構小組 |
 | **狀態** | 草稿 |
 
@@ -19,35 +19,38 @@
 Sentrycs C-UAS 是完全被動式 RF 偵測系統，採用製造商通訊協議操縱（CoRF）技術，偵測距離達 8km。在 PoC 階段無法取得真實設備，需以 Python 腳本模擬其行為：
 
 1. **替代真實設備**：模擬 Detected → Mitigating → Neutralized 的完整作戰流程
-2. **驗證直通路徑**：驗證 Sentrycs → TAK Server 直通架構的可行性
+2. **驗證 Gateway 路由**：透過 CoT Gateway 的 SentrycsAdapter 統一融合所有感測器資料
 3. **操控者位置**：模擬 RF 定向追蹤操控者位置的功能
 
-### 1.2 架構差異：Sentrycs 直通 TAK Server
+### 1.2 架構：Sentrycs 透過 CoT Gateway 融合輸出
 
-**重要架構特點**：Sentrycs 模擬器**不經過** CoT Gateway，直接推送 CoT XML 至 TAK Server。
+**重要架構特點**：Sentrycs 模擬器以 **HTTP JSON Status API（Port 7070）** 對外提供偵測數據，由 CoT Gateway 的 SentrycsAdapter 輪詢後，與 EchoShield 雷達資料融合，統一推送至 TAK Server。
 
 ```
 Unified Drone Simulator (:8080 REST API)
          ↑ GET /status/{drone_id}    ↑ POST /command/takeover
          └────── Sentrycs Simulator ─┘
-                       │
-                       │ TCP SSL 8089 (CoT XML)
+                       │ HTTP JSON Status API (:7070)
                        ▼
-                  TAK Server ──▶ ATAK
+               CoT Gateway (SentrycsAdapter)
+                       │ 融合後 CoT XML
+                       ▼
+                  TAK Server ──▶ ATAK Android
 ```
 
-理由：
-- Sentrycs 原生支援 TAK Push（直接輸出 CoT XML）
-- 繞過 Gateway 可降低延遲並保留 Sentrycs 原生的 CoT 格式
-- CoT Gateway 仍負責 EchoShield 雷達資料的處理與融合
+優點：
+- 所有 CoT 生成邏輯集中在 CoT Gateway，架構更清晰
+- Gateway 可同時融合雷達位置（高精度）與 RF 型號/狀態（高識別度）
+- Sentrycs Simulator 職責單純：維護狀態機 + 提供 JSON 查詢介面
 
-### 1.3 與統一模擬器的關係
+### 1.3 與統一模擬器的關係（保持原有設計）
 
-Sentrycs 模擬器不再自己維護無人機位置，而是與統一無人機模擬器（UDS）協作：
+Sentrycs 模擬器仍負責：
+- 向統一無人機模擬器（Port 8080）查詢無人機位置（`GET /status/{drone_id}`）
+- 在 MITIGATING 時呼叫 `POST /command/takeover` 觸發接管
+- 監測 `is_landed` 狀態，轉換為 NEUTRALIZED
 
-- **位置查詢**：定期呼叫 `GET /status/{drone_id}` 取得最新無人機位置，作為 CoT 的 lat/lon 來源
-- **接管指令**：當觸發 MITIGATING 時，呼叫 `POST /command/takeover` 通知統一模擬器改變無人機航線至降落點
-- **落地偵測**：持續輪詢統一模擬器的 `is_landed` 欄位，一旦為 `true` 即推送 Neutralized CoT 至 TAK Server
+差異：過去直接生成 CoT XML 推送 TAK Server，現在提供 HTTP JSON Status API（:7070），由 CoT Gateway 負責後續的 CoT 生成與推送。
 
 ---
 
@@ -57,13 +60,13 @@ Sentrycs 模擬器不再自己維護無人機位置，而是與統一無人機�
 |----|---------|-------|
 | FR-SC-001 | 實作 IDLE → DETECTED → MITIGATING → NEUTRALIZED → IDLE 狀態機 | 必要 |
 | FR-SC-002 | 從 YAML 場景檔載入場景參數（TAK Server 位址、無人機型號、時序等）| 必要 |
-| FR-SC-003 | 依狀態輸出符合 MIL-STD-2525C 的 CoT XML | 必要 |
-| FR-SC-004 | 透過 TCP SSL 8089 直接連線 TAK Server 推送 CoT XML | 必要 |
+| FR-SC-003 | 維護偵測狀態機（IDLE/DETECTED/MITIGATING/NEUTRALIZED），並透過 JSON API 提供當前狀態 | 必要 |
+| FR-SC-004 | 提供 HTTP JSON 狀態 API（aiohttp, Port 7070），供 CoT Gateway SentrycsAdapter 輪詢 | 必要 |
 | FR-SC-005 | 支援 DJI Mavic 3、DJI Matrice 30T、Autel EVO II 三種無人機型號 | 必要 |
 | FR-SC-006 | 模擬操控者位置（無人機位置 offset 200–500m，方位角可設定）| 必要 |
-| FR-SC-007 | 操控者位置以獨立 CoT（type: a-h-G-U-C-I）推送 | 必要 |
-| FR-SC-008 | 狀態變化時立即推送 CoT；穩定狀態下每秒推送一次 | 必要 |
-| FR-SC-009 | 支援 TCP SSL 重連（指數退避，最多 10 次）| 重要 |
+| FR-SC-007 | JSON 輸出包含 operator_lat / operator_lon 欄位（由 CoT Gateway 產生操控者 CoT）| 必要 |
+| FR-SC-008 | 狀態變化時立即輸出 JSON；穩定狀態下每秒輸出一次 | 必要 |
+| FR-SC-009 | TCP Server 支援多 Client 同時連線；Client 斷線不影響其他 Client；Server 在無 Client 時繼續運行 | 必要 |
 | FR-SC-010 | 提供 CLI 介面，支援 --scenario, --verbose 參數 | 必要 |
 | FR-SC-011 | 向統一無人機模擬器 REST API（Port 8080）定期查詢無人機狀態（每 0.5 秒）| 必要 |
 | FR-SC-012 | 當觸發 MITIGATING 時，呼叫 `POST /command/takeover` 發送接管指令給統一模擬器 | 必要 |
@@ -75,12 +78,13 @@ Sentrycs 模擬器不再自己維護無人機位置，而是與統一無人機�
 
 ### 3.1 概覽
 
-Sentrycs Simulator 是一個純 Client 端程式（不開 Server），依場景設定直接推送 CoT XML 至 TAK Server。使用 Python asyncio + ssl 實作 TCP SSL 連線。
+Sentrycs Simulator 是一個同時扮演 **Client（查詢 UDS）** 與 **Server（提供 JSON API）** 的 Python asyncio 程式。
+- **Client 端**：輪詢統一無人機模擬器 REST API（Port 8080）取得無人機位置與狀態；在接管時呼叫 `/command/takeover`
+- **Server 端**：以 aiohttp 提供 JSON 狀態查詢 API（Port 7070），供 CoT Gateway SentrycsAdapter 輪詢取得偵測狀態
 
 ### 3.2 模組結構圖
 
 ```mermaid
-
 flowchart TD
     CLI["CLI 入口\n(argparse)"]
     SL["ScenarioLoader\n(YAML 解析)"]
@@ -88,10 +92,9 @@ flowchart TD
     SM["StateMachine\n(IDLE→DETECTED→MITIGATING→NEUTRALIZED)"]
     DD["DroneDetection\n(偵測狀態物件)"]
     OL["OperatorLocation\n(操控者位置計算)"]
-    CXB["CotXmlBuilder\n(CoT XML 生成)"]
-    TSP["TakSslPusher\n(TCP SSL Client)"]
-    TAK["TAK Server\n(:8089 SSL)"]
-    UDS["Unified Drone Simulator\n(:8080 REST API)"]
+    UDS_C["UnifiedSimulatorClient\n(HTTP Client → UDS :8080)"]
+    API_SVR["SentrycsStatusApiServer\n(aiohttp HTTP Server :7070)"]
+    GW["CoT Gateway\n(SentrycsAdapter Poll)"]
 
     CLI --> SL
     CLI --> SIM
@@ -99,23 +102,23 @@ flowchart TD
     SIM --> SM
     SM --> DD
     DD --> OL
-    DD --> CXB
-    OL --> CXB
-    CXB --> TSP
-    TSP -->|TCP SSL| TAK
-    SIM -->|"GET /status/{id}"| UDS
-    SIM -->|"POST /command/takeover"| UDS
+    SIM --> UDS_C
+    UDS_C -->|"GET /status"| UDS["UDS :8080"]
+    UDS_C -->|"POST /takeover"| UDS
+    DD --> API_SVR
+    API_SVR -->|"JSON Status"| GW
 ```
 
 ### 3.3 主要類別
 
 | 類別 | 職責 |
 |------|------|
-| `SentrycsSimulator` | 主協調器，驅動狀態機，協調 CoT 推送 |
-| `DroneDetection` | 單一偵測目標的完整狀態（位置、型號、狀態、操控者） |
-| `OperatorLocation` | 計算操控者位置（無人機位置 + bearing + distance offset） |
-| `CotXmlBuilder` | 依 DroneDetection 狀態生成正確的 CoT XML |
-| `TakSslPusher` | TCP SSL Client，連接 TAK Server 8089 並推送 CoT XML |
+| `SentrycsSimulator` | 主協調器，驅動狀態機，協調 UDS 輪詢與 JSON API 服務 |
+| `DroneDetection` | 單一偵測目標的完整狀態（位置、型號、偵測狀態、操控者） |
+| `OperatorLocation` | 計算操控者位置（無人機位置 + bearing + distance offset）|
+| `StateMachine` | 管理 IDLE→DETECTED→MITIGATING→NEUTRALIZED 狀態轉移 |
+| `UnifiedSimulatorClient` | HTTP Client，呼叫 UDS REST API 取得位置，發送接管指令 |
+| `SentrycsStatusApiServer` | aiohttp HTTP Server（Port 7070），對 CoT Gateway 提供 JSON 偵測狀態 |
 
 ---
 
@@ -134,7 +137,7 @@ stateDiagram-v2
         每秒推送一次
     end note
 
-    DETECTED --> MITIGATING : 觸發 RF 干擾\n+ 呼叫 POST /command/takeover\n(at mitigating_at_s)
+    DETECTED --> MITIGATING : 觸發 RF 干擾\n呼叫 POST /command/takeover
     note right of MITIGATING
         CoT type: a-h-A-M-F-Q-r
         remarks: "Mitigating"
@@ -167,6 +170,48 @@ stateDiagram-v2
 > - `MITIGATING` → remarks 含 "Mitigating" → 橘色閃爍（TAK plugin 判斷）
 > - `NEUTRALIZED` → remarks 含 "Neutralized" → 藍色
 
+### 4.3 JSON Status API 回傳格式
+
+每個活躍偵測目標（非 IDLE）由 `SentrycsStatusApiServer` 透過 `GET /detections` 提供，CoT Gateway SentrycsAdapter 以 1 Hz 輪詢取得：
+
+```json
+{
+  "uid": "SENTRYCS-DJI-Mavic3-001",
+  "model": "DJI Mavic 3",
+  "detection_status": "DETECTED",
+  "lat": 25.0330000,
+  "lon": 121.5654000,
+  "alt_m": 120.5,
+  "velocity_ms": 15.0,
+  "azimuth_deg": 180.0,
+  "operator_lat": 25.0309929,
+  "operator_lon": 121.5632836,
+  "operator_distance_m": 300.0,
+  "operator_bearing_deg": 225.0,
+  "timestamp": "2026-04-22T08:00:05.000Z",
+  "is_landed": false
+}
+```
+
+**欄位說明**：
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `uid` | string | 偵測目標唯一 ID（`SENTRYCS-{MODEL}-{SEQ}`）|
+| `model` | string | 無人機型號（`DJI Mavic 3` / `DJI Matrice 30T` / `Autel EVO II`）|
+| `detection_status` | enum | `DETECTED` / `MITIGATING` / `NEUTRALIZED` |
+| `lat`, `lon` | float | 無人機位置（從 UDS GET /status 取得，WGS84）|
+| `alt_m` | float | 高度（HAE，公尺）|
+| `velocity_ms` | float | 速度（m/s，從 UDS 取得）|
+| `azimuth_deg` | float | 飛行方位角（度）|
+| `operator_lat`, `operator_lon` | float | 操控者估計位置（WGS84）|
+| `operator_distance_m` | float | 操控者距無人機距離（公尺）|
+| `operator_bearing_deg` | float | 操控者相對無人機方位角（度）|
+| `timestamp` | string | 感測時間（ISO 8601 UTC）|
+| `is_landed` | boolean | 是否已落地（UDS is_landed=true 時設為 true）|
+
+> **IDLE 狀態**：不包含在 `/detections` 回傳列表中。
+
 ---
 
 ## 5. 支援無人機型號
@@ -189,7 +234,9 @@ stateDiagram-v2
 
 ---
 
-## 6. CoT XML 輸出格式（完整範例）
+## 6. CoT XML 輸出格式（由 CoT Gateway CotGenerator 產生）
+
+> **架構說明**：Sentrycs Simulator 不直接產生 CoT XML。以下格式由 CoT Gateway 的 CotGenerator 根據 SentrycsAdapter 轉換的 Track 物件產生，供開發人員理解 CotGenerator 的輸出規格。
 
 ### 6.1 DETECTED 狀態
 
@@ -343,64 +390,22 @@ def calculate_operator_position(
 
 ---
 
-## 8. TAK SSL Push 機制
+## 8. Sentrycs JSON Status API（Port 7070）
 
 ### 8.1 連線規格
 
-- **Protocol**：TCP + TLS 1.2
-- **Port**：8089
-- **憑證格式**：PKCS#12（.p12）
-- **Truststore**：包含 TAK-POC-CA 根憑證
+| 項目 | 規格 |
+|------|------|
+| 框架 | aiohttp（Python 非同步 HTTP Server）|
+| Port | 7070（可設定）|
+| 協定 | HTTP（本機明文，不需 SSL）|
+| 訊息格式 | JSON |
+| 輪詢方 | CoT Gateway SentrycsAdapter |
+| 輪詢頻率 | 1 Hz（每秒查詢一次）|
 
-### 8.2 憑證配置
+### 8.2 回傳格式（見 Section 4.3 完整格式）
 
-```python
-import ssl
-
-def create_ssl_context(cert_file: str, cert_password: str) -> ssl.SSLContext:
-    """建立 TAK Server SSL 連線 Context"""
-    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    ctx.load_cert_chain(certfile=cert_file, password=cert_password)
-    ctx.load_verify_locations(cafile="certs/truststore.pem")
-    ctx.verify_mode = ssl.CERT_REQUIRED
-    ctx.check_hostname = False  # TAK Server 使用自簽憑證
-    return ctx
-```
-
-### 8.3 重連機制（指數退避）
-
-```python
-async def connect_with_retry(self) -> None:
-    """TCP SSL 連線含指數退避重試"""
-    backoff = 1.0
-    max_backoff = 60.0
-    max_retries = 10
-    attempt = 0
-
-    while attempt < max_retries:
-        try:
-            self.reader, self.writer = await asyncio.open_connection(
-                self.host, self.port, ssl=self.ssl_context
-            )
-            logger.info(f"Connected to TAK Server {self.host}:{self.port}")
-            return
-        except (ConnectionRefusedError, ssl.SSLError, OSError) as e:
-            attempt += 1
-            logger.warning(f"Connection failed (attempt {attempt}): {e}")
-            await asyncio.sleep(backoff)
-            backoff = min(backoff * 2, max_backoff)
-
-    raise ConnectionError(f"Failed to connect after {max_retries} attempts")
-```
-
-### 8.4 CoT Push 頻率
-
-| 情境 | Push 頻率 |
-|------|---------|
-| 狀態穩定（DETECTED / MITIGATING / NEUTRALIZED）| 每 1 秒推送一次 |
-| 狀態變化（IDLE→DETECTED, DETECTED→MITIGATING 等）| 立即推送 |
-| IDLE 狀態 | 不推送 |
-| 操控者位置（有效狀態期間）| 每 5 秒推送一次 |
+Sentrycs Simulator 在 DETECTED / MITIGATING / NEUTRALIZED 狀態時透過 `GET /detections` 回傳；IDLE 狀態不包含在回傳列表中。完整實作見第 8.4 節。
 
 ---
 
@@ -413,17 +418,13 @@ scenario:
   name: "dji_mavic3_interception"
   description: "DJI Mavic 3 入侵，完整 Detected → Mitigating → Neutralized 流程"
 
-  tak_server:
-    host: "localhost"             # MacBook 本機 TAK Server（Docker）
-    port: 8089
-    cert_file: "certs/sentrycs.p12"
-    cert_password: "atakatak"
-    reconnect_max_retries: 10
-
+  sentrycs_api:
+      host: "0.0.0.0"    # 本機所有介面
+      port: 7070          # CoT Gateway SentrycsAdapter 輪詢此 Port
   unified_drone_simulator:
-    host: "localhost"
-    api_port: 8080
-    poll_interval_s: 0.5
+      host: "localhost"
+      api_port: 8080
+      poll_interval_s: 0.5
 
   drones:
     - model: "DJI Mavic 3"
@@ -483,6 +484,7 @@ scenario:
 ```bash
 python sentrycs_sim.py \
   --scenario scenarios/dji_mavic3.yaml \
+  --api-port 7070 \
   --verbose
 ```
 
@@ -491,17 +493,14 @@ python sentrycs_sim.py \
 | 參數 | 型別 | 預設值 | 說明 |
 |------|------|-------|------|
 | `--scenario` | string | （必填）| YAML 場景檔路徑 |
+| `--api-port` | int | `7070` | JSON Status API HTTP Server 監聽 Port |
 | `--verbose` | flag | `False` | 啟用詳細日誌輸出 |
-| `--dry-run` | flag | `False` | 執行場景但不實際連線 TAK Server（除錯用）|
 
 ### 10.3 執行範例
 
 ```bash
 # 執行 DJI Mavic 3 攔截場景
-python sentrycs_sim.py --scenario scenarios/dji_mavic3.yaml --verbose
-
-# Dry run（測試 CoT XML 生成，不連線 TAK Server）
-python sentrycs_sim.py --scenario scenarios/dji_mavic3.yaml --dry-run --verbose
+python sentrycs_sim.py --scenario scenarios/dji_mavic3.yaml --api-port 7070 --verbose
 ```
 
 ---
@@ -561,10 +560,9 @@ class SentrycsSimulator:
         """
         執行模擬場景（主迴圈）
         1. 載入場景
-        2. 建立 TCP SSL 連線至 TAK Server
+        2. 啟動 JSON Status API HTTP Server（Port 7070）
         3. 依時序驅動狀態機
-        4. 推送 CoT XML
-        5. 場景結束後優雅關閉
+        4. 場景結束後優雅關閉
         """
         ...
 
@@ -678,126 +676,55 @@ class DroneDetection:
         ...
 ```
 
-### 11.3 `CotXmlBuilder`
+### 11.3 `SentrycsStatusApiServer`
+
+`SentrycsStatusApiServer` 是 aiohttp HTTP Server，對外提供 JSON 偵測狀態 API。由 `SentrycsSimulator.run()` 以 `asyncio.gather` 並行啟動：
 
 ```python
-from datetime import datetime, timedelta
+from aiohttp import web
 
-class CotXmlBuilder:
-    """CoT XML 生成器"""
+class SentrycsStatusApiServer:
+    """aiohttp HTTP Server，對外提供 JSON 偵測狀態 API（Port 7070）"""
 
-    @staticmethod
-    def build_drone_cot(detection: DroneDetection) -> str:
-        """
-        生成無人機 CoT XML
-        :param detection: DroneDetection 物件
-        :return: CoT XML 字串
-        """
-        now = datetime.utcnow()
-        stale = now + timedelta(seconds=detection.get_stale_offset())
-        time_str = now.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-        stale_str = stale.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-
-        return f"""<?xml version="1.0" encoding="UTF-8"?>
-<event version="2.0"
-       uid="{detection.uid}"
-       type="{detection.get_cot_type()}"
-       time="{time_str}"
-       start="{time_str}"
-       stale="{stale_str}"
-       how="m-g">
-  <point lat="{detection.lat:.7f}" lon="{detection.lon:.7f}" hae="{detection.alt_m:.1f}" ce="25.0" le="10.0"/>
-  <detail>
-    <contact callsign="{detection.callsign}"/>
-    <remarks>{detection.get_remarks()}</remarks>
-    <sensor model="{detection.model}" status="{detection.status.value}" source="Sentrycs"/>
-    <operator lat="{detection.operator_lat:.7f}" lon="{detection.operator_lon:.7f}" distance_m="{detection.operator_distance_m:.0f}" bearing_deg="{detection.operator_bearing_deg:.1f}"/>
-  </detail>
-</event>"""
-
-    @staticmethod
-    def build_operator_cot(detection: DroneDetection) -> str:
-        """
-        生成操控者位置 CoT XML
-        :param detection: DroneDetection 物件
-        :return: CoT XML 字串
-        """
-        now = datetime.utcnow()
-        stale = now + timedelta(seconds=15)
-        time_str = now.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-        stale_str = stale.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-        operator_uid = f"SENTRYCS-OPERATOR-{detection.uid.split('SENTRYCS-')[1]}"
-
-        return f"""<?xml version="1.0" encoding="UTF-8"?>
-<event version="2.0"
-       uid="{operator_uid}"
-       type="a-h-G-U-C-I"
-       time="{time_str}"
-       start="{time_str}"
-       stale="{stale_str}"
-       how="m-g">
-  <point lat="{detection.operator_lat:.7f}" lon="{detection.operator_lon:.7f}" hae="0.0" ce="50.0" le="9999999.0"/>
-  <detail>
-    <contact callsign="OPERATOR-{detection.callsign}"/>
-    <remarks>Sentrycs: Operator Location | Drone: {detection.callsign} | Distance: {detection.operator_distance_m:.0f}m</remarks>
-  </detail>
-</event>"""
-```
-
-### 11.4 `TakSslPusher`
-
-```python
-import asyncio
-import ssl
-from typing import Optional
-
-class TakSslPusher:
-    """TAK Server TCP SSL Client"""
-
-    def __init__(
-        self,
-        host: str,
-        port: int,
-        cert_file: str,
-        cert_password: str,
-        max_retries: int = 10
-    ) -> None:
+    def __init__(self, simulator: "SentrycsSimulator", host: str = "0.0.0.0", port: int = 7070):
+        self.simulator = simulator
         self.host = host
         self.port = port
-        self.cert_file = cert_file
-        self.cert_password = cert_password
-        self.max_retries = max_retries
-        self._reader: Optional[asyncio.StreamReader] = None
-        self._writer: Optional[asyncio.StreamWriter] = None
-        self._ssl_context: Optional[ssl.SSLContext] = None
+        self._app = web.Application()
+        self._app.router.add_get("/detections", self._handle_detections)
+        self._app.router.add_get("/detection/{uid}", self._handle_detection_by_uid)
 
-    async def connect(self) -> None:
-        """建立 TCP SSL 連線（含指數退避重試）"""
-        ...
+    async def _handle_detections(self, request: web.Request) -> web.Response:
+        """GET /detections — 回傳所有活躍偵測目標（非 IDLE）"""
+        active = [d.to_api_dict() for d in self.simulator.detections.values()
+                  if d.status.value != "IDLE"]
+        return web.json_response(active)
 
-    async def push_cot(self, cot_xml: str) -> None:
-        """
-        推送 CoT XML 至 TAK Server
-        :param cot_xml: CoT XML 字串
-        :raises ConnectionError: 連線已斷線且重連失敗
-        """
-        if self._writer is None or self._writer.is_closing():
-            await self.connect()
-        data = (cot_xml + "\n").encode("utf-8")
-        self._writer.write(data)
-        await self._writer.drain()
+    async def _handle_detection_by_uid(self, request: web.Request) -> web.Response:
+        """GET /detection/{uid} — 回傳單一偵測目標"""
+        uid = request.match_info["uid"]
+        detection = self.simulator.detections.get(uid)
+        if detection is None or detection.status.value == "IDLE":
+            return web.json_response({"error": "not_found"}, status=404)
+        return web.json_response(detection.to_api_dict())
 
-    async def disconnect(self) -> None:
-        """優雅關閉連線"""
-        if self._writer:
-            self._writer.close()
-            await self._writer.wait_closed()
-            self._writer = None
-            self._reader = None
+    async def start(self) -> None:
+        """啟動 HTTP Server"""
+        runner = web.AppRunner(self._app)
+        await runner.setup()
+        site = web.TCPSite(runner, self.host, self.port)
+        await site.start()
+        await asyncio.Event().wait()  # 保持運行直到取消
+```
 
-    def _create_ssl_context(self) -> ssl.SSLContext:
-        """建立 SSL Context（PKCS#12 憑證）"""
-        ...
+```python
+async def run(self) -> None:
+    api_server = SentrycsStatusApiServer(simulator=self, host="0.0.0.0", port=self.api_port)
+    await asyncio.gather(
+        api_server.start(),
+        self._poll_uds_loop(),
+        self._run_scenario(),
+    )
 ```
 
 ---
@@ -807,13 +734,13 @@ class TakSslPusher:
 | ID | 測試案例 | 測試方法 | 預期結果 |
 |----|---------|---------|---------|
 | TR-SC-001 | 狀態機轉移順序 | 模擬 `detected_at_s=0, mitigating_at_s=5, neutralized_at_s=10`，讀取狀態序列 | IDLE→DETECTED→MITIGATING→NEUTRALIZED→IDLE |
-| TR-SC-002 | CoT XML DETECTED 格式 | 呼叫 `CotXmlBuilder.build_drone_cot`，狀態 DETECTED | XML 有效，type=a-h-A-M-F-Q-r，remarks 含 "Detected" |
-| TR-SC-003 | CoT XML MITIGATING 格式 | 同上，狀態 MITIGATING | remarks 含 "Mitigating" |
-| TR-SC-004 | CoT XML NEUTRALIZED 格式 | 同上，狀態 NEUTRALIZED | remarks 含 "Neutralized"，stale 為 +30s |
-| TR-SC-005 | 操控者 CoT XML 格式 | 呼叫 `CotXmlBuilder.build_operator_cot` | type=a-h-G-U-C-I，ce=50.0，le=9999999.0 |
+| TR-SC-002 | JSON API DETECTED 格式 | 呼叫 `GET /detections`，狀態 DETECTED | JSON 有效，detection_status="DETECTED"，含 uid、lat、lon、operator_lat |
+| TR-SC-003 | JSON API MITIGATING 格式 | 同上，狀態 MITIGATING | detection_status="MITIGATING"，is_landed=false |
+| TR-SC-004 | JSON API NEUTRALIZED 格式 | 同上，狀態 NEUTRALIZED | detection_status="NEUTRALIZED"，is_landed=true |
+| TR-SC-005 | IDLE 狀態不出現在 /detections | 狀態為 IDLE，呼叫 `GET /detections` | 回傳空陣列 `[]` |
 | TR-SC-006 | 操控者位置計算 | 無人機 (25.0330, 121.5654)，bearing=225, dist=300m | 操控者位置在西南方約 300m 處（誤差 < 1m）|
-| TR-SC-007 | stale time 計算 | 生成 CoT，比較 stale 與 time 差值 | 差值為 15s（DETECTED）或 30s（NEUTRALIZED）|
-| TR-SC-008 | TCP SSL 重連機制 | Mock 連線失敗 3 次後成功，驗證指數退避 | 第 1 次退避 1s，第 2 次 2s，第 3 次 4s |
+| TR-SC-007 | GET /detection/{uid} 查詢單一目標 | 指定有效 uid | 回傳對應 detection JSON，HTTP 200 |
+| TR-SC-008 | UDS Client HTTP 重連機制 | Mock UDS 連線失敗 3 次後成功，驗證重試邏輯 | 第 1 次退避 1s，第 2 次 2s，第 3 次 4s |
 
 ---
 
@@ -823,7 +750,7 @@ class TakSslPusher:
 # requirements.txt
 asyncio             # stdlib（Python 3.11+）
 PyYAML>=6.0         # YAML 場景設定檔解析
-aiohttp>=3.9        # 呼叫統一模擬器 REST API（UnifiedSimulatorClient）
+aiohttp>=3.9        # REST API Client（UnifiedSimulatorClient）
 geopy>=2.3          # WGS84 座標計算（操控者位置偏移）
 pytest>=7.0         # 單元測試框架
 pytest-asyncio>=0.21 # asyncio 測試支援
@@ -839,17 +766,14 @@ sentrycs_simulator/
 │   ├── sentrycs_simulator.py    # SentrycsSimulator
 │   ├── drone_detection.py       # DroneDetection, DetectionStatus
 │   ├── operator_location.py     # calculate_operator_position
-│   ├── cot_xml_builder.py       # CotXmlBuilder
-│   └── tak_ssl_pusher.py        # TakSslPusher
+│   ├── unified_simulator_client.py  # UnifiedSimulatorClient (HTTP → UDS :8080)
+│   └── status_api_server.py     # SentrycsStatusApiServer (aiohttp :7070)
 ├── scenarios/
 │   ├── dji_mavic3.yaml
 │   └── multi_drone.yaml
-├── certs/
-│   ├── sentrycs.p12             # TAK Server 客戶端憑證
-│   └── truststore.pem           # TAK-POC-CA 根憑證
 ├── tests/
 │   ├── test_state_machine.py
-│   ├── test_cot_builder.py
-│   └── test_tak_pusher.py
+│   ├── test_status_api.py
+│   └── test_operator_location.py
 └── requirements.txt
 ```

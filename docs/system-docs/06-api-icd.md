@@ -5,7 +5,7 @@
 | 欄位 | 內容 |
 |------|------|
 | **文件編號** | 06 |
-| **版本** | v0.3 |
+| **版本** | v0.4 |
 | **日期** | 2026-04-22（修訂：部署環境更新為 MacBook Pro 本機，移除 WinTAK）|
 | **作者** | 系統架構小組 |
 | **狀態** | 草稿 |
@@ -19,9 +19,10 @@
 | 介面 ID | 名稱 | 來源 | 目的地 | 協定 | 格式 | Port |
 |---------|------|------|--------|------|------|------|
 | ICD-001 | EchoShield TCP JSON API | EchoShield Simulator | EchodyneAdapter（CoT Gateway）| TCP | JSON（換行分隔）| 9000 |
-| ICD-002 | Sentrycs TAK Push | Sentrycs Simulator | TAK Server（直通）| TCP SSL | CoT XML | 8089 |
+| ICD-002 | Sentrycs JSON Status API | Sentrycs Simulator | SentrycsAdapter（CoT Gateway）| HTTP | JSON | 7070 |
 | ICD-003 | CoT Gateway → TAK Server | TakTransmitter（CoT Gateway）| TAK Server | TCP SSL | CoT XML | 8089 |
 | ICD-004 | EchodyneAdapter 內部介面 | EchodyneAdapter | TrackCorrelator | Python In-process | Track dataclass | — |
+| ICD-005 | SentrycsAdapter 內部介面 | SentrycsAdapter | TrackCorrelator | Python In-process | Track dataclass | — |
 
 ---
 
@@ -184,167 +185,69 @@
 
 ---
 
-## 3. ICD-002：Sentrycs TAK Push CoT XML
+## 3. ICD-002：Sentrycs JSON Status API（HTTP Port 7070）
 
 ### 3.1 連線規格
 
 | 項目 | 規格 |
 |------|------|
-| 協定 | TCP + TLS 1.2 |
-| 角色 | Sentrycs Simulator 為 Client，TAK Server（MacBook Docker）為 Server |
-| Server Port | 8089 |
-| Server 位址 | `localhost`（本機）或 `<MacBook-LAN-IP>`（Android 裝置用）|
-| 憑證 | 客戶端憑證（PKCS#12，sentrycs.p12）|
-| Truststore | 包含 TAK-POC-CA 根憑證 |
-| 訊息分隔符 | 換行符（`\n`）|
-| 方向 | Client → Server（Sentrycs 推送 CoT）|
+| 協定 | TCP（明文，無 SSL）|
+| 角色 | Sentrycs Simulator 為 HTTP Server（:7070），SentrycsAdapter 為 HTTP Client（輪詢）|
+| Port | 7070 |
+| Server 位址 | `127.0.0.1`（本機，不需跨網段）|
+| 加密 | 無（本機通訊，不需 SSL）|
+| 訊息分隔符 | 換行符（`\n`, 0x0A）|
+| 方向 | Server → Client（Sentrycs 推送 JSON，SentrycsAdapter 接收）|
 | Push 頻率 | 穩定狀態：1 Hz，狀態變化時：立即推送 |
+| IDLE 狀態 | 不推送（無輸出）|
 
-### 3.2 憑證要求
+### 3.2 JSON 完整 Schema（Draft-07）
 
-| 憑證 | 格式 | 用途 | 來源 |
-|------|------|------|------|
-| `sentrycs.p12` | PKCS#12 | Sentrycs Simulator 客戶端身份 | TAK Server makeCert.sh |
-| `truststore.p12` / `truststore.pem` | PKCS#12 / PEM | 驗證 TAK Server 伺服器憑證 | TAK Server makeRootCa.sh |
-
-### 3.3 CoT XML Schema（關鍵欄位）
-
-```xml
-<!-- event 元素必填屬性 -->
-<event
-  version="2.0"                    <!-- CoT 協定版本，固定 "2.0" -->
-  uid="{唯一識別碼}"                <!-- 必填，全域唯一，詳見 uid 命名規則 -->
-  type="{CoT type}"                <!-- 必填，MIL-STD-2525C -->
-  time="{ISO8601 UTC}"            <!-- 必填，訊息產生時間 -->
-  start="{ISO8601 UTC}"           <!-- 必填，等於 time -->
-  stale="{ISO8601 UTC}"           <!-- 必填，訊息失效時間（time + 15s 或 30s）-->
-  how="m-g">                      <!-- 必填，固定 "m-g"（machine-generated）-->
-
-  <!-- point 元素（位置）-->
-  <point
-    lat="{float}"                  <!-- WGS84 緯度，7 位小數 -->
-    lon="{float}"                  <!-- WGS84 經度，7 位小數 -->
-    hae="{float}"                  <!-- 高度（公尺，HAE）-->
-    ce="{float}"                   <!-- 水平誤差圓（公尺）-->
-    le="{float}"/>                 <!-- 垂直誤差（公尺）-->
-
-  <!-- detail 元素（詳細資訊）-->
-  <detail>
-    <contact callsign="{string}"/> <!-- 顯示名稱 -->
-    <remarks>{string}</remarks>    <!-- 狀態說明（決定 TAK 圖標顏色變化）-->
-    <sensor model="{string}"       <!-- 無人機型號 -->
-            status="{string}"      <!-- Detected/Mitigating/Neutralized -->
-            source="Sentrycs"/>    <!-- 感測器來源 -->
-    <operator                      <!-- 操控者位置（僅無人機 CoT 含此元素）-->
-      lat="{float}"
-      lon="{float}"
-      distance_m="{float}"
-      bearing_deg="{float}"/>
-  </detail>
-</event>
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SentrycsDetection",
+  "description": "Sentrycs Simulator 輸出的偵測資料（每筆換行分隔）",
+  "type": "object",
+  "required": ["drone_id", "model", "lat", "lon", "alt_m", "status", "operator_lat", "operator_lon", "timestamp"],
+  "properties": {
+    "drone_id": {
+      "type": "string",
+      "description": "對應 UDS 的 drone_id（如 TRK-001）",
+      "example": "TRK-001"
+    },
+    "model": {
+      "type": "string",
+      "description": "無人機型號",
+      "enum": ["DJI Mavic 3", "DJI Matrice 30T", "Autel EVO II"]
+    },
+    "lat": {"type": "number", "minimum": -90, "maximum": 90},
+    "lon": {"type": "number", "minimum": -180, "maximum": 180},
+    "alt_m": {"type": "number", "minimum": 0, "maximum": 5000, "description": "高度（公尺，HAE）"},
+    "velocity_ms": {"type": "number", "minimum": 0, "maximum": 150},
+    "azimuth_deg": {"type": "number", "minimum": 0, "maximum": 360},
+    "status": {
+      "type": "string",
+      "enum": ["DETECTED", "MITIGATING", "NEUTRALIZED"],
+      "description": "Sentrycs 偵測狀態（IDLE 狀態不輸出）"
+    },
+    "operator_lat": {"type": "number", "minimum": -90, "maximum": 90},
+    "operator_lon": {"type": "number", "minimum": -180, "maximum": 180},
+    "operator_distance_m": {"type": "number", "description": "操控者距無人機距離（公尺）"},
+    "operator_bearing_deg": {"type": "number", "minimum": 0, "maximum": 360},
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "偵測時間（ISO 8601 UTC）"
+    }
+  },
+  "additionalProperties": false
+}
 ```
 
-### 3.4 DETECTED 狀態 CoT 完整範例
+### 3.3 對應 CoT XML（由 CoT Gateway CotGenerator 產生）
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<event version="2.0"
-       uid="SENTRYCS-DJI-Mavic3-001"
-       type="a-h-A-M-F-Q-r"
-       time="2025-07-10T08:00:05.000Z"
-       start="2025-07-10T08:00:05.000Z"
-       stale="2025-07-10T08:00:20.000Z"
-       how="m-g">
-  <point lat="25.0330000" lon="121.5654000" hae="120.5" ce="25.0" le="10.0"/>
-  <detail>
-    <contact callsign="DJI-Mavic3-001"/>
-    <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/Air_Enemy.png"/>
-    <remarks>Sentrycs: Detected | Model: DJI Mavic 3 | Speed: 15.0m/s</remarks>
-    <sensor model="DJI Mavic 3" status="Detected" source="Sentrycs"/>
-    <operator lat="25.0309929" lon="121.5632836" distance_m="300" bearing_deg="225"/>
-  </detail>
-</event>
-```
-
-### 3.5 MITIGATING 狀態 CoT 完整範例
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<event version="2.0"
-       uid="SENTRYCS-DJI-Mavic3-001"
-       type="a-h-A-M-F-Q-r"
-       time="2025-07-10T08:00:20.000Z"
-       start="2025-07-10T08:00:20.000Z"
-       stale="2025-07-10T08:00:35.000Z"
-       how="m-g">
-  <point lat="25.0312753" lon="121.5653945" hae="115.2" ce="25.0" le="10.0"/>
-  <detail>
-    <contact callsign="DJI-Mavic3-001"/>
-    <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/Air_Enemy.png"/>
-    <remarks>Sentrycs: Mitigating | Model: DJI Mavic 3 | RF Jamming Active</remarks>
-    <sensor model="DJI Mavic 3" status="Mitigating" source="Sentrycs"/>
-    <operator lat="25.0309929" lon="121.5632836" distance_m="300" bearing_deg="225"/>
-  </detail>
-</event>
-```
-
-### 3.6 NEUTRALIZED 狀態 CoT 完整範例
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<event version="2.0"
-       uid="SENTRYCS-DJI-Mavic3-001"
-       type="a-h-A-M-F-Q-r"
-       time="2025-07-10T08:00:35.000Z"
-       start="2025-07-10T08:00:35.000Z"
-       stale="2025-07-10T08:01:05.000Z"
-       how="m-g">
-  <point lat="25.0295506" lon="121.5653890" hae="110.8" ce="25.0" le="10.0"/>
-  <detail>
-    <contact callsign="DJI-Mavic3-001"/>
-    <usericon iconsetpath="34ae1613-9645-4222-a9d2-e5f243dea2865/Military/Air_Enemy.png"/>
-    <remarks>Sentrycs: Neutralized | Model: DJI Mavic 3 | RF Control Seized</remarks>
-    <sensor model="DJI Mavic 3" status="Neutralized" source="Sentrycs"/>
-    <operator lat="25.0309929" lon="121.5632836" distance_m="300" bearing_deg="225"/>
-  </detail>
-</event>
-```
-
-### 3.7 操控者位置 CoT 完整範例
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<event version="2.0"
-       uid="SENTRYCS-OPERATOR-DJI-Mavic3-001"
-       type="a-h-G-U-C-I"
-       time="2025-07-10T08:00:05.000Z"
-       start="2025-07-10T08:00:05.000Z"
-       stale="2025-07-10T08:00:20.000Z"
-       how="m-g">
-  <point lat="25.0309929" lon="121.5632836" hae="0.0" ce="50.0" le="9999999.0"/>
-  <detail>
-    <contact callsign="OPERATOR-DJI-Mavic3-001"/>
-    <remarks>Sentrycs: Operator Location | Drone: DJI-Mavic3-001 | Distance: 300m | Bearing: 225°</remarks>
-  </detail>
-</event>
-```
-
-### 3.8 stale time 計算規則
-
-```
-DETECTED 或 MITIGATING：stale = time + 15 秒
-NEUTRALIZED：             stale = time + 30 秒
-操控者位置：               stale = time + 15 秒
-```
-
-### 3.9 uid 命名規則
-
-| 目標類型 | 命名格式 | 範例 |
-|---------|---------|------|
-| 無人機（DJI Mavic 3）| `SENTRYCS-DJI-Mavic3-{SEQ:03d}` | `SENTRYCS-DJI-Mavic3-001` |
-| 無人機（DJI Matrice 30T）| `SENTRYCS-DJI-Matrice30T-{SEQ:03d}` | `SENTRYCS-DJI-Matrice30T-001` |
-| 無人機（Autel EVO II）| `SENTRYCS-Autel-EVOII-{SEQ:03d}` | `SENTRYCS-Autel-EVOII-001` |
-| 操控者 | `SENTRYCS-OPERATOR-{無人機uid的SENTRYCS-後半部}` | `SENTRYCS-OPERATOR-DJI-Mavic3-001` |
+> **架構說明**：以下 CoT XML 由 CoT Gateway 的 CotGenerator 根據 SentrycsAdapter 轉換後的 Track 物件產生，不再由 Sentrycs Simulator 直接輸出。Sentrycs Simulator 僅輸出 JSON（見 3.2）。
 
 ---
 
@@ -352,7 +255,7 @@ NEUTRALIZED：             stale = time + 30 秒
 
 ### 4.1 連線規格
 
-與 ICD-002 相同（TCP SSL Port 8089，MacBook 本機 localhost），差別在於使用 `gateway.p12` 客戶端憑證。
+與 ICD-003 使用相同的 TCP SSL Port 8089，差別在於使用 `gateway.p12` 客戶端憑證。
 
 ### 4.2 EchoShield 偵測（未關聯）CoT 範例
 
@@ -418,10 +321,8 @@ NEUTRALIZED：             stale = time + 30 秒
 | FUSED，Sentrycs DETECTED | `a-h-A-M-F-Q-r` | 紅色 | 融合且 RF 確認威脅 |
 | FUSED，Sentrycs MITIGATING | `a-h-A-M-F-Q-r` | 橘色閃爍 | remarks 含 "Mitigating" |
 | FUSED，Sentrycs NEUTRALIZED | `a-h-A-M-F-Q-r` | 藍色 | remarks 含 "Neutralized" |
-| Sentrycs 直通 DETECTED | `a-h-A-M-F-Q-r` | 紅色 | ICD-002 路徑 |
-| Sentrycs 直通 MITIGATING | `a-h-A-M-F-Q-r` | 橘色閃爍 | ICD-002 路徑 |
-| Sentrycs 直通 NEUTRALIZED | `a-h-A-M-F-Q-r` | 藍色 | ICD-002 路徑 |
-| 操控者位置（Sentrycs）| `a-h-G-U-C-I` | 橘色 | ICD-002 路徑 |
+
+> **v0.4 架構說明**：所有 CoT type 的判斷邏輯現在均在 CoT Gateway 的 CotGenerator 執行；Sentrycs Simulator 僅提供 `detection_status` 字串，Gateway 負責映射至正確的 CoT type。
 
 ---
 
@@ -515,6 +416,16 @@ def track_from_echoshield_json(data: dict) -> Track:
 ---
 
 ## 6. 端對端訊息流範例
+
+### 6.0 Sentrycs 路徑端對端說明
+
+Sentrycs 數據現在透過 CoT Gateway 融合：
+
+1. Sentrycs Simulator → HTTP JSON Status API（HTTP :7070，aiohttp Server）
+2. SentrycsAdapter → 接收 → 轉換為 `Track(source=SENTRYCS, drone_model="DJI Mavic 3", detection_status="DETECTED")`
+3. TrackCorrelator → 與 EchoShield Track 距離≤50m 時融合 → `Track(source=FUSED)`
+4. CotGenerator → `a-h-A-M-F-Q-r`（紅色）/ `a-u-A-M-F-Q-r`（灰色，純雷達）
+5. TakTransmitter → TCP SSL :8089 → TAK Server → ATAK
 
 ### 6.1 完整轉換範例：EchoShield JSON → Track → CoT XML
 
