@@ -4,7 +4,16 @@
 
 ---
 
-## [v0.5] - 2026-04-23
+## [v0.6] - 2026-04-23
+
+### 修改
+- **移除特定硬體型號指定**：將所有 "MacBook Pro" / "MacBook" 字眼替換為泛稱「展示環境主機」、「展示主機」、「本地 Docker 環境」等，PoC 不寫死特定機器型號
+- **移除 PostgreSQL 強調**：資料庫選型屬細部設計，不在架構規格中指定；Docker Compose 範例的 postgres 服務改為注解，CoreConfig.xml 的 DB 連線改為通用範本
+- 影響文件：`00-index.md`（v0.6）、`01-system-architecture.md`（v0.7）、`02-unified-drone-simulator-spec.md`（v0.3）、`06-cot-gateway-spec.md`（v0.5）、`07-tak-server-deployment-spec.md`（v0.4）、`08-api-icd.md`（v0.5）
+
+---
+
+
 
 ### 新增
 - `04-echoshield-simulator-spec.md`：EchoShield Simulator 完整開發規格（新增獨立文件），涵蓋：Map Simulator 查詢、雷達誤差模擬、方位角/仰角計算、EchoShield TCP JSON Feed 輸出（:9000）
@@ -81,7 +90,7 @@
 基於 PoC 技術規格書建立 7 份初版文件。
 
 #### 核心設計決策
-- **部署環境**：所有服務部署於 MacBook Pro 本機（Docker Desktop for Mac）；ATAK Android 裝置透過同一 Wi-Fi 網段連線（無 AWS EC2）
+- **部署環境**：所有服務部署於 展示環境主機（Docker Desktop for Mac）；ATAK Android 裝置透過同一 Wi-Fi 網段連線（無 AWS EC2）
 - **TAK 顯示端**：全為 ATAK Android（平板/手機）；無 WinTAK
 - **無人機模擬**：單一 Unified Drone Simulator（Python asyncio + aiohttp）負責飛行引擎與接管閉環
 - **接管閉環**：`POST /command/takeover` → 改變航線 → 飛往降落點 → 高度≤2m → LANDED → Sentrycs 推送 Neutralized
@@ -93,5 +102,5 @@
 - `02-unified-drone-simulator-spec.md`（原 `02-drone-simulator-spec.md`）：統一無人機模擬器規格（v0.1）
 - `05-sentrycs-simulator-spec.md`（原 `03`）：Sentrycs C-UAS 模擬器規格（v0.1）
 - `06-cot-gateway-spec.md`（原 `04`）：CoT Gateway 中介軟體規格（v0.1）
-- `07-tak-server-deployment-spec.md`（原 `05`）：TAK Server MacBook Docker 部署規格（v0.1）
+- `07-tak-server-deployment-spec.md`（原 `05`）：TAK Server 展示主機 Docker 部署規格（v0.1）
 - `08-api-icd.md`（原 `06`）：介面控制文件 ICD（v0.1）

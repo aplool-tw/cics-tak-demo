@@ -5,7 +5,7 @@
 | 欄位 | 內容 |
 |------|------|
 | **文件編號** | 07 |
-| **版本** | v0.3 |
+| **版本** | v0.4 |
 | **日期** | 2026-04-23 |
 | **作者** | 系統架構小組 |
 | **狀態** | 草稿 |
@@ -16,35 +16,35 @@
 
 ### 1.1 PoC 部署環境
 
-**PoC 階段所有服務部署於一台 MacBook Pro 本機**，不使用任何雲端服務。
+**PoC 階段所有服務部署於一台 展示環境主機**，不使用任何雲端服務。
 
 | 元件 | 執行方式 | 位置 |
 |------|---------|------|
-| TAK Server | Docker 容器（Docker Desktop for Mac）| MacBook Pro 本機 |
-| PostgreSQL 15 | Docker 容器（docker-compose 管理）| MacBook Pro 本機 |
-| CoT Gateway | Python 直接執行（或 Docker）| MacBook Pro 本機 |
-| EchoShield Simulator | Python 直接執行 | MacBook Pro 本機 |
-| Sentrycs Simulator | Python 直接執行 | MacBook Pro 本機 |
-| ATAK 顯示端 | Android 裝置（平板/手機）| 與 MacBook 同一 Wi-Fi |
+| TAK Server | Docker 容器（Docker Desktop for Mac）| 展示環境主機 |
+| TAK Server DB | Docker 容器（細部設計決定）| 展示環境主機 |
+| CoT Gateway | Python 直接執行（或 Docker）| 展示環境主機 |
+| EchoShield Simulator | Python 直接執行 | 展示環境主機 |
+| Sentrycs Simulator | Python 直接執行 | 展示環境主機 |
+| ATAK 顯示端 | Android 裝置（平板/手機）| 與 展示主機同一 Wi-Fi |
 
 ### 1.2 網路架構
 
 ```
-MacBook Pro
+展示環境主機
 ├── localhost (127.0.0.1)
 │   ├── EchoShield Simulator :9000
 │   ├── CoT Gateway（TCP client）
 │   ├── TAK Server Docker :8087 :8089 :8443 :8446
-│   └── PostgreSQL Docker :5432
+│   └── TAK Server DB Docker（細部設計決定）
 │
 └── LAN IP（Wi-Fi，e.g. 192.168.1.100）
     └── ATAK 平板/手機透過此 IP 連接 TAK Server
 
-# 查詢 MacBook LAN IP：
+# 查詢 展示主機 LAN IP：
 ipconfig getifaddr en0
 ```
 
-> **重要**：ATAK Android 裝置必須與 MacBook 連接同一 Wi-Fi AP，並使用 MacBook 的 LAN IP（非 localhost）連線至 TAK Server。
+> **重要**：ATAK Android 裝置必須與 展示主機 連接同一 Wi-Fi AP，並使用 展示主機 的 LAN IP（非 localhost）連線至 TAK Server。
 
 ### 1.3 前置需求
 
@@ -81,7 +81,7 @@ docker compose version
 | 項目 | 建議設定 | 原因 |
 |------|---------|------|
 | CPUs | 4 | TAK Server Java JVM 需要 |
-| Memory | 6 GB | TAK Server(2GB) + PostgreSQL(512MB) + 系統 |
+| Memory | 6 GB | TAK Server(2GB) + DB + 系統 |
 | Disk image size | 20 GB | Docker Image + 資料 |
 | Enable VirtioFS | ✅ | macOS 高效能檔案共享 |
 
@@ -122,19 +122,19 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
 | 8443 | HTTPS | TAK Server Web Admin Console | 本機瀏覽器 |
 | 8446 | HTTPS | PKI Auto-enrollment | 本機 + LAN Android 裝置 |
 | 4242 | UDP | SA（作戰模式備用）| 本機 |
-| 5432 | TCP | PostgreSQL（僅 Docker 內部）| Docker 內部網路 |
+| 5432 | TCP | TAK Server DB（僅 Docker 內部）| Docker 內部網路 |
 
 ### 3.3 Android 裝置連線確認
 
 ```bash
-# 查詢 MacBook Wi-Fi LAN IP
+# 查詢 展示主機 Wi-Fi LAN IP
 ipconfig getifaddr en0
 
-# 確認 Android 裝置可達（在 MacBook 端執行）
+# 確認 Android 裝置可達（在 展示主機端執行）
 # 先確認 Android 裝置 IP（在 Android 設定 > 關於 > IP 位址查看）
 ping <Android-IP>
 
-# 確認 TAK Server Port 可達（從 MacBook 本機測試）
+# 確認 TAK Server Port 可達（從 展示主機本機測試）
 nc -zv 127.0.0.1 8089
 ```
 
@@ -146,10 +146,10 @@ nc -zv 127.0.0.1 8089
 
 ### 4.1 TAK Server Docker Image
 
-TAK Server 官方提供 Docker Image，需從 TAK.gov 申請並下載（需帳號）。下載後在 MacBook 本機載入：
+TAK Server 官方提供 Docker Image，需從 TAK.gov 申請並下載（需帳號）。下載後在 展示主機本機載入：
 
 ```bash
-# 解壓並載入 Image（在 MacBook 本機執行）
+# 解壓並載入 Image（在 展示主機本機執行）
 cd ~/tak-poc
 unzip takserver-docker-*.zip
 docker load -i takserver-*.tar.gz
@@ -181,15 +181,8 @@ services:
       - ./data:/opt/tak/data
       - ./CoreConfig.xml:/opt/tak/CoreConfig.xml:ro
     environment:
-      - TAK_DB_HOST=postgres
-      - TAK_DB_PORT=5432
-      - TAK_DB_NAME=cot
-      - TAK_DB_USER=martiuser
-      - TAK_DB_PASSWORD=${DB_PASSWORD}
       - TAK_JAVA_OPTS=-Xmx2g -Xms512m
-    depends_on:
-      postgres:
-        condition: service_healthy
+    # DB 連線設定依細部設計決定（見資料庫服務定義）
     networks:
       - tak-network
     logging:
@@ -198,26 +191,11 @@ services:
         max-size: "100m"
         max-file: "5"
 
-  postgres:
-    image: postgres:15-alpine
-    container_name: takserver-db
-    restart: unless-stopped
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=cot
-      - POSTGRES_USER=martiuser
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-    networks:
-      - tak-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U martiuser -d cot"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  # 資料庫服務（細部設計決定，依 TAK Server 版本與部署需求選擇）
+  # 請參考 TAK Server 官方文件設定對應的資料庫服務
 
 volumes:
-  postgres_data:
+  tak_data:
     driver: local
 
 networks:
@@ -301,16 +279,16 @@ cd /opt/tak/certs/files
 # 產生：atak-tablet.p12, atak-phone.p12
 ```
 
-### 5.6 憑證複製至 MacBook 主機並分發
+### 5.6 憑證複製至 展示主機 主機並分發
 
 ```bash
-# 從 Container 複製至 MacBook（在 MacBook Terminal 執行）
+# 從 Container 複製至 展示主機（在 展示主機 Terminal 執行）
 docker cp takserver:/opt/tak/certs/files/ ~/tak-poc/certs/
 
 # 查看產生的憑證
 ls -la ~/tak-poc/certs/files/*.p12
 
-# 憑證分發（所有服務都在同一台 MacBook，直接複製）
+# 憑證分發（所有服務都在同一台 展示主機，直接複製）
 cp ~/tak-poc/certs/files/gateway.p12      ~/cot_gateway/certs/
 cp ~/tak-poc/certs/files/truststore.p12   ~/cot_gateway/certs/
 # 注意：Sentrycs Simulator 改走 HTTP JSON API，不再直連 TAK Server
@@ -323,7 +301,7 @@ cp ~/tak-poc/certs/files/truststore.p12   ~/cot_gateway/certs/
 ### 5.8 truststore.pem 建立（供 Python ssl 使用）
 
 ```bash
-# 在 MacBook Terminal 執行（需安裝 openssl：brew install openssl）
+# 在 展示主機 Terminal 執行（需安裝 openssl：brew install openssl）
 openssl pkcs12 -in ~/tak-poc/certs/files/truststore.p12 \
   -nokeys -cacerts -out ~/tak-poc/certs/files/truststore.pem \
   -passin pass:atakatak
@@ -341,15 +319,16 @@ TAK Server 的主設定檔位於 `/opt/tak/CoreConfig.xml`（Container 內）：
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Configuration>
 
-  <!-- 資料庫連線 -->
+  <!-- 資料庫連線（依細部設計決定，請參考 TAK Server 官方文件） -->
+  <!--
   <repository enable="true">
-    <connection url="jdbc:postgresql://postgres:5432/cot"
-                username="martiuser"
-                password="takserver_poc_2025"
-                driver="org.postgresql.Driver"
+    <connection url="jdbc:DB_PROVIDER://db-host:DB_PORT/cot"
+                username="DB_USER"
+                password="${DB_PASSWORD}"
                 connectionPoolMinSize="5"
                 connectionPoolMaxSize="50"/>
   </repository>
+  -->
 
   <!-- 網路介面設定 -->
   <network>
@@ -402,14 +381,14 @@ TAK Server 的主設定檔位於 `/opt/tak/CoreConfig.xml`（Container 內）：
 
 ```bash
 # Mission Package = ATAK 連線設定包（.zip 格式）
-# 包含：伺服器位址（MacBook LAN IP）、Port、客戶端憑證
+# 包含：伺服器位址（展示主機 LAN IP）、Port、客戶端憑證
 
 # 在 TAK Server Web Console 建立：
 # 瀏覽器開啟：https://localhost:8443/
 # 1. 登入（預設帳號：admin）
 # 2. 進入 Setup > Data Package
 # 3. 建立 Enrollment Package：
-#    - Server Address: <MacBook-LAN-IP>（如 192.168.1.100）
+#    - Server Address: <HOST-LAN-IP>（如 192.168.1.100）
 #    - Port: 8089
 #    - 選擇 atak-tablet.p12 / atak-phone.p12 憑證
 # 4. 下載 .zip 包
@@ -424,8 +403,8 @@ TAK Server 的主設定檔位於 `/opt/tak/CoreConfig.xml`（Container 內）：
 
 ### 7.1 ATAK 共同前置準備
 
-1. 確認 Android 裝置與 MacBook 連接**同一 Wi-Fi AP**
-2. 確認 MacBook LAN IP（`ipconfig getifaddr en0`）
+1. 確認 Android 裝置與 展示主機 連接**同一 Wi-Fi AP**
+2. 確認 展示主機 LAN IP（`ipconfig getifaddr en0`）
 3. 準備憑證檔案：`atak-tablet.p12` / `atak-phone.p12` + `truststore.p12`
 
 ### 7.2 ATAK 指揮端（平板）
@@ -439,7 +418,7 @@ TAK Server 的主設定檔位於 `/opt/tak/CoreConfig.xml`（Container 內）：
 1. 將 `atak-tablet.p12` 傳送至平板（USB / 雲端）
 2. ATAK → Settings → TAK Servers → 新增：
    - **Description**：TAK-POC-Server
-   - **Server Address**：`<MacBook-LAN-IP>`（如 `192.168.1.100`）
+   - **Server Address**：`<HOST-LAN-IP>`（如 `192.168.1.100`）
    - **Port**：8089
    - **Protocol**：SSL
    - **Client Certificate**：atak-tablet.p12
@@ -511,7 +490,7 @@ openssl s_client -connect localhost:8089 \
 ### 8.5 Web Console 存取
 
 ```bash
-# MacBook 瀏覽器開啟（接受自簽憑證警告）
+# 本機瀏覽器開啟（接受自簽憑證警告）
 open https://localhost:8443/
 # 預期看到 TAK Server 管理介面
 ```
@@ -554,7 +533,6 @@ docker compose -f ~/tak-poc/docker-compose.yml ps
 
 # 查看最新日誌
 docker compose -f ~/tak-poc/docker-compose.yml logs --tail 100 tak-server
-docker compose -f ~/tak-poc/docker-compose.yml logs --tail 50 postgres
 ```
 
 ### 9.2 TAK Server 日誌監控
@@ -625,12 +603,9 @@ docker compose ps
 ### 10.3 資料庫備份
 
 ```bash
-# 手動備份 PostgreSQL
-docker exec takserver-db pg_dump -U martiuser cot \
-  > ~/tak-poc/backups/cot_$(date +%Y%m%d_%H%M%S).sql
-
-# 壓縮備份
-gzip ~/tak-poc/backups/cot_$(date +%Y%m%d_%H%M%S).sql
+# 資料庫備份方式依細部設計決定（參考 TAK Server 官方文件）
+# 至少應備份 TAK Server 的 data/ 目錄與設定檔
+tar -czf ~/tak-poc/backups/tak_data_$(date +%Y%m%d_%H%M%S).tar.gz ~/tak-poc/data/
 ```
 
 ### 10.4 資料庫還原
@@ -638,7 +613,7 @@ gzip ~/tak-poc/backups/cot_$(date +%Y%m%d_%H%M%S).sql
 ```bash
 # 還原資料庫（替換備份檔名）
 gunzip ~/tak-poc/backups/cot_20250710.sql.gz
-docker exec -i takserver-db psql -U martiuser cot < ~/tak-poc/backups/cot_20250710.sql
+docker exec -i takserver-db psql -U DB_USER cot < ~/tak-poc/backups/cot_20250710.sql
 ```
 
 ### 10.5 Container 崩潰自動重啟

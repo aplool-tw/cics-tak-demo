@@ -5,7 +5,7 @@
 | 欄位 | 內容 |
 |------|------|
 | **文件編號** | 01 |
-| **版本** | v0.6 |
+| **版本** | v0.7 |
 | **日期** | 2026-04-23 |
 | **作者** | 系統架構小組 |
 | **狀態** | 草稿 |
@@ -30,7 +30,7 @@
 |------|-----------|-----------|
 | EchoShield 整合 | Python 模擬器 | 真實硬體整合 |
 | Sentrycs 整合 | Python 模擬器 | 真實設備整合 |
-| TAK Server | MacBook Pro Docker Desktop（本機）| 高可用叢集 |
+| TAK Server | 本地 Docker 環境（本機）| 高可用叢集 |
 | 通訊安全 | TLS 1.2 (PoC 憑證) | 作戰級 PKI |
 | 場景規模 | 1–5 架無人機 | >10 架大規模 |
 | 顯示端 | ATAK Android（平板/手機）| iTAK / WebTAK |
@@ -69,9 +69,9 @@ flowchart TB
             CG["CotGenerator\n(MIL-STD-2525C)"]
             TT["TakTransmitter\n(TCP SSL)"]
         end
-        subgraph TAK["TAK Server (MacBook Pro)"]
+        subgraph TAK["TAK Server (展示環境主機)"]
             TAKSVR["TAK Server\n(Docker)"]
-            PSQL["PostgreSQL 15\n(Docker)"]
+            PSQL["TAK Server DB\n(Docker)"]
         end
     end
 
@@ -114,8 +114,8 @@ flowchart TB
 | **CotGenerator** | Python | 將 Track 物件轉換為 CoT XML，依 MIL-STD-2525C 選擇正確 type | 支援 a-u-A-M-F-Q-r 及 a-h-A-M-F-Q-r |
 | **TakTransmitter** | Python TCP Socket | 將 CoT XML 透過 TCP SSL 8089 推送至 TAK Server，含指數退避重連 | |
 | **GatewayMain** | Python asyncio | CoT Gateway 主程式進入點，協調所有模組，處理 SIGINT/SIGTERM | |
-| **TAK Server** | Java (Docker), MacBook Pro Docker Desktop | 接收所有 CoT 訊息，分發給已連線的 TAK 顯示端 | 含 PostgreSQL 15 持久化 |
-| **ATAK** | Android 應用程式（平板/手機）| 戰術圖資顯示，支援指揮端（ATAK 平板）與單兵（ATAK 手機）角色 | TCP SSL 8089 連線，需與 MacBook 同 Wi-Fi 網段 |
+| **TAK Server** | Java (Docker), 本地 Docker 環境 | 接收所有 CoT 訊息，分發給已連線的 TAK 顯示端 | 含資料庫持久化（細部設計決定）|
+| **ATAK** | Android 應用程式（平板/手機）| 戰術圖資顯示，支援指揮端（ATAK 平板）與單兵（ATAK 手機）角色 | TCP SSL 8089 連線，需與 展示主機同 Wi-Fi 網段 |
 
 ---
 
@@ -256,9 +256,9 @@ sequenceDiagram
 | 日誌 | structlog | ≥ 23.0 | 結構化日誌輸出 |
 | 指管層 | Python CoT Gateway | 自研 | 資料處理與 TAK 整合 |
 | TAK Server | TAK Server | 最新穩定版 | CoT 分發平台 |
-| 資料庫 | PostgreSQL | 15 (Docker) | TAK Server 持久化 |
+| 資料庫 | 關聯式資料庫（視部署需求選擇）| — | TAK Server 持久化（細部設計決定）|
 | 容器化 | Docker + docker-compose | 24.x | TAK Server & DB 部署 |
-| 本機平台 | MacBook Pro | Docker Desktop for Mac | TAK Server 運行環境 |
+| 本機平台 | 展示環境主機 | Docker Desktop for Mac | TAK Server 運行環境 |
 | 作業系統 | macOS | Sequoia / Sonoma | 本機 OS（Docker 容器內為 Linux）|
 | 顯示端 | ATAK | 最新版 | Android 戰術顯示（平板/手機，需同 Wi-Fi 網段）|
 | 通訊協定 | CoT (Cursor-on-Target) | 2.0 | TAK 訊息格式 |
@@ -274,32 +274,32 @@ sequenceDiagram
 
 | 元件 | 位置 | IP | Port | 協定 | 用途 |
 |------|------|-----|------|------|------|
-| Unified Drone Simulator | MacBook（本機）| 127.0.0.1 | 8080 | HTTP | Command REST API（接管指令）|
-| Map Simulator | MacBook（本機）| 127.0.0.1 | 8090 | HTTP | 物件狀態登錄表查詢 API |
-| EchoShield Simulator | MacBook（本機）| 127.0.0.1 | 9000 | TCP | EchoShield JSON Feed 輸出 |
-| CoT Gateway | MacBook（本機）| 127.0.0.1 | — | — | TCP Client，連接 Sim & TAK |
-| Sentrycs Simulator | MacBook（本機）| 127.0.0.1 | 7070 | HTTP | JSON Status API Server（供 SentrycsAdapter 輪詢）|
-| TAK Server | MacBook（本機）| `127.0.0.1`（本機）/ `<MacBook-LAN-IP>`（Android 裝置用）| 8087 | TCP | 測試用（無 SSL）|
-| TAK Server | MacBook（本機）| `127.0.0.1` / `<MacBook-LAN-IP>` | 8089 | TCP SSL | 主線 CoT 接收 |
-| TAK Server | MacBook（本機）| `127.0.0.1` / `<MacBook-LAN-IP>` | 8443 | HTTPS | Web Admin Console |
-| TAK Server | MacBook（本機）| `127.0.0.1` / `<MacBook-LAN-IP>` | 8446 | HTTPS | PKI Auto-enrollment |
+| Unified Drone Simulator | 展示主機（本機）| 127.0.0.1 | 8080 | HTTP | Command REST API（接管指令）|
+| Map Simulator | 展示主機（本機）| 127.0.0.1 | 8090 | HTTP | 物件狀態登錄表查詢 API |
+| EchoShield Simulator | 展示主機（本機）| 127.0.0.1 | 9000 | TCP | EchoShield JSON Feed 輸出 |
+| CoT Gateway | 展示主機（本機）| 127.0.0.1 | — | — | TCP Client，連接 Sim & TAK |
+| Sentrycs Simulator | 展示主機（本機）| 127.0.0.1 | 7070 | HTTP | JSON Status API Server（供 SentrycsAdapter 輪詢）|
+| TAK Server | 展示主機（本機）| `127.0.0.1`（本機）/ `<HOST-LAN-IP>`（Android 裝置用）| 8087 | TCP | 測試用（無 SSL）|
+| TAK Server | 展示主機（本機）| `127.0.0.1` / `<HOST-LAN-IP>` | 8089 | TCP SSL | 主線 CoT 接收 |
+| TAK Server | 展示主機（本機）| `127.0.0.1` / `<HOST-LAN-IP>` | 8443 | HTTPS | Web Admin Console |
+| TAK Server | 展示主機（本機）| `127.0.0.1` / `<HOST-LAN-IP>` | 8446 | HTTPS | PKI Auto-enrollment |
 | ATAK 指揮端（平板）| Android 平板 | Wi-Fi DHCP（同網段）| — | TCP SSL | 連接 TAK Server 8089 |
 | ATAK（手機）| Android 手機 | Wi-Fi DHCP（同網段）| — | TCP SSL | 連接 TAK Server 8089 |
 
-> **MacBook LAN IP 查詢**：`ipconfig getifaddr en0`（Wi-Fi）或 `en1`（乙太網）。Android ATAK 裝置須與 MacBook 連接同一 Wi-Fi AP。
+> **展示主機 LAN IP 查詢**：`ipconfig getifaddr en0`（Wi-Fi）或 `en1`（乙太網）。Android ATAK 裝置須與 展示主機 連接同一 Wi-Fi AP。
 
 ### 7.2 網路圖
 
 ```mermaid
 flowchart LR
-    subgraph MACBOOK["MacBook Pro（PoC 主機）"]
+    subgraph MACBOOK["展示環境主機（PoC）"]
         UDS["Unified Drone Simulator\n:8080 (Command API)"]
         MS["Map Simulator\n:8090"]
         ES_SIM2["EchoShield Simulator\n:9000 (TCP Feed)"]
         SC["Sentrycs Simulator\n:7070 HTTP"]
         GW["CoT Gateway\n(EchodyneAdapter + SentrycsAdapter)"]
         TAKSVR["TAK Server（Docker）\n:8087 :8089 :8443 :8446"]
-        PSQL["PostgreSQL（Docker）\n:5432"]
+        PSQL["TAK Server DB\n(Docker)"]
     end
 
     subgraph WIFI["Wi-Fi 區域網路（同一 AP）"]
@@ -315,9 +315,9 @@ flowchart LR
     SC -->|"HTTP :7070"| GW
     GW -->|"TCP SSL :8089"| TAKSVR
     TAKSVR --- PSQL
-    TAKSVR -->|"TCP SSL :8089\n<MacBook-LAN-IP>"| AT_C
-    TAKSVR -->|"TCP SSL :8089\n<MacBook-LAN-IP>"| AT_T
-    TAKSVR -->|"TCP SSL :8089\n<MacBook-LAN-IP>"| AP
+    TAKSVR -->|"TCP SSL :8089\n<HOST-LAN-IP>"| AT_C
+    TAKSVR -->|"TCP SSL :8089\n<HOST-LAN-IP>"| AT_T
+    TAKSVR -->|"TCP SSL :8089\n<HOST-LAN-IP>"| AP
 ```
 
 ---
@@ -344,7 +344,7 @@ TAK-POC-CA (Root CA)
 |------|------|------|------|
 | CoT Gateway → TAK Server | TCP SSL (TLS 1.2) | 8089 | 統一 CoT Push（含 EchoShield + Sentrycs 融合結果）|
 | ATAK → TAK Server | TCP SSL (TLS 1.2) | 8089 | 顯示端訂閱（Android 裝置）|
-| 管理員 → TAK Server | HTTPS (TLS 1.2) | 8443 | Web Console（MacBook 本機瀏覽器）|
+| 管理員 → TAK Server | HTTPS (TLS 1.2) | 8443 | Web Console（展示主機本機瀏覽器）|
 
 > **PoC 注意**：本 PoC 使用自簽 CA，不適用於生產環境。
 

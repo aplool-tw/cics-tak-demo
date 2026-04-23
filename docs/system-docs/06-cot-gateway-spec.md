@@ -5,7 +5,7 @@
 | 欄位 | 內容 |
 |------|------|
 | **文件編號** | 06 |
-| **版本** | v0.4 |
+| **版本** | v0.5 |
 | **日期** | 2026-04-23 |
 | **作者** | 系統架構小組 |
 | **狀態** | 草稿 |
@@ -848,7 +848,7 @@ gateway:
     ttl_s: 10                      # 航跡存活時間（秒）
 
   tak_server:
-    host: "localhost"  # MacBook 本機 TAK Server（Docker）
+    host: "localhost"  # 展示主機本機 TAK Server（Docker）
     port: 8089
     use_ssl: true
     cert_file: "certs/gateway.p12"
