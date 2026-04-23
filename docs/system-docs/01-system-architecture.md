@@ -6,7 +6,7 @@
 |------|------|
 | **文件編號** | 01 |
 | **版本** | v0.6 |
-| **日期** | 2026-04-22（修訂：三層架構（移除通訊層），移除 SimulatedDroneAdapter）|
+| **日期** | 2026-04-23 |
 | **作者** | 系統架構小組 |
 | **狀態** | 草稿 |
 | **機密等級** | PoC 內部使用 |
@@ -93,7 +93,6 @@ flowchart TB
     TC -->|Track 物件（含 FUSED）| CG
     CG -->|CoT XML| TT
     TT -->|"TCP SSL :8089"| TAKSVR
-    TAKSVR --- PSQL
     TAKSVR -->|"TCP SSL :8089"| ATAK_C
     TAKSVR -->|"TCP SSL :8089"| ATAK_T
     TAKSVR -->|"TCP SSL :8089"| ATAK_P
