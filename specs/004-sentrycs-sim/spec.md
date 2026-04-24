@@ -108,7 +108,8 @@
 
 - **FR-SC-013**: System MUST 提供 HTTP JSON 狀態 API，預設監聽 `0.0.0.0:7070`，Port 可由 CLI `--api-port` 與場景檔覆寫。
 - **FR-SC-014**: System MUST 提供 `GET /detections` 端點，回傳所有非 IDLE 偵測目標的陣列；IDLE 目標不包含在回傳中。
-- **FR-SC-015**: System MUST 提供 `GET /detection/{uid}` 端點，對存在且非 IDLE 的目標回傳單一 JSON（HTTP 200），否則回傳 HTTP 404。
+- **FR-SC-015**: System MUST 提供 `GET /detection/{uid}` 端點，對存在且非 IDLE 的目標回傳單一 JSON（HTTP 200），否則回傳 HTTP 404（body `{"status":"error","reason":"not_found"}`）。
+- **FR-SC-015b**: System MUST 提供 `GET /health` 端點，回傳 HTTP 200 與 JSON `{status, uptime_s, tracked_drones, map_sim_reachable}`，供 smoke test 與就緒探測使用；該端點不得觸發任何狀態機副作用或寫入 registry。啟動後就緒時間 < 2 秒（SC-SC-011 以 `/health` 200 為就緒信號的等價條件）。
 - **FR-SC-016**: System MUST 在每筆偵測 JSON 中包含 `uid, model, detection_status, lat, lon, alt_m, velocity_ms, azimuth_deg, operator_lat, operator_lon, operator_distance_m, operator_bearing_deg, timestamp, is_landed` 全部欄位。其中 `model` 來源為場景 YAML 中該 `uid` 對應的 `model` 設定（Map Simulator `/objects` 契約不提供型號，由 Sentrycs 以本地 scenario 表補上）；若收到的 `uid` 不在場景 YAML 內，MUST 輸出 `model: "Unknown"` 並記錄 error log，不得中斷狀態機或 API 輸出。
 - **FR-SC-017**: System MUST 以 ISO 8601 UTC（結尾 `Z`）格式輸出 `timestamp`，反映該筆狀態的最新更新時間。
 - **FR-SC-018**: System MUST 支援多個 HTTP Client 同時輪詢（至少 5 個並發連線），各請求取得一致的偵測快照。
@@ -150,7 +151,7 @@
 - **SC-SC-008**（容錯：UDS 409）：當 UDS 回傳 409 時，目標在 ≤ 1 秒內進入 `MITIGATING` 且不重送 takeover。
 - **SC-SC-009**（`is_lost` 過濾）：Map Simulator 回傳中標記 `is_lost=true` 的物件 100% 被排除於偵測清單之外。
 - **SC-SC-010**（可觀測性）：`--verbose` 模式下，每次狀態轉移、每次 takeover 請求、每次 Map Simulator 錯誤皆產生 1 筆結構化日誌（含 `uid`、舊狀態、新狀態、時間戳）。
-- **SC-SC-011**（啟動時間）：從 CLI 啟動到 `GET /detections` 回應 HTTP 200 的就緒時間 < 2 秒。
+- **SC-SC-011**（啟動時間）：從 CLI 啟動到 `GET /health` 回應 HTTP 200（等價於 `GET /detections` 回應 HTTP 200，服務就緒）的時間 < 2 秒。
 - **SC-SC-012**（優雅關閉）：收到 `SIGINT` 後，行程在 3 秒內結束，且未留下懸掛的 HTTP 連線或 async task。
 
 ---
@@ -164,4 +165,4 @@
 - CoT XML 生成由 CoT Gateway 的 SentrycsAdapter 負責，本模擬器僅輸出 JSON；§6 的 CoT 範例僅供參考，不屬於本 feature 的驗收範圍。
 - 預設 API Port `7070`、Map Simulator `localhost:8090`、UDS `localhost:8080`，均可由 YAML 覆寫。
 - 依賴 Map Simulator 與 UDS 已凍結的契約：`GET /objects?lat=&lon=&radius_m=` 回傳含 `status + is_lost`；`POST /command/takeover` 接受 `{drone_id, target_lat, target_lon, target_alt_m}` 並回傳 200/400/404/409。
-- Python 3.11+、`aiohttp`、`PyYAML`、`geopy` 為可用的執行環境依賴。
+- Python 3.11+、`aiohttp`、`PyYAML`、`pydantic v2`、`structlog` 為可用的執行環境依賴；WGS84 大地距離/方位計算由本服務以手寫 destination formula（約 15 行）實作，**不**引入 `geopy`，以守依賴最小化原則（詳 plan.md §Dependencies、research.md R3）。
