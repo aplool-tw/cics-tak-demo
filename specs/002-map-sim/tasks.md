@@ -207,13 +207,13 @@ sleep）。
 
 **Target file**：`services/map-sim/tests/integration/test_uds_push_end_to_end.py`。
 
-- [ ] T045 [US1] 撰寫 `tests/integration/test_uds_push_end_to_end.py::test_uds_push_client_round_trip`
+- [ ] T045 [US1] 撰寫 `tests/integration/test_uds_push_end_to_end.py::test_uds_payload_contract_compatibility`
   —— 在同一 event loop 啟動 Map Sim aiohttp app（隨機 port / `aiohttp.test_utils.TestServer`），撰寫一個
   最小 UDS push client（async httpx 或 aiohttp.ClientSession）按 UDS `specs/001-uds/contracts/rest-api.md`
   §3.2 的 8 欄位 payload 連推 3 架 × 3 tick；之後呼叫 `GET /objects?lat=&lon=&radius_m=10000` →
-  `count==3`、所有 drone 的 `status` 為原值、`is_lost=false`。**驗證 Map Sim 與 UDS 契約相容**（對應
-  plan.md Summary 與 quickstart.md §4；本測試是 Map Sim 方的合約驗證，不實際 import `services/uds/`
-  套件——以硬編碼 payload schema 重現，避免跨 service import 耦合）。
+  `count==3`、所有 drone 的 `status` 為原值、`is_lost=false`。**本測試名義上是「UDS push round-trip」但僅驗證
+  Map Sim 對 UDS 契約形狀的相容性**，不實際 import `services/uds/` 套件；payload schema 硬編碼重現以避免
+  跨 service import 耦合。真正的跨服務 manual end-to-end 走 quickstart.md §4。
 
 ---
 
