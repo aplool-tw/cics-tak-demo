@@ -121,7 +121,7 @@ EchoShield Simulator（雷達）與 Sentrycs Simulator（RF）作為下游消費
 以下需求依 `docs/system-docs/02-unified-drone-simulator-spec.md` §2 為基礎，並依 CHANGELOG v0.3 澄清移除 TCP `:9000` 相關職責，改以 `POST /objects/update` 推送為主。
 
 - **FR-UDS-001**：UDS 必須為每架無人機維護飛行狀態物件（位置、速度、方向、高度、狀態機），並在每個主迴圈週期依 `dt` 更新該物件。
-- **FR-UDS-002**：UDS 必須在每個主迴圈週期對每架 `flight_state ≠ IDLE` 的無人機各發送一次 `POST http://<map-sim-host>:8090/objects/update`（per-drone 粒度），每筆 request body 為單一無人機 JSON，涵蓋該無人機最新狀態（WGS84 位置、高度、速度、航向、`flight_state`、型號、操控者位置），欄位格式對齊 `08-api-icd.md` §3.1。
+- **FR-UDS-002**：UDS 必須在每個主迴圈週期對每架 `flight_state ≠ IDLE` 的無人機各發送一次 `POST http://<map-sim-host>:8090/objects/update`（per-drone 粒度），每筆 request body 為單一無人機 JSON，欄位依 `docs/system-docs/03-map-simulator-spec.md` §3.1 與 `contracts/rest-api.md` §3.2 所定義的 8 個欄位：`drone_id`、`lat`、`lon`、`alt_m`、`speed_ms`（由 `DroneState.velocity_ms` 換算）、`heading_deg`、`status`（由 `flight_state.value` 換算）、`timestamp`。**UDS 推送不包含** `model` 或 `operator_lat/operator_lon`（這些欄位由 Sentrycs Simulator 於其 `:7070` JSON 輸出中提供，不屬於 UDS→Map Simulator 的推送契約）。
 - **FR-UDS-003**：UDS 必須以 HTTP REST Server 於 `:8080` 提供**正式契約端點**：
   - `POST /command/takeover` — 接收接管指令（**唯一正式契約**，必須納入契約測試並維持向後相容）。
 - **FR-UDS-003a**（除錯端點）：UDS 可選擇性提供下列除錯端點，**僅在啟動時帶 `--debug` 旗標才註冊**（預設關閉，未帶旗標時路由不存在，回應 404）：
@@ -141,7 +141,7 @@ EchoShield Simulator（雷達）與 Sentrycs Simulator（RF）作為下游消費
 - **FR-UDS-006**：UDS 必須在高度 ≤ 2 m 且速度 ≤ 0.5 m/s 時自動將無人機切換為 `LANDED`，並於該切換所在的主迴圈週期對 Map Simulator 推送恰一筆 `POST /objects/update`（request body `flight_state = "LANDED"`，作為明確的收尾旗標）；自下一個主迴圈週期起，UDS 不得再對該 `drone_id` 發送任何 `POST /objects/update`（直到場景重置）。
 - **FR-UDS-007**：UDS 必須從 YAML 場景檔載入無人機清單、初始位置 / 高度 / 速度 / 航向、操控者位置、航點（waypoints）、降落點（`landing_point`）、`update_hz` 與時間軸事件（`timeline`）。`timeline[].action` 欄位採封閉白名單，PoC 階段僅允許單一值 `start_flying`；載入時遇到白名單以外的值（含拼寫錯誤、未知 action、空字串），`ScenarioLoader` 必須立即 fail-fast（拋出 `unknown action: <value>` 並以非零 exit code 結束），不得靜默忽略或跳過該事件。
 - **FR-UDS-008**：UDS 必須支援直線飛行、轉向飛行與降落軌跡插值，使用 WGS84 Haversine 距離、Bearing 計算與座標偏移公式。
-- **FR-UDS-009**：UDS 主迴圈頻率必須可透過 CLI 旗標 / 場景檔設定，預設 10 Hz、合法範圍 1–20 Hz。
+- **FR-UDS-009**：UDS 主迴圈頻率必須可透過 CLI 旗標 / 場景檔設定，預設 10 Hz、合法範圍 1–20 Hz。設定優先序：**CLI `--hz` > 場景檔 `scenario.update_hz` > 預設 10**（任一來源越界皆 fail-fast）。相同優先序規則套用於 `--api-port` 與 `scenario.servers.command_api_port`（CLI 覆寫 YAML 覆寫預設 8080）。
 - **FR-UDS-010**：UDS 必須在單一行程內支援同時模擬至少 10 架無人機（PoC 規模上限）。
 - **FR-UDS-011**：UDS CLI 必須至少提供 `--scenario`（YAML 路徑）、`--api-port`（預設 8080）、`--map-sim-url`（預設 `http://127.0.0.1:8090`）、`--hz`、`--verbose`、`--debug`（布林旗標；預設 false；啟用後才註冊 FR-UDS-003a 的除錯端點）。
 - **FR-UDS-012**：UDS 必須使用 WGS84 座標系（Haversine 距離、Bearing、座標偏移皆以地球半徑 6,371,000 m 計算）。

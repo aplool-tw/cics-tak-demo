@@ -24,10 +24,10 @@ All paths relative to repo root. Service source tree is `services/uds/src/uds/`,
 **Purpose**: Scaffold the `services/uds/` Python project skeleton and configuration so every later phase can import from `uds.*`.
 
 - [ ] T001 Create `services/uds/` directory tree per plan.md §Project Structure (empty `src/uds/{models,scenario,geo,engine,push,api}/__init__.py`, `tests/{contract,integration,unit}/__init__.py`, `scenarios/`).
-- [ ] T002 Create `services/uds/pyproject.toml` declaring Python ≥ 3.11, runtime deps (`aiohttp>=3.9`, `PyYAML>=6.0`, `pydantic>=2.6`, `structlog>=24.1`), dev/test deps (`pytest>=8.0`, `pytest-asyncio>=0.23`, `freezegun>=1.4`, `geopy>=2.4`), and the `uds = "uds.cli:main"` console entry point.
+- [ ] T002 Create `services/uds/pyproject.toml` declaring Python ≥ 3.11, runtime deps (`aiohttp>=3.9`, `PyYAML>=6.0`, `pydantic>=2.6`, `structlog>=24.1`), dev/test deps (`pytest>=8.0`, `pytest-asyncio>=0.23`, `freezegun>=1.4`, `geopy>=2.4`, `ruff>=0.4`, `black>=24.3`), and the `uds = "uds.cli:main"` console entry point.
 - [ ] T003 [P] Add `services/uds/pytest.ini` (or `[tool.pytest.ini_options]` in pyproject) with `asyncio_mode = "auto"` and `testpaths = ["tests"]`.
 - [ ] T004 [P] Add `services/uds/README.md` that links to `specs/001-uds/spec.md` and `quickstart.md`.
-- [ ] T005 [P] Configure lint/format: add `ruff` + `black` config in `pyproject.toml` (line-length 100, target-version py311).
+- [ ] T005 [P] Configure lint/format: add `ruff` + `black` to `[project.optional-dependencies].dev` in `pyproject.toml` and configure (line-length 100, target-version py311).
 - [ ] T006 [P] Create `services/uds/scenarios/single_drone_invasion.yaml` matching quickstart.md §3 (single `TRK-001`, `start_flying` at `at_s=0`).
 - [ ] T007 [P] Create `services/uds/scenarios/drone_swarm.yaml` with 10 drones (upper bound for FR-UDS-010 / SC-004 tests).
 
@@ -40,7 +40,7 @@ All paths relative to repo root. Service source tree is `services/uds/src/uds/`,
 **Purpose**: Shared cross-cutting primitives that every later module imports. Must land before Phase 3+.
 
 - [ ] T008 Implement `services/uds/src/uds/logging.py` — `configure_logging(verbose: bool)` using structlog JSON renderer + stdlib bridge; event names `state.transition`, `push.ok`, `push.backpressure`, `push.client_error`, `push.server_error`, `push.conn_error`, `push.timeout`, `takeover.accepted`, `takeover.rejected`, `scenario.loaded`, `scenario.fail_fast` (research.md §6). Unit test: `tests/unit/test_logging.py` asserts emitted record has required JSON keys.
-- [ ] T009 Implement `services/uds/src/uds/config.py` — `Settings` dataclass holding `scenario_path`, `api_port=8080`, `map_sim_url="http://127.0.0.1:8090"`, `hz=10`, `verbose=False`, `debug=False`; include `Settings.from_args()` factory validating `hz ∈ [1, 20]` (FR-UDS-009, FR-UDS-011). Covered by `tests/unit/test_config.py`.
+- [ ] T009 Implement `services/uds/src/uds/config.py` — `Settings` dataclass holding `scenario_path`, `api_port=8080`, `map_sim_url="http://127.0.0.1:8090"`, `hz=10`, `verbose=False`, `debug=False`; include `Settings.from_args_and_scenario(args, scenario)` factory implementing **precedence: CLI > scenario YAML > default** for both `hz` (source: `--hz` > `scenario.update_hz` > 10) and `api_port` (source: `--api-port` > `scenario.servers.command_api_port` > 8080); validate resolved `hz ∈ [1, 20]` and `api_port ∈ [1, 65535]`, fail-fast on violation (FR-UDS-009, FR-UDS-011). Covered by `tests/unit/test_config.py` including precedence matrix.
 
 **Checkpoint**: `python -c "from uds.logging import configure_logging; from uds.config import Settings"` succeeds.
 
@@ -193,7 +193,7 @@ All paths relative to repo root. Service source tree is `services/uds/src/uds/`,
 - [ ] T072 [P] Add `tests/integration/test_sc_metrics.py::test_sc006_debug_freshness` — SC-006 (observability, non-contract): with `--debug`, `GET /status/TRK-001` response timestamp is within 1 tick of most recent main-loop completion.
 - [ ] T073 [P] Add `tests/integration/test_sc_metrics.py::test_sc007_30s_outage` — SC-007: keep `fake_map_server` offline for 30 s while UDS runs; assert process never exits, `push.conn_error` counter grows monotonically; bring server back up, assert first push within next tick succeeds.
 - [ ] T074 [P] Add `tests/integration/test_sc_metrics.py::test_sc008_reproducibility_1m` — SC-008: run same YAML twice with frozen clock; compare `(lat, lon, alt_m)` at 10 sampled ticks, assert L2 error ≤ 1 m per sample (extends T044 to the integration level).
-- [ ] T075 [P] Implement `push.*` and `takeover.*` structured-log fields audit — `grep` through sources / tests to confirm every log site emits `drone_id`, `flight_state`, and either `http_status` or `reason` (research.md §6). Add `tests/unit/test_logging.py::test_required_fields` that captures every emitted event and asserts key presence.
+- [ ] T075 [P] Implement `push.*` and `takeover.*` structured-log fields audit — `grep` through sources / tests to confirm every log site emits `drone_id` plus at least one of `{http_status, reason, error_class}` (research.md §6). For `push.timeout` / `push.conn_error` events, an `error_class` field (e.g. `asyncio.TimeoutError`, `aiohttp.ClientConnectionError`) is the required replacement for `http_status`. Add `tests/unit/test_logging.py::test_required_fields` that captures every emitted event and asserts key presence under this flexible rule.
 - [ ] T076 [P] Harden `MapClient` error handling — explicitly catch `aiohttp.ClientConnectorError`, `asyncio.TimeoutError`, `aiohttp.ClientResponseError`; confirm `Exception` is never swallowed silently (reraise as structured log + drop). Unit test via `tests/unit/test_map_client_errors.py`.
 - [ ] T077 [P] Document "no retry queue; next tick retries with freshest state" policy in `services/uds/README.md` §"Failure semantics" — FR-UDS-014 + research.md §3.1 / contracts §3.5.
 - [ ] T078 [P] Add `services/uds/docs/cli.md` (optional) or extend README with `--debug` caveat ("NOT a contract endpoint") mirroring contracts §2.3.
