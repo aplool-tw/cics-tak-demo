@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "echoshield-sim"
+version = "0.1.0"
+description = "EchoShield Simulator — anti-drone TAK PoC radar feed"
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+dependencies = [
+    "aiohttp>=3.9",
+    "pydantic>=2.6",
+    "structlog>=24.1",
+    "numpy>=1.26",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "freezegun>=1.4",
+    "jsonschema>=4.0",
+    "ruff>=0.4",
+    "black>=24.3",
+]
+
+[project.scripts]
+echoshield-sim = "echoshield_sim.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
