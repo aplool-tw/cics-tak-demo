@@ -1,0 +1,28 @@
+sensor_lat: 25.0330
+sensor_lon: 121.5654
+
+# 以下皆為預設值，可省略
+poll_interval_s: 0.5
+map_sim_url: http://localhost:8090
+uds_url: http://localhost:8080
+api_host: 0.0.0.0
+api_port: 7070
+neutralized_hold_s: 30.0
+mitigating_disappear_grace_s: 10.0
+
+drones:
+  - uid: TRK-001
+    model: "DJI Mavic 3"
+    detected_at_s: 5
+    mitigating_at_s: 20
+    neutralized_at_s: 35
+    operator_bearing_deg: 225
+    operator_distance_m: 300
+
+  - uid: TRK-002
+    model: "Autel EVO II"
+    detected_at_s: 10
+    mitigating_at_s: 25
+    neutralized_at_s: 45
+    operator_bearing_deg: 45
+    operator_distance_m: 350
