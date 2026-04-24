@@ -1,0 +1,140 @@
+scenario:
+  name: "drone_swarm"
+  description: "10 架無人機群入侵，測試 FR-UDS-010 上限 / SC-004"
+  update_hz: 10
+  servers:
+    command_api_port: 8080
+
+  drones:
+    - drone_id: "TRK-001"
+      model: "DJI Mavic 3"
+      start_lat: 25.0598
+      start_lon: 121.5654
+      start_alt_m: 120.0
+      speed_ms: 15.0
+      heading_deg: 180.0
+      operator_bearing_deg: 225
+      operator_distance_m: 300
+      waypoints:
+        - { lat: 25.0330, lon: 121.5654, alt_m: 100.0 }
+      landing_point: { lat: 25.0250, lon: 121.5654, alt_m: 0.0, descent_speed_ms: 3.0 }
+    - drone_id: "TRK-002"
+      model: "DJI Matrice 30T"
+      start_lat: 25.0600
+      start_lon: 121.5660
+      start_alt_m: 110.0
+      speed_ms: 14.0
+      heading_deg: 185.0
+      operator_bearing_deg: 220
+      operator_distance_m: 310
+      waypoints:
+        - { lat: 25.0330, lon: 121.5660, alt_m: 100.0 }
+      landing_point: { lat: 25.0250, lon: 121.5660, alt_m: 0.0, descent_speed_ms: 3.0 }
+    - drone_id: "TRK-003"
+      model: "Autel EVO II"
+      start_lat: 25.0602
+      start_lon: 121.5650
+      start_alt_m: 115.0
+      speed_ms: 13.0
+      heading_deg: 175.0
+      operator_bearing_deg: 230
+      operator_distance_m: 305
+      waypoints:
+        - { lat: 25.0330, lon: 121.5650, alt_m: 100.0 }
+      landing_point: { lat: 25.0250, lon: 121.5650, alt_m: 0.0, descent_speed_ms: 3.0 }
+    - drone_id: "TRK-004"
+      model: "DJI Mavic 3"
+      start_lat: 25.0604
+      start_lon: 121.5656
+      start_alt_m: 118.0
+      speed_ms: 15.0
+      heading_deg: 180.0
+      operator_bearing_deg: 225
+      operator_distance_m: 300
+      waypoints:
+        - { lat: 25.0330, lon: 121.5656, alt_m: 100.0 }
+      landing_point: { lat: 25.0250, lon: 121.5656, alt_m: 0.0, descent_speed_ms: 3.0 }
+    - drone_id: "TRK-005"
+      model: "DJI Matrice 30T"
+      start_lat: 25.0606
+      start_lon: 121.5662
+      start_alt_m: 112.0
+      speed_ms: 14.5
+      heading_deg: 182.0
+      operator_bearing_deg: 222
+      operator_distance_m: 308
+      waypoints:
+        - { lat: 25.0330, lon: 121.5662, alt_m: 100.0 }
+      landing_point: { lat: 25.0250, lon: 121.5662, alt_m: 0.0, descent_speed_ms: 3.0 }
+    - drone_id: "TRK-006"
+      model: "Autel EVO II"
+      start_lat: 25.0608
+      start_lon: 121.5648
+      start_alt_m: 117.0
+      speed_ms: 13.5
+      heading_deg: 178.0
+      operator_bearing_deg: 228
+      operator_distance_m: 302
+      waypoints:
+        - { lat: 25.0330, lon: 121.5648, alt_m: 100.0 }
+      landing_point: { lat: 25.0250, lon: 121.5648, alt_m: 0.0, descent_speed_ms: 3.0 }
+    - drone_id: "TRK-007"
+      model: "DJI Mavic 3"
+      start_lat: 25.0610
+      start_lon: 121.5658
+      start_alt_m: 122.0
+      speed_ms: 15.5
+      heading_deg: 179.0
+      operator_bearing_deg: 224
+      operator_distance_m: 299
+      waypoints:
+        - { lat: 25.0330, lon: 121.5658, alt_m: 100.0 }
+      landing_point: { lat: 25.0250, lon: 121.5658, alt_m: 0.0, descent_speed_ms: 3.0 }
+    - drone_id: "TRK-008"
+      model: "DJI Matrice 30T"
+      start_lat: 25.0612
+      start_lon: 121.5664
+      start_alt_m: 116.0
+      speed_ms: 14.2
+      heading_deg: 181.0
+      operator_bearing_deg: 221
+      operator_distance_m: 307
+      waypoints:
+        - { lat: 25.0330, lon: 121.5664, alt_m: 100.0 }
+      landing_point: { lat: 25.0250, lon: 121.5664, alt_m: 0.0, descent_speed_ms: 3.0 }
+    - drone_id: "TRK-009"
+      model: "Autel EVO II"
+      start_lat: 25.0614
+      start_lon: 121.5646
+      start_alt_m: 119.0
+      speed_ms: 13.8
+      heading_deg: 177.0
+      operator_bearing_deg: 229
+      operator_distance_m: 303
+      waypoints:
+        - { lat: 25.0330, lon: 121.5646, alt_m: 100.0 }
+      landing_point: { lat: 25.0250, lon: 121.5646, alt_m: 0.0, descent_speed_ms: 3.0 }
+    - drone_id: "TRK-010"
+      model: "DJI Mavic 3"
+      start_lat: 25.0616
+      start_lon: 121.5652
+      start_alt_m: 121.0
+      speed_ms: 15.2
+      heading_deg: 180.0
+      operator_bearing_deg: 226
+      operator_distance_m: 301
+      waypoints:
+        - { lat: 25.0330, lon: 121.5652, alt_m: 100.0 }
+      landing_point: { lat: 25.0250, lon: 121.5652, alt_m: 0.0, descent_speed_ms: 3.0 }
+
+  timeline:
+    - { at_s: 0, action: start_flying, drone_id: "TRK-001" }
+    - { at_s: 0, action: start_flying, drone_id: "TRK-002" }
+    - { at_s: 0, action: start_flying, drone_id: "TRK-003" }
+    - { at_s: 0, action: start_flying, drone_id: "TRK-004" }
+    - { at_s: 0, action: start_flying, drone_id: "TRK-005" }
+    - { at_s: 0, action: start_flying, drone_id: "TRK-006" }
+    - { at_s: 0, action: start_flying, drone_id: "TRK-007" }
+    - { at_s: 0, action: start_flying, drone_id: "TRK-008" }
+    - { at_s: 0, action: start_flying, drone_id: "TRK-009" }
+    - { at_s: 0, action: start_flying, drone_id: "TRK-010" }
