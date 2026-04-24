@@ -76,7 +76,7 @@ Demo 現場網路/服務不穩是常態：TAK Server 重啟、EchoShield Simulat
 **Acceptance Scenarios**:
 
 1. **Given** EchoShield Simulator 在 Gateway 運行中被關閉，**When** EchodyneAdapter 偵測到 EOF / ConnectionResetError，**Then** 記錄 WARNING 日誌、等待 5 秒後嘗試重連，並持續無限次重試；Gateway 主程序不退出，SentrycsAdapter 與 TakTransmitter 仍正常運作。
-2. **Given** TAK Server 暫時不可達，**When** TakTransmitter 嘗試送出 CoT，**Then** 觸發指數退避重連（1s → 2s → 4s → … 封頂 60s，最多 5 次嘗試），期間 CoT queue 若超過 500 筆則丟棄最舊/最新（依實作策略）並記錄 WARNING，重連成功後繼續消費 queue。
+2. **Given** TAK Server 暫時不可達，**When** TakTransmitter 嘗試送出 CoT，**Then** 觸發指數退避重連（1s → 2s → 4s → … 封頂 60s，最多 5 次嘗試），期間 CoT queue 若超過 500 筆則以 **drop-newest** 丟棄新進訊息（對齊 FR-GW-022）並記錄 WARNING `queue_full_drop`，重連成功後繼續消費 queue。
 3. **Given** Sentrycs `GET /detections` 回傳 HTTP 5xx 或連線逾時，**When** SentrycsAdapter 下次輪詢，**Then** 該筆輪詢被跳過（不產生 Track），下一秒重試；EchoShield 資料流不受影響，Gateway 繼續處理雷達單源 CoT。
 4. **Given** 某 uid 的雷達 Track 超過 10 秒未更新（TTL 超時），**When** 每秒的 TTL 清理任務執行，**Then** 將 `track_status` 標記為 `Lost`、推送一筆最終 CoT（`stale = time`，即立即過期），並從活躍航跡表移除，不再因殘留資料持續產生 CoT。
 5. **Given** 收到 SIGINT / SIGTERM，**When** Gateway 開始優雅關閉，**Then** 停止接收新 Track、排空 CoT queue（或最多等待 3 秒）、關閉所有 TCP 連線後退出，退出碼為 0。
@@ -144,7 +144,7 @@ Demo 現場網路/服務不穩是常態：TAK Server 重啟、EchoShield Simulat
 - **FR-GW-023**: Gateway MUST 以單一 YAML 設定檔（`config/gateway.yaml`）驅動所有端點、閾值、憑證路徑與日誌等級；關鍵欄位包含 `echoshield.{host,port,reconnect_interval_s}`、`sentrycs.{host,port,poll_interval_s,enabled}`、`correlator.{distance_threshold_m,time_window_s,ttl_s}`、`tak_server.{host,port,use_ssl,cert_file,cert_password,max_retries}`。
 - **FR-GW-024**: Gateway MUST 使用 asyncio 事件迴圈，將 EchodyneAdapter、SentrycsAdapter、processing loop（消費 track_queue 執行 correlate + generate + enqueue_cot）、TTL loop、TakTransmitter send loop 作為獨立 coroutine 並行執行；任一 adapter 失敗不得使其他 coroutine 中止。
 - **FR-GW-025**: Gateway MUST 在收到 SIGINT / SIGTERM 時執行優雅關閉：停止接收新 Track、盡量排空 CoT queue、關閉所有 TCP 連線、以 exit code 0 結束。
-- **FR-GW-026**: Gateway MUST 以結構化日誌輸出關鍵事件（連線成功/失敗、Track 解析錯誤、融合成功、TTL 到期、TakTransmitter 重連、Queue 滿丟訊息），格式為 `%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s`，預設等級 INFO。
+- **FR-GW-026**: Gateway MUST 以 **structlog JSON** 結構化日誌輸出關鍵事件；每筆日誌為一行 JSON，至少含 `timestamp`（UTC ISO 8601 毫秒）、`level`（`INFO`/`WARNING`/`ERROR`）、`logger`、`event`（事件 key）三欄，並附事件對應的上下文欄位。事件 key 清單（MUST 全數覆蓋）：INFO — `track_first_seen` / `correlation_hit` / `correlation_miss` / `source_switch` / `ttl_expired` / `tak_connected` / `tak_reconnect` / `echoshield_connected` / `sentrycs_poll` / `shutdown`；WARNING — `queue_full_drop` / `sentrycs_poll_failed` / `echoshield_disconnected` / `invalid_wire_fields`；ERROR — `tak_max_retries_exceeded`。預設等級 INFO。
 
 ### Key Entities
 
@@ -188,6 +188,6 @@ Demo 現場網路/服務不穩是常態：TAK Server 重啟、EchoShield Simulat
 - uid 主鍵採 Sentrycs `drone_id`（`FUSED-{sentrycs_drone_id}`）的具體副作用：ATAK 上在 RF 首次關聯成功的瞬間會看到舊灰色目標消失、新紅色目標出現於幾乎相同位置，使用者體驗為「識別升級」而非「目標跳動」，屬預期行為。
 - PoC 模式下 TAK Server SSL 使用 `verify_mode=CERT_NONE` 暫時停用伺服器憑證驗證，僅載入 `gateway.p12` 客戶端憑證；正式部署時本 Feature 之外另以設定檔升級為完整驗證。
 - 所有對外時間一律使用 UTC；`datetime.now(timezone.utc)` 為 Gateway 產生 CoT 的時間基準，sensor `timestamp` 僅用於關聯時間窗比對，不作為 CoT `time` 屬性。
-- Python 3.11+、asyncio 為基礎；相依套件 `aiohttp`, `PyYAML` 必要，`geopy` / `structlog` 為可選輔助。
+- Python 3.11+、asyncio 為基礎；runtime 必要相依 `aiohttp`（Sentrycs HTTP client）、`pydantic`（config / Track 驗證）、`structlog`（FR-GW-026 結構化 JSON 日誌）、`PyYAML`（載入 `gateway.yaml`）、`cryptography`（p12 → PEM）。明確不使用 `geopy`（Haversine 手寫）與 `lxml`（CoT 以 stdlib `xml.etree.ElementTree` 組裝）。
 - 本 Feature 聚焦「Gateway 本體」，不負責啟動/停止 Simulator 與 TAK Server（由 Docker Compose 統籌）；也不提供對外管理/監控介面（不開 HTTP 埠）。
 - Sentrycs Simulator（Feature 004）已實作並符合 08-api-icd.md §3；EchoShield Simulator（Feature 003）已實作並符合 08-api-icd.md §2；TAK Server（Feature 001 基礎設施）已可在 `:8089` 接受 TCP SSL CoT。
