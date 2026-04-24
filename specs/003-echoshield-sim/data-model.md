@@ -21,7 +21,7 @@
 | `lost_grace_sec`   | `float`          | `2.0`                | `≥ 0`                                     | YAML                        |
 | `position_noise_m` | `float`          | `5.0`                | `≥ 0`                                     | YAML                        |
 | `velocity_noise_ms`| `float`          | `0.5`                | `≥ 0`                                     | YAML                        |
-| `noise_seed`       | `int \| None`    | `None`               | —                                         | YAML `noise.seed` + CLI `--seed`（CLI 優先） |
+| `noise_seed`       | `int \| None`    | `None`               | —                                         | YAML `noise_seed`（flat key）+ CLI `--seed`（CLI 優先） |
 | `map_sim_url`      | `str`            | `http://localhost:8090` | URL shape                              | YAML                        |
 | `feed_host`        | `str`            | `0.0.0.0`            | —                                         | YAML                        |
 | `feed_port`        | `int`            | `9000`               | `1 ≤ x ≤ 65535`                           | YAML                        |
@@ -114,7 +114,7 @@ Simulator 內部每個被看到過的 `drone_id` 維護一筆 `TrackState`。
 | `rng`        | `numpy.random.Generator`    | 由 `default_rng(noise_seed)` 建立（`None` → OS 熵源）       |
 | `pos_sigma_m`| `float`                     | 複製自 `RadarConfig.position_noise_m`                      |
 | `alt_sigma_m`| `float`                     | 固定 `2.0`（spec FR-ES-017）                               |
-| `vel_sigma` | `float`                     | 複製自 `RadarConfig.velocity_noise_ms`                     |
+| `vel_sigma_ms` | `float`                   | 複製自 `RadarConfig.velocity_noise_ms`                     |
 
 **Methods（純函式語義，但會 advance RNG 狀態）**
 - `perturb_position(lat, lon) -> (lat', lon')`：`lat' = lat + N(0, σ/111320)`、

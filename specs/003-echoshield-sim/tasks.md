@@ -32,7 +32,7 @@ description: "Task list for EchoShield Simulator implementation (TDD: contract �
 - [ ] T002 Create `services/echoshield-sim/pyproject.toml` mirroring `services/map-sim/pyproject.toml`（setuptools backend、`[project].name = "echoshield-sim"`、`[project.scripts] echoshield-sim = "echoshield_sim.cli:main"`、runtime deps: `aiohttp>=3.9,pydantic>=2.6,structlog>=24.1,numpy>=1.26,pyyaml`；dev deps: `pytest>=8.0,pytest-asyncio>=0.23,freezegun>=1.4,ruff,black`；pytest `asyncio_mode=auto`）.
 - [ ] T003 [P] Create `services/echoshield-sim/README.md` pointing to `specs/003-echoshield-sim/quickstart.md` and summarising endpoints（Map Sim client → `:8090`、TCP feed → `:9000`）.
 - [ ] T004 [P] Create `services/echoshield-sim/scripts/smoke.sh` mirroring `services/map-sim/scripts/smoke.sh`（`nc localhost 9000` tail + `curl :8090/objects` sanity check）.
-- [ ] T005 [P] Create `services/echoshield-sim/config/local.yaml` from quickstart.md §1 template（sensor 24.0/121.0、`max_range_m:4800`、`feed_port:9000`、`noise.seed:null`）.
+- [ ] T005 [P] Create `services/echoshield-sim/config/local.yaml` from quickstart.md §1 template（sensor 24.0/121.0、`max_range_m: 4800`、`feed_port: 9000`、`noise_seed: null`（flat YAML key））.
 - [ ] T006 [P] Create `services/echoshield-sim/tests/conftest.py` with shared fixtures: `frozen_time`（freezegun at `2026-04-24T08:15:30.000Z`）、`noise_seed=42`、`aiohttp` stub Map Sim server factory（reuse pattern from `services/map-sim/tests/conftest.py` if present）.
 - [ ] T007 Install editable + dev：`cd services/echoshield-sim && pip install -e '.[dev]'`；verify `pytest -q` discovers zero tests cleanly and `ruff check src tests` passes.
 
@@ -46,7 +46,7 @@ description: "Task list for EchoShield Simulator implementation (TDD: contract �
 
 ### Foundational Tests（TDD 先行）
 
-- [ ] T008 [P] Unit test `services/echoshield-sim/tests/unit/test_config.py`: 驗證 YAML 載入 + `extra="forbid"` + `frozen=True`；CLI `--seed 7` 覆寫 YAML `noise.seed: 42` → 最終 `noise_seed == 7`（spec §Clarifications）；非法值（`update_rate_hz=0`、`sensor_lat=91`）raise ValidationError.
+- [ ] T008 [P] Unit test `services/echoshield-sim/tests/unit/test_config.py`: 驗證 YAML 載入 + `extra="forbid"` + `frozen=True`；CLI `--seed 7` 覆寫 YAML `noise_seed: 42` → 最終 `noise_seed == 7`（spec §Clarifications）；非法值（`update_rate_hz=0`、`sensor_lat=91`）raise ValidationError.
 - [ ] T009 [P] Unit test `services/echoshield-sim/tests/unit/test_logging.py`: structlog JSON renderer 輸出含必要欄位（`event`、`level`、`timestamp`）；throttle helper 驗證「每秒最多 1 行」`map_sim_unavailable`（research.md R7）.
 - [ ] T010 [P] Contract test `services/echoshield-sim/tests/contract/test_radar_track_schema.py`: 讀入 `specs/003-echoshield-sim/contracts/tcp-feed.md` §3.1 JSON Schema（內嵌為字串常數或 fixture），以 `jsonschema` 驗證 example（§3.3）通過；故意破壞 `track_id` 格式應 fail（紅燈先行、Phase 3 前不實作 producer）.
 
@@ -150,7 +150,7 @@ description: "Task list for EchoShield Simulator implementation (TDD: contract �
   - `azimuth_deg(sensor_lat, sensor_lon, target_lat, target_lon) -> float`（大圓 bearing，`% 360`、round 2）.
   - `elevation_deg(sensor_lat, sensor_lon, sensor_alt_m, target_lat, target_lon, target_alt_m) -> float`（`atan2(Δalt, horiz)`；`horiz<1.0` 則依 Δalt 符號回 ±90；round 2）.
 - [ ] T040 [P] [US3] Implement `services/echoshield-sim/src/echoshield_sim/geo/noise.py`:
-  - `NoiseGenerator(rng: np.random.Generator, pos_sigma_m: float, alt_sigma_m: float = 2.0, vel_sigma: float)`.
+  - `NoiseGenerator(rng: np.random.Generator, pos_sigma_m: float, alt_sigma_m: float = 2.0, vel_sigma_ms: float)`.
   - `perturb_position(lat, lon) -> (lat', lon')`（`σ/111320` 近似，research.md R4）.
   - `perturb_altitude(alt_m) -> float`.
   - `perturb_velocity(speed_ms) -> max(0.0, speed_ms + N(0, σ))`.

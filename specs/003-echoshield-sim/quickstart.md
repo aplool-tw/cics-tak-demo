@@ -41,8 +41,7 @@ lost_grace_sec: 2.0
 position_noise_m: 5.0
 velocity_noise_ms: 0.5
 
-noise:
-  seed: null       # 或填整數以求可重現（CLI --seed 會覆寫此值）
+noise_seed: null   # 或填整數以求可重現（CLI --seed 會覆寫此值）
 
 map_sim_url: http://localhost:8090
 feed_host: 0.0.0.0
@@ -144,7 +143,7 @@ echoshield-sim --config config/local.yaml --seed 42
 echoshield-sim --config config/localB.yaml --seed 42
 ```
 
-CLI `--seed` 優先於 YAML `noise.seed`（spec §Clarifications）。
+CLI `--seed` 優先於 YAML `noise_seed`（spec §Clarifications）。
 
 ---
 

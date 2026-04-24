@@ -221,11 +221,12 @@ RadarProcessor，驗證 azimuth / elevation 在理論值的 ±0.1° 內、位置
 #### 設定與 CLI
 
 - **FR-ES-021**：所有可調參數（`sensor_lat/lon/alt_m`、`max_range_m`、`update_rate_hz`、
-  `lost_grace_sec`、`position_noise_m`、`velocity_noise_ms`、`noise.seed`、`map_sim_url`、`feed_host`、`feed_port`）
-  **MUST** 可由 YAML 設定檔配置。`noise.seed` 為整數或 `null`（預設 `null` = 使用系統熵源隨機）。
+  `lost_grace_sec`、`position_noise_m`、`velocity_noise_ms`、`noise_seed`、`map_sim_url`、`feed_host`、`feed_port`）
+  **MUST** 可由 YAML 設定檔配置（YAML key 為 **flat** `noise_seed`，不使用 nested `noise: { seed: ... }`）。
+  `noise_seed` 為整數或 `null`（預設 `null` = 使用系統熵源隨機）。
 - **FR-ES-022**：CLI **MUST** 支援 `--config <path>`（必要）、`--verbose`（選填，啟用 DEBUG 日誌）、
-  與 `--seed <int>`（選填，覆寫 config 的 `noise.seed`，供 demo / 測試重現噪點序列）。當同時提供 CLI
-  `--seed` 與 config `noise.seed` 時，**CLI 值優先**；若兩者皆未提供則使用系統熵源隨機初始化。
+  與 `--seed <int>`（選填，覆寫 config 的 `noise_seed`，供 demo / 測試重現噪點序列）。當同時提供 CLI
+  `--seed` 與 config `noise_seed` 時，**CLI 值優先**；若兩者皆未提供則使用系統熵源隨機初始化。
 
 ### Key Entities
 
@@ -306,7 +307,7 @@ RadarProcessor，驗證 azimuth / elevation 在理論值的 ±0.1° 內、位置
   釋放映射。此值以牆上時鐘計時（非 tick 計數），不隨 `update_rate_hz` 變動。FR-ES-021 的 YAML 設定
   **MUST** 支援此欄位。
 - **噪點 Seed 可重現性**：噪點 RNG（位置 / 高度 / 速度 Gaussian）使用單一 seed 初始化。來源優先順序：
-  CLI `--seed INT` > config `noise.seed` > `null`（=使用系統熵源，OS CSPRNG，每次執行結果不同）。
+  CLI `--seed INT` > config `noise_seed` > `null`（=使用系統熵源，OS CSPRNG，每次執行結果不同）。
   CLI 明確給值時**必定**覆寫 config（即使 config 已設），便於臨時 demo / debug 重現。seed 僅影響噪點
   取樣，不影響 `track_id`（`track_id` 仍由 `uuid4` 產生、不納入 seed 控制）。
 

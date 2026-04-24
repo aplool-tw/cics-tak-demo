@@ -59,7 +59,7 @@ Spec 與 Technical Context 中的項目全部已解。以下紀錄為「關鍵�
 ## R4：高斯噪點與可重現性（numpy + seed 優先序）
 
 - **Decision**：使用 `numpy.random.default_rng(seed)` 產生 `Generator`，單一 instance 貫穿
-  lat / lon / alt / speed 全部取樣。seed 解析順序：CLI `--seed` > YAML `noise.seed` > `None`
+  lat / lon / alt / speed 全部取樣。seed 解析順序：CLI `--seed` > YAML `noise_seed` > `None`
   （= 使用系統熵源，由 `default_rng()` 自動取得）。lat/lon 的 σ 以 `σ_m / 111320` 近似為度
   （PoC 容忍 cos(lat) 失真，SC-ES-004 測試靜止目標不跨緯度所以誤差可接受）。
 - **Rationale**：
@@ -118,7 +118,7 @@ Spec 與 Technical Context 中的項目全部已解。以下紀錄為「關鍵�
   - `RadarConfig(BaseModel)`：7 大群參數（sensor / detection / noise / upstream / feed），
     `model_config = ConfigDict(extra="forbid")` 避免 typo。
   - YAML 載入：`yaml.safe_load` → `RadarConfig.model_validate(dict)`。
-  - `noise.seed: int | None = None`。
+  - `noise_seed: int | None = None`（YAML flat key）。
 - **Rationale**：`extra="forbid"` 符合「config 是 PoC 明確契約」立場；與 map-sim update 路徑用的
   `extra="ignore"` 區分（那是 wire payload，需寬容）。
 - **Alternatives considered**：`pydantic-settings` + env var：PoC 單一 YAML 足夠，不引入新包。
