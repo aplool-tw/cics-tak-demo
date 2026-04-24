@@ -28,13 +28,13 @@ description: "Task list for EchoShield Simulator implementation (TDD: contract �
 
 **Purpose**: 建立服務 scaffolding，與 `services/map-sim/` 嚴格對稱。
 
-- [ ] T001 Create service directory tree `services/echoshield-sim/{src/echoshield_sim,tests/{contract,integration,unit},scripts,config}` and empty `__init__.py` under `src/echoshield_sim/`, `src/echoshield_sim/models/`, `src/echoshield_sim/geo/`, `src/echoshield_sim/mapsim/`, `src/echoshield_sim/feed/`.
-- [ ] T002 Create `services/echoshield-sim/pyproject.toml` mirroring `services/map-sim/pyproject.toml`（setuptools backend、`[project].name = "echoshield-sim"`、`[project.scripts] echoshield-sim = "echoshield_sim.cli:main"`、runtime deps: `aiohttp>=3.9,pydantic>=2.6,structlog>=24.1,numpy>=1.26,pyyaml`；dev deps: `pytest>=8.0,pytest-asyncio>=0.23,freezegun>=1.4,ruff,black`；pytest `asyncio_mode=auto`）.
-- [ ] T003 [P] Create `services/echoshield-sim/README.md` pointing to `specs/003-echoshield-sim/quickstart.md` and summarising endpoints（Map Sim client → `:8090`、TCP feed → `:9000`）.
-- [ ] T004 [P] Create `services/echoshield-sim/scripts/smoke.sh` mirroring `services/map-sim/scripts/smoke.sh`（`nc localhost 9000` tail + `curl :8090/objects` sanity check）.
-- [ ] T005 [P] Create `services/echoshield-sim/config/local.yaml` from quickstart.md §1 template（sensor 24.0/121.0、`max_range_m: 4800`、`feed_port: 9000`、`noise_seed: null`（flat YAML key））.
-- [ ] T006 [P] Create `services/echoshield-sim/tests/conftest.py` with shared fixtures: `frozen_time`（freezegun at `2026-04-24T08:15:30.000Z`）、`noise_seed=42`、`aiohttp` stub Map Sim server factory（reuse pattern from `services/map-sim/tests/conftest.py` if present）.
-- [ ] T007 Install editable + dev：`cd services/echoshield-sim && pip install -e '.[dev]'`；verify `pytest -q` discovers zero tests cleanly and `ruff check src tests` passes.
+- [X] T001 Create service directory tree `services/echoshield-sim/{src/echoshield_sim,tests/{contract,integration,unit},scripts,config}` and empty `__init__.py` under `src/echoshield_sim/`, `src/echoshield_sim/models/`, `src/echoshield_sim/geo/`, `src/echoshield_sim/mapsim/`, `src/echoshield_sim/feed/`.
+- [X] T002 Create `services/echoshield-sim/pyproject.toml` mirroring `services/map-sim/pyproject.toml`（setuptools backend、`[project].name = "echoshield-sim"`、`[project.scripts] echoshield-sim = "echoshield_sim.cli:main"`、runtime deps: `aiohttp>=3.9,pydantic>=2.6,structlog>=24.1,numpy>=1.26,pyyaml`；dev deps: `pytest>=8.0,pytest-asyncio>=0.23,freezegun>=1.4,ruff,black`；pytest `asyncio_mode=auto`）.
+- [X] T003 [P] Create `services/echoshield-sim/README.md` pointing to `specs/003-echoshield-sim/quickstart.md` and summarising endpoints（Map Sim client → `:8090`、TCP feed → `:9000`）.
+- [X] T004 [P] Create `services/echoshield-sim/scripts/smoke.sh` mirroring `services/map-sim/scripts/smoke.sh`（`nc localhost 9000` tail + `curl :8090/objects` sanity check）.
+- [X] T005 [P] Create `services/echoshield-sim/config/local.yaml` from quickstart.md §1 template（sensor 24.0/121.0、`max_range_m: 4800`、`feed_port: 9000`、`noise_seed: null`（flat YAML key））.
+- [X] T006 [P] Create `services/echoshield-sim/tests/conftest.py` with shared fixtures: `frozen_time`（freezegun at `2026-04-24T08:15:30.000Z`）、`noise_seed=42`、`aiohttp` stub Map Sim server factory（reuse pattern from `services/map-sim/tests/conftest.py` if present）.
+- [X] T007 Install editable + dev：`cd services/echoshield-sim && pip install -e '.[dev]'`；verify `pytest -q` discovers zero tests cleanly and `ruff check src tests` passes.
 
 **Checkpoint**: Scaffolding compiles and an empty pytest run succeeds.
 
@@ -46,18 +46,18 @@ description: "Task list for EchoShield Simulator implementation (TDD: contract �
 
 ### Foundational Tests（TDD 先行）
 
-- [ ] T008 [P] Unit test `services/echoshield-sim/tests/unit/test_config.py`: 驗證 YAML 載入 + `extra="forbid"` + `frozen=True`；CLI `--seed 7` 覆寫 YAML `noise_seed: 42` → 最終 `noise_seed == 7`（spec §Clarifications）；非法值（`update_rate_hz=0`、`sensor_lat=91`）raise ValidationError.
-- [ ] T009 [P] Unit test `services/echoshield-sim/tests/unit/test_logging.py`: structlog JSON renderer 輸出含必要欄位（`event`、`level`、`timestamp`）；throttle helper 驗證「每秒最多 1 行」`map_sim_unavailable`（research.md R7）.
-- [ ] T010 [P] Contract test `services/echoshield-sim/tests/contract/test_radar_track_schema.py`: 讀入 `specs/003-echoshield-sim/contracts/tcp-feed.md` §3.1 JSON Schema（內嵌為字串常數或 fixture），以 `jsonschema` 驗證 example（§3.3）通過；故意破壞 `track_id` 格式應 fail（紅燈先行、Phase 3 前不實作 producer）.
+- [X] T008 [P] Unit test `services/echoshield-sim/tests/unit/test_config.py`: 驗證 YAML 載入 + `extra="forbid"` + `frozen=True`；CLI `--seed 7` 覆寫 YAML `noise_seed: 42` → 最終 `noise_seed == 7`（spec §Clarifications）；非法值（`update_rate_hz=0`、`sensor_lat=91`）raise ValidationError.
+- [X] T009 [P] Unit test `services/echoshield-sim/tests/unit/test_logging.py`: structlog JSON renderer 輸出含必要欄位（`event`、`level`、`timestamp`）；throttle helper 驗證「每秒最多 1 行」`map_sim_unavailable`（research.md R7）.
+- [X] T010 [P] Contract test `services/echoshield-sim/tests/contract/test_radar_track_schema.py`: 讀入 `specs/003-echoshield-sim/contracts/tcp-feed.md` §3.1 JSON Schema（內嵌為字串常數或 fixture），以 `jsonschema` 驗證 example（§3.3）通過；故意破壞 `track_id` 格式應 fail（紅燈先行、Phase 3 前不實作 producer）.
 
 ### Foundational Implementation
 
-- [ ] T011 [P] Implement `services/echoshield-sim/src/echoshield_sim/config.py`: pydantic v2 `RadarConfig(BaseModel)` per data-model.md §1（所有欄位、validators、`ConfigDict(extra="forbid", frozen=True)`）；`load_config(path: str) -> RadarConfig`（`yaml.safe_load` + `model_validate`）.
-- [ ] T012 [P] Implement `services/echoshield-sim/src/echoshield_sim/logging.py`: `configure_logging(verbose: bool)` 安裝 structlog JSON renderer to stdout；`get_throttled_logger(logger, key, min_interval_s)` 實作 per-key 節流（research.md R7）.
-- [ ] T013 [P] Implement `services/echoshield-sim/src/echoshield_sim/models/track.py`: `RadarTrack` pydantic model 對應 contracts/tcp-feed.md §3.1（所有欄位、`additionalProperties=False` 等價的 `extra="forbid"`、pattern validators for `track_id`、`timestamp`、`track_status` enum、`classification` const）.
-- [ ] T014 Implement `services/echoshield-sim/src/echoshield_sim/cli.py`: argparse `--config`（必要）、`--verbose`、`--seed int`；load config → CLI `--seed` 覆寫 → `configure_logging` → call `loop.run(config)`（暫存 stub，Phase 3 接入）.
-- [ ] T015 Implement `services/echoshield-sim/src/echoshield_sim/__main__.py`: `from .cli import main; main()`，支援 `python -m echoshield_sim`.
-- [ ] T016 Green-light Foundational tests：run `pytest tests/unit/test_config.py tests/unit/test_logging.py tests/contract/test_radar_track_schema.py -q`，全部 PASS.
+- [X] T011 [P] Implement `services/echoshield-sim/src/echoshield_sim/config.py`: pydantic v2 `RadarConfig(BaseModel)` per data-model.md §1（所有欄位、validators、`ConfigDict(extra="forbid", frozen=True)`）；`load_config(path: str) -> RadarConfig`（`yaml.safe_load` + `model_validate`）.
+- [X] T012 [P] Implement `services/echoshield-sim/src/echoshield_sim/logging.py`: `configure_logging(verbose: bool)` 安裝 structlog JSON renderer to stdout；`get_throttled_logger(logger, key, min_interval_s)` 實作 per-key 節流（research.md R7）.
+- [X] T013 [P] Implement `services/echoshield-sim/src/echoshield_sim/models/track.py`: `RadarTrack` pydantic model 對應 contracts/tcp-feed.md §3.1（所有欄位、`additionalProperties=False` 等價的 `extra="forbid"`、pattern validators for `track_id`、`timestamp`、`track_status` enum、`classification` const）.
+- [X] T014 Implement `services/echoshield-sim/src/echoshield_sim/cli.py`: argparse `--config`（必要）、`--verbose`、`--seed int`；load config → CLI `--seed` 覆寫 → `configure_logging` → call `loop.run(config)`（暫存 stub，Phase 3 接入）.
+- [X] T015 Implement `services/echoshield-sim/src/echoshield_sim/__main__.py`: `from .cli import main; main()`，支援 `python -m echoshield_sim`.
+- [X] T016 Green-light Foundational tests：run `pytest tests/unit/test_config.py tests/unit/test_logging.py tests/contract/test_radar_track_schema.py -q`，全部 PASS.
 
 **Checkpoint**: Config/log/RadarTrack schema 就緒；Contract schema 已凍結。三個 User Story 可並行展開。
 
@@ -71,17 +71,17 @@ description: "Task list for EchoShield Simulator implementation (TDD: contract �
 
 ### Tests for User Story 1（先寫、先失敗）⚠️
 
-- [ ] T017 [P] [US1] Contract test `services/echoshield-sim/tests/contract/test_tcp_framing.py`: 啟動 `FeedServer`、手動 `broadcast([radar_track_json_bytes])`，TCP 連線讀 1 行 → byte 末為 `0x0A`、行內無其他 `0x0A`、`json.loads` 成功、通過 RadarTrack JSON Schema（contracts §6 #1）.
-- [ ] T018 [P] [US1] Unit test `services/echoshield-sim/tests/unit/test_track_serialization.py`: RadarTrack → JSON line 為 compact（`separators=(",",":")`）、UTF-8、尾端單一 `\n`；欄位順序與小數位（lat/lon 7dp、alt 1dp、vel 2dp、az/el 2dp）符合 contracts/tcp-feed.md §3.2.
-- [ ] T019 [P] [US1] Integration test `services/echoshield-sim/tests/integration/test_multi_client.py`: 啟動 server + 餵 2 筆固定 track；3 個並發 asyncio TCP client 連線 2 秒 → 三者收到 bit-identical bytes（允許尾端差 ≤ 1 行）；斷開 client#2 後 client#1/#3 繼續收到後續 tick（FR-ES-013/014、SC-ES-007/008）.
-- [ ] T020 [P] [US1] Integration test `services/echoshield-sim/tests/integration/test_quiet_mode.py`: 餵空 track list 連續 5 秒 → TCP client `reader.read(1)` 超時（或讀到 0 bytes）；連線保持開啟不被關（FR-ES-011、SC-ES-011、contracts §6 #3）.
+- [X] T017 [P] [US1] Contract test `services/echoshield-sim/tests/contract/test_tcp_framing.py`: 啟動 `FeedServer`、手動 `broadcast([radar_track_json_bytes])`，TCP 連線讀 1 行 → byte 末為 `0x0A`、行內無其他 `0x0A`、`json.loads` 成功、通過 RadarTrack JSON Schema（contracts §6 #1）.
+- [X] T018 [P] [US1] Unit test `services/echoshield-sim/tests/unit/test_track_serialization.py`: RadarTrack → JSON line 為 compact（`separators=(",",":")`）、UTF-8、尾端單一 `\n`；欄位順序與小數位（lat/lon 7dp、alt 1dp、vel 2dp、az/el 2dp）符合 contracts/tcp-feed.md §3.2.
+- [X] T019 [P] [US1] Integration test `services/echoshield-sim/tests/integration/test_multi_client.py`: 啟動 server + 餵 2 筆固定 track；3 個並發 asyncio TCP client 連線 2 秒 → 三者收到 bit-identical bytes（允許尾端差 ≤ 1 行）；斷開 client#2 後 client#1/#3 繼續收到後續 tick（FR-ES-013/014、SC-ES-007/008）.
+- [X] T020 [P] [US1] Integration test `services/echoshield-sim/tests/integration/test_quiet_mode.py`: 餵空 track list 連續 5 秒 → TCP client `reader.read(1)` 超時（或讀到 0 bytes）；連線保持開啟不被關（FR-ES-011、SC-ES-011、contracts §6 #3）.
 
 ### Implementation for User Story 1
 
-- [ ] T021 [P] [US1] Implement `services/echoshield-sim/src/echoshield_sim/feed/tcp_server.py`: `FeedServer(host, port, logger)` with `asyncio.start_server`；`clients: set[StreamWriter]`；`async def broadcast(lines: list[bytes])` 對 snapshot iterate、`writer.write(line)` + `asyncio.gather(*[w.drain() for w in snapshot], return_exceptions=True)`；failure → `discard + log client_disconnected`；`async def start()/stop()`；handler on-connect log `client_connected` + add；on-EOF / exception → discard（research.md R3）.
-- [ ] T022 [US1] Implement serialization helper `services/echoshield-sim/src/echoshield_sim/models/track.py::RadarTrack.to_wire_bytes(self) -> bytes`: 回傳 `json.dumps(self.model_dump(), separators=(",",":")).encode("utf-8") + b"\n"`；lat/lon/alt/vel/az/el 於 `model_dump` 前已套 `round`（或於 builder 處理，避免重複 round）.
-- [ ] T023 [US1] Wire minimal `loop.py` stub producing a single fixed RadarTrack every 100ms for manual smoke：`services/echoshield-sim/src/echoshield_sim/loop.py::run(config)`（僅此 Phase，Phase 4/5 會擴充；以 `asyncio.TaskGroup` 管 FeedServer + tick task）.
-- [ ] T024 [US1] Run US1 tests green：`pytest tests/contract/test_tcp_framing.py tests/unit/test_track_serialization.py tests/integration/test_multi_client.py tests/integration/test_quiet_mode.py -q`；手動 smoke：`echoshield-sim --config config/local.yaml` + `nc localhost 9000` 觀察固定 track 輸出.
+- [X] T021 [P] [US1] Implement `services/echoshield-sim/src/echoshield_sim/feed/tcp_server.py`: `FeedServer(host, port, logger)` with `asyncio.start_server`；`clients: set[StreamWriter]`；`async def broadcast(lines: list[bytes])` 對 snapshot iterate、`writer.write(line)` + `asyncio.gather(*[w.drain() for w in snapshot], return_exceptions=True)`；failure → `discard + log client_disconnected`；`async def start()/stop()`；handler on-connect log `client_connected` + add；on-EOF / exception → discard（research.md R3）.
+- [X] T022 [US1] Implement serialization helper `services/echoshield-sim/src/echoshield_sim/models/track.py::RadarTrack.to_wire_bytes(self) -> bytes`: 回傳 `json.dumps(self.model_dump(), separators=(",",":")).encode("utf-8") + b"\n"`；lat/lon/alt/vel/az/el 於 `model_dump` 前已套 `round`（或於 builder 處理，避免重複 round）.
+- [X] T023 [US1] Wire minimal `loop.py` stub producing a single fixed RadarTrack every 100ms for manual smoke：`services/echoshield-sim/src/echoshield_sim/loop.py::run(config)`（僅此 Phase，Phase 4/5 會擴充；以 `asyncio.TaskGroup` 管 FeedServer + tick task）.
+- [X] T024 [US1] Run US1 tests green：`pytest tests/contract/test_tcp_framing.py tests/unit/test_track_serialization.py tests/integration/test_multi_client.py tests/integration/test_quiet_mode.py -q`；手動 smoke：`echoshield-sim --config config/local.yaml` + `nc localhost 9000` 觀察固定 track 輸出.
 
 **Checkpoint**: US1 可獨立 demo——Gateway 可連線、收到 NDJSON、多 Client fan-out 正確、安靜模式正確。
 
@@ -95,28 +95,28 @@ description: "Task list for EchoShield Simulator implementation (TDD: contract �
 
 ### Tests for User Story 2（先寫、先失敗）⚠️
 
-- [ ] T025 [P] [US2] Unit test `services/echoshield-sim/tests/unit/test_lifecycle.py`: `TrackRegistry` 狀態機 per data-model.md §4 所有 transition（`(none)→ACTIVE`、`ACTIVE→ACTIVE`、`ACTIVE→GRACE`、`GRACE→ACTIVE recover`、`GRACE→(none)` 發 Lost）；`track_id` 於 Active 期間恆定；Lost 後再出現分配**新** `track_id`；以 `monotonic_now` 參數化時間（非 `time.monotonic()`）.
-- [ ] T026 [P] [US2] Unit test `services/echoshield-sim/tests/unit/test_mapsim_client.py`: stub aiohttp server 回傳已知 `{count,objects}` → `MapSimClient.fetch(sensor_lat, sensor_lon, radius_m)` 回傳 `list[MapSimObject]`；URL query 精確為 `lat/lon/radius_m`（**不**含 `include_lost`）；忽略 `status`；`is_lost=true` 條目被過濾；`extra="ignore"` 容忍 `distance_m`、`model` 等欄位.
-- [ ] T027 [P] [US2] Contract test `services/echoshield-sim/tests/contract/test_bitexact_replay.py`: fixed `--seed 42` + `freezegun` 凍結時間 + 固定 Map Sim stub objects → 連跑 3 輪廣播，比對輸出 bytes 與 golden file；回歸保護（contracts §6 #2）.
-- [ ] T028 [P] [US2] Integration test `services/echoshield-sim/tests/integration/test_end_to_end.py`: 真正啟動 `loop.run(config)` + aiohttp stub Map Sim；TCP client 於 1s 內收 ≥ 8 行 Active；stub 回 `count=0` → 切靜默（US2 Acceptance 1–2 + SC-ES-001）.
-- [ ] T029 [P] [US2] Integration test `services/echoshield-sim/tests/integration/test_lifecycle_grace.py`:
+- [X] T025 [P] [US2] Unit test `services/echoshield-sim/tests/unit/test_lifecycle.py`: `TrackRegistry` 狀態機 per data-model.md §4 所有 transition（`(none)→ACTIVE`、`ACTIVE→ACTIVE`、`ACTIVE→GRACE`、`GRACE→ACTIVE recover`、`GRACE→(none)` 發 Lost）；`track_id` 於 Active 期間恆定；Lost 後再出現分配**新** `track_id`；以 `monotonic_now` 參數化時間（非 `time.monotonic()`）.
+- [X] T026 [P] [US2] Unit test `services/echoshield-sim/tests/unit/test_mapsim_client.py`: stub aiohttp server 回傳已知 `{count,objects}` → `MapSimClient.fetch(sensor_lat, sensor_lon, radius_m)` 回傳 `list[MapSimObject]`；URL query 精確為 `lat/lon/radius_m`（**不**含 `include_lost`）；忽略 `status`；`is_lost=true` 條目被過濾；`extra="ignore"` 容忍 `distance_m`、`model` 等欄位.
+- [X] T027 [P] [US2] Contract test `services/echoshield-sim/tests/contract/test_bitexact_replay.py`: fixed `--seed 42` + `freezegun` 凍結時間 + 固定 Map Sim stub objects → 連跑 3 輪廣播，比對輸出 bytes 與 golden file；回歸保護（contracts §6 #2）.
+- [X] T028 [P] [US2] Integration test `services/echoshield-sim/tests/integration/test_end_to_end.py`: 真正啟動 `loop.run(config)` + aiohttp stub Map Sim；TCP client 於 1s 內收 ≥ 8 行 Active；stub 回 `count=0` → 切靜默（US2 Acceptance 1–2 + SC-ES-001）.
+- [X] T029 [P] [US2] Integration test `services/echoshield-sim/tests/integration/test_lifecycle_grace.py`:
   - 情境 A（抖動吸收）：drone 出現 1s → 消失 1.5s → 重現 → 沿用相同 `track_id`、無 Lost（FR-ES-010）.
   - 情境 B（Lost 發生）：drone 出現 → 持續消失 ≥ 2.0s → 恰一筆 `Lost` 於 grace 逾時後的下一 tick、不再出現後續行.
   - 情境 C（Lost 後再出現）：Lost 之後 drone 再出現 → 分配**新** `track_id`（FR-ES-009 + SC-ES-010）.
-- [ ] T030 [P] [US2] Integration test `services/echoshield-sim/tests/integration/test_mapsim_unavailable.py`: 三個變體——(i) stub server 未啟動（ConnectionRefused）、(ii) 回 `500`、(iii) 回應延遲 > 1.0s（timeout）。三者皆：主迴圈**不**退出、TCP client 保持連線、`map_sim_unavailable` log 每秒 ≤ 1 行；stub 恢復後 ≤ 200ms 恢復廣播（FR-ES-003、SC-ES-009）.
+- [X] T030 [P] [US2] Integration test `services/echoshield-sim/tests/integration/test_mapsim_unavailable.py`: 三個變體——(i) stub server 未啟動（ConnectionRefused）、(ii) 回 `500`、(iii) 回應延遲 > 1.0s（timeout）。三者皆：主迴圈**不**退出、TCP client 保持連線、`map_sim_unavailable` log 每秒 ≤ 1 行；stub 恢復後 ≤ 200ms 恢復廣播（FR-ES-003、SC-ES-009）.
 
 ### Implementation for User Story 2
 
-- [ ] T031 [P] [US2] Implement `services/echoshield-sim/src/echoshield_sim/models/lifecycle.py`: `MapSimObject`（pydantic, `extra="ignore"`, 欄位 per data-model.md §2）、`TrackState`（dataclass per §3）、`TrackRegistry` 類別封裝狀態機：`update_from_tick(seen: list[MapSimObject], now_mono: float) -> tuple[list[TrackState_active], list[TrackState_lost]]`；`track_id = f"echo-{uuid4().hex[:8]}"`；Lost 後 pop 映射（data-model.md §4 transition 表）.
-- [ ] T032 [P] [US2] Implement `services/echoshield-sim/src/echoshield_sim/mapsim/client.py`: `MapSimClient(session: aiohttp.ClientSession, base_url: str, timeout_s=1.0)`；`async fetch(lat, lon, radius_m) -> list[MapSimObject]`；`ClientTimeout(total=timeout_s)`；`params={"lat":…,"lon":…,"radius_m":…}`（**不**送 `include_lost`）；失敗 raise `MapSimUnavailable`（含原因 enum）；filter out `is_lost=true`（FR-ES-012）.
-- [ ] T033 [US2] Expand `services/echoshield-sim/src/echoshield_sim/loop.py`:
+- [X] T031 [P] [US2] Implement `services/echoshield-sim/src/echoshield_sim/models/lifecycle.py`: `MapSimObject`（pydantic, `extra="ignore"`, 欄位 per data-model.md §2）、`TrackState`（dataclass per §3）、`TrackRegistry` 類別封裝狀態機：`update_from_tick(seen: list[MapSimObject], now_mono: float) -> tuple[list[TrackState_active], list[TrackState_lost]]`；`track_id = f"echo-{uuid4().hex[:8]}"`；Lost 後 pop 映射（data-model.md §4 transition 表）.
+- [X] T032 [P] [US2] Implement `services/echoshield-sim/src/echoshield_sim/mapsim/client.py`: `MapSimClient(session: aiohttp.ClientSession, base_url: str, timeout_s=1.0)`；`async fetch(lat, lon, radius_m) -> list[MapSimObject]`；`ClientTimeout(total=timeout_s)`；`params={"lat":…,"lon":…,"radius_m":…}`（**不**送 `include_lost`）；失敗 raise `MapSimUnavailable`（含原因 enum）；filter out `is_lost=true`（FR-ES-012）.
+- [X] T033 [US2] Expand `services/echoshield-sim/src/echoshield_sim/loop.py`:
   - 建立 `aiohttp.ClientSession` lifetime 綁 TaskGroup.
   - `tick_scheduler` 用 `loop.call_at(next_deadline, …)`（research.md R1）、單 `in_flight` flag；超時則 `tick_overrun` log.
   - 每 tick：`MapSimClient.fetch` → `TrackRegistry.update_from_tick` → 將 Active + 當輪 Lost 組成 `list[RadarTrack]`（**本階段**噪點與幾何由 placeholder 替代：lat/lon/alt/speed 直接帶入、`azimuth_deg=0`、`elevation_deg=0`）→ `FeedServer.broadcast`.
   - 無 track 時**不**寫任何 bytes（FR-ES-011）.
   - Map Sim 失敗 → throttled warn + 跳過該輪、主迴圈不退.
-- [ ] T034 [US2] Add structured log events per research.md R7：`map_sim_query{tick_id,latency_ms,count,status_code}`、`map_sim_unavailable{reason}`（throttled）、`track_lifecycle{drone_id,track_id,event}`、`tick_overrun{tick_id,reason}`、`client_connected/disconnected{remote_addr,client_count}`.
-- [ ] T035 [US2] Run US2 tests green：`pytest tests/unit/test_lifecycle.py tests/unit/test_mapsim_client.py tests/contract/test_bitexact_replay.py tests/integration/test_end_to_end.py tests/integration/test_lifecycle_grace.py tests/integration/test_mapsim_unavailable.py -q`.
+- [X] T034 [US2] Add structured log events per research.md R7：`map_sim_query{tick_id,latency_ms,count,status_code}`、`map_sim_unavailable{reason}`（throttled）、`track_lifecycle{drone_id,track_id,event}`、`tick_overrun{tick_id,reason}`、`client_connected/disconnected{remote_addr,client_count}`.
+- [X] T035 [US2] Run US2 tests green：`pytest tests/unit/test_lifecycle.py tests/unit/test_mapsim_client.py tests/contract/test_bitexact_replay.py tests/integration/test_end_to_end.py tests/integration/test_lifecycle_grace.py tests/integration/test_mapsim_unavailable.py -q`.
 
 **Checkpoint**: US1 + US2 協同可用——真正的 Map Sim → Simulator → TCP Client 端到端；lifecycle / Lost / 安靜模式 / 失敗回復皆驗證。
 
@@ -130,33 +130,33 @@ description: "Task list for EchoShield Simulator implementation (TDD: contract �
 
 ### Tests for User Story 3（先寫、先失敗）⚠️
 
-- [ ] T036 [P] [US3] Unit test `services/echoshield-sim/tests/unit/test_bearing.py`:
+- [X] T036 [P] [US3] Unit test `services/echoshield-sim/tests/unit/test_bearing.py`:
   - 正北 1km 同高 → `azimuth_deg ≈ 0.0 ± 0.1`、`elevation_deg ≈ 0.0 ± 0.1`（US3 Acceptance 1）.
   - 正東 1km → `azimuth_deg ≈ 90.0 ± 0.1`.
   - 正上方 100m、水平 < 1m → `elevation_deg == +90.0`（無 NaN / ZeroDivisionError，FR-ES-020、US3 Acceptance 2）.
   - 正下方 → `elevation_deg == -90.0`.
   - azimuth 回傳範圍 `[0, 360)`.
-- [ ] T037 [P] [US3] Unit test `services/echoshield-sim/tests/unit/test_noise.py`:
+- [X] T037 [P] [US3] Unit test `services/echoshield-sim/tests/unit/test_noise.py`:
   - 固定 seed 42：連續 10,000 次 `perturb_position` 的 lat 偏移 × 111320 → 樣本 σ ∈ [4.0, 6.0]（US3 Acceptance 3、SC-ES-004）.
   - `perturb_velocity` clamp：輸入 `0.0` + σ=0.5 → 所有樣本 ≥ 0（FR-ES-018）.
   - `perturb_altitude` σ ∈ [1.5, 2.5]（1k 樣本）.
   - 同一 seed 兩次建構 `NoiseGenerator` → 前 5 筆取樣 bit-identical.
-- [ ] T038 [P] [US3] Contract test update `services/echoshield-sim/tests/contract/test_bitexact_replay.py`: 開啟噪點 + 幾何後，重新生成 golden 並驗證固定 seed + freezegun 下 bit-identical（contracts §6 #2 的完整版）.
+- [X] T038 [P] [US3] Contract test update `services/echoshield-sim/tests/contract/test_bitexact_replay.py`: 開啟噪點 + 幾何後，重新生成 golden 並驗證固定 seed + freezegun 下 bit-identical（contracts §6 #2 的完整版）.
 
 ### Implementation for User Story 3
 
-- [ ] T039 [P] [US3] Implement `services/echoshield-sim/src/echoshield_sim/geo/bearing.py`:
+- [X] T039 [P] [US3] Implement `services/echoshield-sim/src/echoshield_sim/geo/bearing.py`:
   - `haversine_m(lat1, lon1, lat2, lon2) -> float`（R=6371000）.
   - `azimuth_deg(sensor_lat, sensor_lon, target_lat, target_lon) -> float`（大圓 bearing，`% 360`、round 2）.
   - `elevation_deg(sensor_lat, sensor_lon, sensor_alt_m, target_lat, target_lon, target_alt_m) -> float`（`atan2(Δalt, horiz)`；`horiz<1.0` 則依 Δalt 符號回 ±90；round 2）.
-- [ ] T040 [P] [US3] Implement `services/echoshield-sim/src/echoshield_sim/geo/noise.py`:
+- [X] T040 [P] [US3] Implement `services/echoshield-sim/src/echoshield_sim/geo/noise.py`:
   - `NoiseGenerator(rng: np.random.Generator, pos_sigma_m: float, alt_sigma_m: float = 2.0, vel_sigma_ms: float)`.
   - `perturb_position(lat, lon) -> (lat', lon')`（`σ/111320` 近似，research.md R4）.
   - `perturb_altitude(alt_m) -> float`.
   - `perturb_velocity(speed_ms) -> max(0.0, speed_ms + N(0, σ))`.
   - Factory `make_noise(config: RadarConfig) -> NoiseGenerator` 實作 seed 優先序（CLI > YAML > None → OS 熵，research.md R4）.
-- [ ] T041 [US3] Integrate noise + geometry into `services/echoshield-sim/src/echoshield_sim/loop.py`: per-target 於建構 `RadarTrack` 前 pipeline：`perturb_position` → `perturb_altitude` → `perturb_velocity` → `azimuth_deg(sensor, noised_lat_lon)` → `elevation_deg(sensor, noised_lat_lon, noised_alt)` → rounding per contracts §3.2；替換 Phase 4 的 placeholder.
-- [ ] T042 [US3] Run US3 tests + regenerate golden for T038：`pytest tests/unit/test_bearing.py tests/unit/test_noise.py tests/contract/test_bitexact_replay.py -q`；手動執行 quickstart.md §4 兩 instance 同 seed diff 應為空.
+- [X] T041 [US3] Integrate noise + geometry into `services/echoshield-sim/src/echoshield_sim/loop.py`: per-target 於建構 `RadarTrack` 前 pipeline：`perturb_position` → `perturb_altitude` → `perturb_velocity` → `azimuth_deg(sensor, noised_lat_lon)` → `elevation_deg(sensor, noised_lat_lon, noised_alt)` → rounding per contracts §3.2；替換 Phase 4 的 placeholder.
+- [X] T042 [US3] Run US3 tests + regenerate golden for T038：`pytest tests/unit/test_bearing.py tests/unit/test_noise.py tests/contract/test_bitexact_replay.py -q`；手動執行 quickstart.md §4 兩 instance 同 seed diff 應為空.
 
 **Checkpoint**: 三個 User Story 皆獨立可驗；端對端輸出含真實雷達誤差語義。
 
@@ -164,12 +164,12 @@ description: "Task list for EchoShield Simulator implementation (TDD: contract �
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T043 [P] Docs：更新 `services/echoshield-sim/README.md` 加入 structured log 欄位表 + Quickstart 連結；更新 `docs/system-docs/` 若有服務總覽表.
-- [ ] T044 [P] Performance harness `services/echoshield-sim/tests/integration/test_performance.py`: 50 次 tick 量測「查詢 → 廣播」p95 ≤ 10ms（SC-ES-002）；10s 量測 tick rate ∈ [9.0, 11.0] Hz（SC-ES-001）；20 個 target 不崩潰.
-- [ ] T045 [P] Long-run memory smoke `services/echoshield-sim/tests/integration/test_memory.py`: 跑 5 分鐘（或 3000 tick 的壓縮版），`tracemalloc` 峰值 < 100 MB 且 registry size 無單調成長（SC-ES-012）.
-- [ ] T046 Run `ruff check services/echoshield-sim && black --check services/echoshield-sim` 並修復告警.
-- [ ] T047 執行 `specs/003-echoshield-sim/quickstart.md` §2/§3/§4/§5/§6 全部步驟；於 README 標記「quickstart 已驗證 @ commit <sha>」.
-- [ ] T048 Final green-light：`cd services/echoshield-sim && pytest -q`（contract + unit + integration 全綠）.
+- [X] T043 [P] Docs：更新 `services/echoshield-sim/README.md` 加入 structured log 欄位表 + Quickstart 連結；更新 `docs/system-docs/` 若有服務總覽表.
+- [X] T044 [P] Performance harness `services/echoshield-sim/tests/integration/test_performance.py`: 50 次 tick 量測「查詢 → 廣播」p95 ≤ 10ms（SC-ES-002）；10s 量測 tick rate ∈ [9.0, 11.0] Hz（SC-ES-001）；20 個 target 不崩潰.
+- [X] T045 [P] Long-run memory smoke `services/echoshield-sim/tests/integration/test_memory.py`: 跑 5 分鐘（或 3000 tick 的壓縮版），`tracemalloc` 峰值 < 100 MB 且 registry size 無單調成長（SC-ES-012）.
+- [X] T046 Run `ruff check services/echoshield-sim && black --check services/echoshield-sim` 並修復告警.
+- [X] T047 執行 `specs/003-echoshield-sim/quickstart.md` §2/§3/§4/§5/§6 全部步驟；於 README 標記「quickstart 已驗證 @ commit <sha>」.
+- [X] T048 Final green-light：`cd services/echoshield-sim && pytest -q`（contract + unit + integration 全綠）.
 
 ---
 

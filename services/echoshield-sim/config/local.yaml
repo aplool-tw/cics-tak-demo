@@ -1,0 +1,15 @@
+sensor_lat: 24.0
+sensor_lon: 121.0
+sensor_alt_m: 10.0
+max_range_m: 4800
+update_rate_hz: 10
+lost_grace_sec: 2.0
+
+position_noise_m: 5.0
+velocity_noise_ms: 0.5
+
+noise_seed: null
+
+map_sim_url: http://localhost:8090
+feed_host: 0.0.0.0
+feed_port: 9000
