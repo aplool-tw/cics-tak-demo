@@ -41,6 +41,14 @@ EchoShield Sim         Sentrycs Sim
 
 ---
 
+## Clarifications
+
+### Session 2026-04-24
+
+- Q: `GET /objects` 回應中，物件在進入 `[ttl_warn_s, ttl_remove_s)` lost 區間時，`status` 欄位應如何呈現？ → A: 保留原始 FlightState 值（如 `LANDED`、`FLYING_NORMAL`）不被覆寫；另以獨立布林欄位 `is_lost` 表達 TTL 狀態：當 `last_seen_s ≥ ttl_warn_s` 時為 `true`，否則 `false` 或省略。
+
+---
+
 ## 2. User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 — UDS 推送無人機狀態（Priority: P1）
@@ -74,7 +82,7 @@ EchoShield Simulator（雷達，半徑 4800 m）與 Sentrycs Simulator（RF，�
 1. **Given** 登錄表中有 3 架活躍無人機（距查詢中心分別 1 km / 3 km / 6 km）、`last_seen_s < ttl_warn_s`，**When** 以 `GET /objects?lat=<c_lat>&lon=<c_lon>&radius_m=4800` 查詢，**Then** 回傳 **200 OK**，`count=2`，`objects[]` 依 `distance_m` 由近到遠排序，每筆包含完整 8 欄位加 `distance_m` 與 `last_seen_s`；6 km 外那架不出現。
 2. **Given** 登錄表中同一組物件，**When** 以 `radius_m=8000` 查詢（Sentrycs 視角），**Then** 三架全部出現；結果仍按 `distance_m` 由近到遠排序。
 3. **Given** 登錄表中沒有任何 `drone_id` 落在查詢圓內（例如查詢中心在地球另一側），**When** 呼叫 `GET /objects?lat=&lon=&radius_m=4800`，**Then** 回傳 **200 OK**、`count=0`、`objects=[]`（**不是 404**）。
-4. **Given** 登錄表中某物件的 `last_seen_s > ttl_warn_s` 但 `< ttl_remove_s`（在 lost 區間），**When** 以 `GET /objects?...`（未帶 `include_lost` 或 `include_lost=false`）查詢，**Then** 該物件不出現；**When** 改以 `include_lost=true` 查詢，**Then** 該物件出現且 `status` 欄位為 `"lost"`（或以同等方式表示已過 warn TTL）。
+4. **Given** 登錄表中某物件的 `last_seen_s > ttl_warn_s` 但 `< ttl_remove_s`（在 lost 區間），**When** 以 `GET /objects?...`（未帶 `include_lost` 或 `include_lost=false`）查詢，**Then** 該物件不出現；**When** 改以 `include_lost=true` 查詢，**Then** 該物件出現，`status` 欄位**保留原始 FlightState 值**（如 `FLYING_NORMAL`、`LANDED`，不被覆寫），並附獨立布林欄位 `is_lost: true` 表達 TTL 狀態。
 5. **Given** Map Sim 已啟動，**When** 呼叫 `GET /objects` 但缺 `lat` / `lon` / `radius_m` 任一必填參數，或參數型別無法轉為 float，**Then** 回傳 **400 Bad Request**，`reason` 明確指出缺少/錯誤的參數。
 6. **Given** Map Sim 已啟動，**When** `GET /objects?...&radius_m=0` 或 `radius_m=-1`，**Then** 回傳 **400 Bad Request**，`reason` 明確指出 `radius_m must be > 0`（`0` 與負值均視為非法）。
 
@@ -90,7 +98,7 @@ EchoShield Simulator（雷達，半徑 4800 m）與 Sentrycs Simulator（RF，�
 
 **Acceptance Scenarios**:
 
-1. **Given** Map Sim 以 `ttl_warn_s=5.0, ttl_remove_s=10.0` 啟動、`TRK-001` 剛以 `FLYING_NORMAL` 寫入，**When** 等待 6 秒且期間沒有新的 update，**Then** `GET /objects?...` 預設（`include_lost=false`）不回傳 `TRK-001`；`GET /objects?...&include_lost=true` 與 `GET /objects/all` 仍可見 `TRK-001`，其 `status` 在查詢回應中呈現為 `"lost"`（或等效標記），且 `last_seen_s ≥ 5.0`。
+1. **Given** Map Sim 以 `ttl_warn_s=5.0, ttl_remove_s=10.0` 啟動、`TRK-001` 剛以 `FLYING_NORMAL` 寫入，**When** 等待 6 秒且期間沒有新的 update，**Then** `GET /objects?...` 預設（`include_lost=false`）不回傳 `TRK-001`；`GET /objects?...&include_lost=true` 與 `GET /objects/all` 仍可見 `TRK-001`，其 `status` 維持原始值 `FLYING_NORMAL`（**不被覆寫**），並附 `is_lost: true`，且 `last_seen_s ≥ 5.0`。
 2. **Given** 同上情境，**When** 再繼續等待直到總計超過 10 秒，**Then** `TRK-001` 必須從登錄表完全消失；`GET /objects/all` 回傳的 `total` 不再包含 `TRK-001`，且無論 `include_lost` 為何，`GET /objects` 都不會回傳。
 3. **Given** UDS 對 `TRK-001` 推送最後一筆 `status="LANDED"` 後停推（見 User Story 1 §5），**When** 經過 `ttl_warn_s` 秒，**Then** `TRK-001` 在預設查詢中不再出現；經過 `ttl_remove_s` 秒後從登錄表移除；整段過程不得要求 UDS 主動呼叫 `DELETE /objects/{drone_id}`（DELETE 為選填除錯端點，不是正式清理路徑）。
 4. **Given** Map Sim 正在執行背景 TTL 清理，**When** 清理任務移除 N 個過期物件，**Then** 清理動作不得影響同時間進行中的 `POST /objects/update` / `GET /objects` 請求正確性（互斥存取由 `asyncio.Lock` 或等效機制保證，見 FR-MS-007）。
@@ -106,7 +114,7 @@ EchoShield Simulator（雷達，半徑 4800 m）與 Sentrycs Simulator（RF，�
 - **UDS 重複 `drone_id` 更新**：最新一筆完全覆寫舊值（無合併、無歷史、無版本計數），`last_seen_at` 重設為當下。
 - **高頻並發 POST + GET**：在 UDS 推送（10 架 × 10 Hz ≈ 100 req/s）與兩個感測器各自輪詢 `GET /objects`（合計 ~20 req/s）的併發下，讀寫不得互相污染（髒讀、部分更新）。以 `asyncio.Lock` 序列化登錄表存取即足夠（PoC 量級，不需 lock-free）。
 - **LANDED 後停推，但 TTL 未到**：該 `drone_id` 仍出現在預設查詢中，`status="LANDED"`、`last_seen_s` 逐步上升；TTL 到期後依 User Story 3 清理。這是期望行為，讓下游感測器有短暫時間觀察到「已降落」事件。
-- **`include_lost=true` 的行為**：在 `[ttl_warn_s, ttl_remove_s)` 區間的物件以 `status="lost"` 的形式出現；超過 `ttl_remove_s` 的物件已從登錄表移除，**無法**再被 `include_lost=true` 救回。
+- **`include_lost=true` 的行為**：在 `[ttl_warn_s, ttl_remove_s)` 區間的物件會隨回應出現，`status` 欄位**保留原始 FlightState 值**（如 `FLYING_NORMAL`、`LANDED`，不被覆寫），並以獨立布林欄位 `is_lost=true` 標示 TTL 狀態；超過 `ttl_remove_s` 的物件已從登錄表移除，**無法**再被 `include_lost=true` 救回。
 - **非法 `timestamp` 格式**：回 400；Map Sim 以 ISO 8601 UTC（可含 `Z` 或 `+00:00`）為準。解析失敗視為型別錯誤。
 - **Map Sim 啟動時登錄表為空**：所有 `GET /objects` 回 200、`count=0`；`GET /health` 回 `registered_objects: 0`。
 
@@ -123,7 +131,7 @@ EchoShield Simulator（雷達，半徑 4800 m）與 Sentrycs Simulator（RF，�
 - **FR-MS-003**（地理範圍查詢）：Map Sim MUST 提供 `GET /objects?lat=&lon=&radius_m=&include_lost=` 端點，以 Haversine 距離計算圓形範圍，回傳範圍內符合條件的物件集合；回應 MUST 依 `distance_m` 由近到遠排序、包含 `count` 欄位與每筆物件的 `distance_m`、`last_seen_s`。
 - **FR-MS-004**（未命中查詢語意）：當查詢範圍內無任何活躍物件時，Map Sim MUST 回 200、`count=0`、`objects=[]`；**不得**回 404。呼叫端（EchoShield / Sentrycs）以「空陣列」作為正常狀態處理。
 - **FR-MS-005**（查詢參數校驗）：`lat` / `lon` / `radius_m` 任一缺漏或無法轉為 float、或 `radius_m ≤ 0` → MUST 回 400 並在 `reason` 欄位明確指出錯誤參數名。
-- **FR-MS-006**（TTL 機制）：Map Sim MUST 為每個 `drone_id` 維護 `last_seen_at`；物件 `age_s > ttl_warn_s` 時，預設查詢（`include_lost=false`）MUST 不回傳該物件，且回傳/除錯視圖中該物件的 `status` 呈現為 `"lost"`；`age_s > ttl_remove_s` 時，Map Sim MUST 從登錄表移除該物件，之後無論 `include_lost` 為何皆不可見。預設 `ttl_warn_s=5.0`、`ttl_remove_s=10.0`。
+- **FR-MS-006**（TTL 機制）：Map Sim MUST 為每個 `drone_id` 維護 `last_seen_at`；物件 `age_s > ttl_warn_s` 時，預設查詢（`include_lost=false`）MUST 不回傳該物件；當以 `include_lost=true` 或 `GET /objects/all` 取得該物件時，回應中該物件的 `status` 欄位 MUST **保留原始 FlightState 值**（如 `FLYING_NORMAL`、`MITIGATING_TAKEOVER`、`LANDING`、`LANDED`），**不得**被覆寫為 `"lost"`；TTL 狀態 MUST 以獨立布林欄位 `is_lost` 表達：當 `last_seen_s ≥ ttl_warn_s` 時 `is_lost=true`，否則 `is_lost=false`（可省略欄位或明確為 `false`，擇一實作並於 contracts 固定）。`age_s > ttl_remove_s` 時，Map Sim MUST 從登錄表移除該物件，之後無論 `include_lost` 為何皆不可見。預設 `ttl_warn_s=5.0`、`ttl_remove_s=10.0`。
 - **FR-MS-007**（並發安全）：`POST /objects/update` / `GET /objects` / `GET /objects/all` / 背景 TTL 清理 之間對登錄表的讀寫 MUST 以互斥機制（`asyncio.Lock` 或等效）保護，保證不出現髒讀、部分更新、或清理過程中讀到被刪除物件的不一致狀態。
 - **FR-MS-008**（除錯查詢）：Map Sim MUST 提供 `GET /objects/all`，回傳登錄表中所有物件（含 lost），並附 `total` / `active` / `lost` 計數；此端點用於除錯、不納入正式契約測試的性能 SC。
 - **FR-MS-009**（手動移除）：Map Sim MUST 提供 `DELETE /objects/{drone_id}` 端點供測試/除錯手動移除特定物件；此端點為選填路徑，正式資料流仍以 TTL 為清理機制。
@@ -140,7 +148,7 @@ EchoShield Simulator（雷達，半徑 4800 m）與 Sentrycs Simulator（RF，�
   - `age_s()`：從 `last_seen_at` 到現在的秒數，用於 TTL 判斷與 `last_seen_s` 輸出。
   - `is_active(ttl_warn_s)`：回傳是否仍在 warn TTL 內；供查詢過濾用。
 - **ObjectRegistry**：以 `drone_id` 為鍵的 DroneObject 字典，附 `asyncio.Lock`。對外提供 `update / query_radius / get_all / remove / cleanup_expired` 五種操作；所有操作 MUST 取得鎖。`cleanup_expired` 由背景任務週期呼叫（建議 2 s 一次）。
-- **Query Response**：`GET /objects` 的回應物件，包含 `query`（echo 查詢參數 + 回應產生時間戳）、`count`（過濾後物件數）、`objects[]`（DroneObject 序列化 + `distance_m` + `last_seen_s`，依距離升冪排序）。`GET /objects/all` 另有 `total / active / lost` 三個計數欄位。
+- **Query Response**：`GET /objects` 的回應物件，包含 `query`（echo 查詢參數 + 回應產生時間戳）、`count`（過濾後物件數）、`objects[]`（DroneObject 序列化 + `distance_m` + `last_seen_s` + `is_lost: bool`，依距離升冪排序）。`objects[].status` 永遠是原始 UDS FlightState 值，不被 TTL 狀態覆寫；`is_lost` 為獨立布林欄位，`true` 表示 `last_seen_s ≥ ttl_warn_s`（僅在 `include_lost=true` 時可能出現 `true`），`false` 或省略表示仍在 warn TTL 內。`GET /objects/all` 另有 `total / active / lost` 三個計數欄位，其中 `lost` 以 `is_lost=true` 為判準計數。
 - **Haversine Distance**：以 WGS84 球面近似計算（R = 6371000 m）。Map Sim 不引入橢球（Vincenty）計算；PoC 容差上，100 km 內 < 0.5% 誤差可接受。
 
 ---
