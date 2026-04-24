@@ -7,6 +7,15 @@
 
 ---
 
+## Clarifications
+
+### Session 2026-04-24
+
+- Q: Track ID 在短暫消失後的復現策略？ → A: 採 2 秒 grace window：drone_id 從 Map Sim 回應中消失後，Simulator 於 2.0s 內暫不發 Lost、暫不釋放 `track_id`；若該 drone_id 在 grace window 內重新出現，沿用原 `track_id` 繼續廣播 Active；逾時才發出 `track_status: "Lost"` 並釋放映射。
+- Q: 雷達噪點隨機性是否需支援可重現 seed？ → A: 同時提供 CLI `--seed INT` 與 config `noise.seed`（預設 `null` = 使用系統熵源隨機），CLI 優先於 config。設定後 Simulator 使用該 seed 初始化噪點用之 `random.Random` / `numpy.random.Generator`，以支援單元測試與 demo 重現。
+
+---
+
 ## 概述
 
 EchoShield Simulator 是 PoC 感測層的**雷達模擬器**，取代真實 EchoShield® 4D Radar 硬體，使 CoT Gateway
@@ -77,8 +86,10 @@ Story 1 並列 P1，否則 Gateway 雖然能連線但永遠看不到目標。
 2. **Given** Map Sim 回傳 `{"count": 0, "objects": []}`，**When** 輪到下一次廣播，**Then** Simulator
    **不**送出任何 JSON 行（「安靜模式」），且 TCP 連線保持健康。
 3. **Given** 某 `drone_id` 上一輪存在、這一輪已從 Map Sim 回應中消失（例如離開範圍或被 Map Sim TTL
-   過濾），**When** 當輪廣播，**Then** Simulator 為該 drone_id 額外發出**一筆** `track_status: "Lost"`
-   的 JSON 行，之後不再為該 drone_id 廣播，且下次若該 drone_id 重新出現，Simulator 分配**新**的 `track_id`。
+   過濾），**When** 該 drone_id 連續缺席達 `lost_grace_sec`（預設 2.0s）仍未重新出現，**Then** Simulator
+   於 grace window 逾時的下一輪額外發出**一筆** `track_status: "Lost"` 的 JSON 行、釋放 `track_id` 映射；
+   若之後該 drone_id 再次出現，Simulator 分配**新**的 `track_id`。若該 drone_id 在 grace window 內（≤2s）
+   重新出現，Simulator **MUST** 沿用原 `track_id` 繼續廣播 Active，且**不**發 Lost。
 
 ---
 
@@ -128,8 +139,9 @@ RadarProcessor，驗證 azimuth / elevation 在理論值的 ±0.1° 內、位置
   Simulator 會把它當作一般 Active 目標輸出；其 `track_status` 仍為 `"Active"`（雷達看不見 `status` 字串
   語義，它只看是否仍在回應中）。當 UDS 停止推送而 Map Sim 因 TTL 過濾掉後，Simulator 即按 Story 2 AC 3
   發送一筆 `track_status: "Lost"` 並釋放 `track_id`。
-- **目標在同一 tick 內短暫消失又出現**（例如 Map Sim 一次 5xx）：被視為同一 drone_id 的 Lost → Active
-  序列，Simulator 在 Lost 後會為下次出現重新分配 `track_id`（與 4.1.1 下游對 Lost 的處理一致）。
+- **目標短暫消失又出現**（例如 Map Sim 一次 5xx、或目標在範圍邊緣抖動）：若重新出現距上次被看到 ≤
+  `lost_grace_sec`（預設 2.0s），Simulator **MUST** 沿用原 `track_id` 恢復 Active 廣播，grace window 內
+  **不**發 Lost；若逾時後才重新出現，則視同新物件並分配新 `track_id`（Lost 已於逾時當輪發出）。
 - **雷達範圍內同時 > 20 個目標**：PoC 不保證正確性（見 Assumptions），但 Simulator **不得**崩潰；
   超量時仍應持續輸出（例如按 Map Sim 距離排序前 N 筆，或全部輸出，由實作選擇）。
 
@@ -164,12 +176,18 @@ RadarProcessor，驗證 azimuth / elevation 在理論值的 ±0.1° 內、位置
 
 - **FR-ES-009**：對每個 `drone_id`，首次出現在 Map Sim 回應時 Simulator **MUST** 分配一個新的 `track_id`
   並於該 drone_id 仍在回應中期間**保持不變**。
-- **FR-ES-010**：當某 drone_id 從「上一輪在回應中」變為「這一輪不在回應中」時，Simulator **MUST** 於
-  當輪**額外**輸出一筆 `track_status: "Lost"` 的 JSON（可沿用最後一次已知位置，但 `timestamp` 為當下），
-  之後釋放該 drone_id 的 `track_id` 映射；若之後該 drone_id 再次出現，Simulator **MUST** 分配新的
-  `track_id`（不復用）。
-- **FR-ES-011**：當本輪 Map Sim 回應中無任何物件且上一輪亦無 → 安靜模式：**MUST NOT** 送出任何 bytes。
-  若上一輪有物件、本輪無 → 僅送出該輪的 Lost 行。
+- **FR-ES-010**：當某 drone_id 從 Map Sim 回應中消失時，Simulator **MUST** 啟動長度為 `lost_grace_sec`
+  （預設 2.0s）的 grace window，於 window 期間內**保留**該 drone_id → `track_id` 映射，但**不**再為該
+  drone_id 廣播 JSON 行、也**不**發 Lost。
+  - 若該 drone_id 在 grace window 內重新出現於 Map Sim 回應中，Simulator **MUST** 沿用原 `track_id`
+    並於當輪恢復 `track_status: "Active"` 廣播；**MUST NOT** 發 Lost 行。
+  - 若 grace window 逾時（自最後一次被看到起已過 `lost_grace_sec`）仍未重新出現，Simulator **MUST**
+    於逾時後的下一輪**額外**輸出**一筆** `track_status: "Lost"` 的 JSON（可沿用最後一次已知位置，但
+    `timestamp` 為當下），並在該輪釋放 `track_id` 映射；若之後該 drone_id 再次出現，Simulator **MUST**
+    分配新的 `track_id`（不復用）。
+- **FR-ES-011**：當本輪 Map Sim 回應中無任何物件、且無任何 drone_id 處於 grace window → 安靜模式：
+  **MUST NOT** 送出任何 bytes。若本輪無物件但上一輪有，當該輪僅表示進入 grace window（非逾時）→ 仍
+  安靜；僅在 grace window 逾時的那一輪送出對應 Lost 行。
 
 #### `is_lost` / `status` 語義（與 Map Sim §3.2 一致）
 
@@ -203,17 +221,21 @@ RadarProcessor，驗證 azimuth / elevation 在理論值的 ±0.1° 內、位置
 #### 設定與 CLI
 
 - **FR-ES-021**：所有可調參數（`sensor_lat/lon/alt_m`、`max_range_m`、`update_rate_hz`、
-  `position_noise_m`、`velocity_noise_ms`、`map_sim_url`、`feed_host`、`feed_port`）**MUST** 可由 YAML
-  設定檔配置。
-- **FR-ES-022**：CLI **MUST** 支援 `--config <path>`（必要）與 `--verbose`（選填，啟用 DEBUG 日誌）。
+  `lost_grace_sec`、`position_noise_m`、`velocity_noise_ms`、`noise.seed`、`map_sim_url`、`feed_host`、`feed_port`）
+  **MUST** 可由 YAML 設定檔配置。`noise.seed` 為整數或 `null`（預設 `null` = 使用系統熵源隨機）。
+- **FR-ES-022**：CLI **MUST** 支援 `--config <path>`（必要）、`--verbose`（選填，啟用 DEBUG 日誌）、
+  與 `--seed <int>`（選填，覆寫 config 的 `noise.seed`，供 demo / 測試重現噪點序列）。當同時提供 CLI
+  `--seed` 與 config `noise.seed` 時，**CLI 值優先**；若兩者皆未提供則使用系統熵源隨機初始化。
 
 ### Key Entities
 
 - **RadarConfig**：雷達的「安裝參數 + 模擬參數」。
   - 安裝：`sensor_lat`（WGS84 緯度）、`sensor_lon`（WGS84 經度）、`sensor_alt_m`（安裝高度，公尺 HAE）。
   - 偵測：`max_range_m`（最大偵測距離，公尺；預設 4800，對應 Group 1；支援 6400 / 11400 等任意值）、
-    `update_rate_hz`（預設 10）。
-  - 噪點：`position_noise_m`（σ，預設 5.0）、`velocity_noise_ms`（σ，預設 0.5）。
+    `update_rate_hz`（預設 10）、`lost_grace_sec`（Track 消失後延後釋放的 grace window 秒數，預設 2.0）。
+  - 噪點：`position_noise_m`（σ，預設 5.0）、`velocity_noise_ms`（σ，預設 0.5）、
+    `noise_seed`（`int | None`，預設 `None`；若為整數則初始化噪點 RNG 以取得可重現序列，
+    `None` 代表使用系統熵源）。
   - 上下游：`map_sim_url`（預設 `http://localhost:8090`）、`feed_host` / `feed_port`（預設 `0.0.0.0:9000`）。
 
 - **RadarTrack**（EchoShield JSON 輸出的單筆航跡）。
@@ -252,9 +274,10 @@ RadarProcessor，驗證 azimuth / elevation 在理論值的 ±0.1° 內、位置
   持續收到下一輪廣播，且 Simulator 進程未崩潰、主迴圈仍在 10 Hz 運行。
 - **SC-ES-009（Map Sim 不可用恢復）**：阻斷 Map Sim（例如 kill 或 firewall）持續 3 秒後恢復，Simulator
   **MUST** 在恢復後的下一 tick（≤ 100ms）恢復正常廣播，且阻斷期間主迴圈未退出。
-- **SC-ES-010（Lost 事件）**：某 drone_id 從 Map Sim 回應消失，Simulator **MUST** 在該事件發生的**下一
-  輪廣播**中恰發出 1 筆 `track_status: "Lost"`，之後至該 drone_id 重新出現前 **MUST** 不再為其廣播任何
-  JSON 行。
+- **SC-ES-010（Lost 事件 + Grace Window）**：某 drone_id 從 Map Sim 回應消失並連續缺席 > `lost_grace_sec`
+  （預設 2.0s），Simulator **MUST** 於 grace window 逾時後的下一輪恰發出 1 筆 `track_status: "Lost"`，
+  之後至該 drone_id 重新出現前 **MUST** 不再為其廣播任何 JSON 行。反之，若該 drone_id 在 ≤ 2.0s 內
+  重新出現，Simulator **MUST** 沿用原 `track_id` 續發 Active，且**不得**發出任何 Lost 行。
 - **SC-ES-011（空結果靜默）**：Map Sim 連續 5 秒回 `count=0`，Simulator **MUST** 在 TCP Socket 上不送
   任何 bytes（連線保持開啟）。
 - **SC-ES-012（資源）**：長時間（≥ 1 小時）在 3 個目標 + 1 個 Client 情境下運行，進程常駐記憶體
@@ -278,6 +301,14 @@ RadarProcessor，驗證 azimuth / elevation 在理論值的 ±0.1° 內、位置
   `track_id` 重新分配。
 - **安靜模式**：無目標時不送任何 bytes，包含不送空行 / keepalive；依賴 TCP 連線本身維持存活（Gateway
   若需 liveness，應由 Gateway 端 timeout 機制負責）。
+- **Track 消失 Grace Window**：採 `lost_grace_sec`（預設 2.0s）grace window 吸收 Map Sim 偶發抖動
+  （單次 5xx、範圍邊緣閃爍）。window 內原 `track_id` 保留、Lost 延後、不重新分配；逾時才發 Lost 並
+  釋放映射。此值以牆上時鐘計時（非 tick 計數），不隨 `update_rate_hz` 變動。FR-ES-021 的 YAML 設定
+  **MUST** 支援此欄位。
+- **噪點 Seed 可重現性**：噪點 RNG（位置 / 高度 / 速度 Gaussian）使用單一 seed 初始化。來源優先順序：
+  CLI `--seed INT` > config `noise.seed` > `null`（=使用系統熵源，OS CSPRNG，每次執行結果不同）。
+  CLI 明確給值時**必定**覆寫 config（即使 config 已設），便於臨時 demo / debug 重現。seed 僅影響噪點
+  取樣，不影響 `track_id`（`track_id` 仍由 `uuid4` 產生、不納入 seed 控制）。
 
 ## Out of Scope
 
