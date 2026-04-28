@@ -35,6 +35,8 @@ SENTRYCS_PORT="7070"
 TAK_HOST="127.0.0.1"
 TAK_PORT="8089"
 TAK_USE_SSL="false"
+TAK_CERT_DIR=""              # empty = "${ROOT_DIR}/infra/certs"
+TAK_P12_PASSWORD_OVERRIDE="" # empty = use $TAK_P12_PASSWORD env or "takpoc"
 
 UDS_SCENARIO=""
 SENTRYCS_SCENARIO=""
@@ -90,6 +92,10 @@ Bind / per-service ports
   --tak-host <host>          External TAK Server host. Default: 127.0.0.1
   --tak-port <port>          External TAK Server port. Default: 8089
   --tak-use-ssl              Enable SSL for TAK uplink (requires p12). Off by default.
+  --tak-cert-dir <dir>       Directory containing gateway.p12 + truststore.pem
+                             when --tak-use-ssl is on. Default: <repo>/infra/certs
+  --tak-p12-password <pwd>   Password for gateway.p12. Default: $TAK_P12_PASSWORD
+                             env var, or 'takpoc' if unset.
 
 Upstream URL/host overrides (optional; default: derived from --bind-host + ports)
   --uds-map-sim-url <url>            Map Sim base URL used by UDS push client
@@ -139,6 +145,8 @@ while [[ $# -gt 0 ]]; do
     --tak-host)               TAK_HOST="$2"; shift 2 ;;
     --tak-port)               TAK_PORT="$2"; shift 2 ;;
     --tak-use-ssl)            TAK_USE_SSL="true"; shift ;;
+    --tak-cert-dir)           TAK_CERT_DIR="$2"; shift 2 ;;
+    --tak-p12-password)       TAK_P12_PASSWORD_OVERRIDE="$2"; shift 2 ;;
     --uds-map-sim-url)        UDS_MAP_SIM_URL="$2"; shift 2 ;;
     --echoshield-map-sim-url) ECHOSHIELD_MAP_SIM_URL="$2"; shift 2 ;;
     --sentrycs-map-sim-url)   SENTRYCS_MAP_SIM_URL="$2"; shift 2 ;;
@@ -323,6 +331,28 @@ PY
 
 launch_cot_gateway() {
   local cfg="${GEN_DIR}/gateway.yaml"
+
+  # Cert plumbing (only meaningful when --tak-use-ssl is on)
+  local cert_dir="${TAK_CERT_DIR:-${ROOT_DIR}/infra/certs}"
+  local cert_block=""
+  if [[ "${TAK_USE_SSL}" == "true" ]]; then
+    local p12="${cert_dir}/gateway.p12"
+    [[ -f "${p12}" ]] || die "TAK SSL on but cert not found: ${p12} (run scripts/gen-certs.sh)"
+    # Mirror certs into the gateway runtime config dir so the relative
+    # path inside gateway.yaml (config/certs/gateway.p12) resolves.
+    local svc_certs="${ROOT_DIR}/services/cot-gateway/config/certs"
+    mkdir -p "${svc_certs}"
+    cp "${cert_dir}/gateway.p12" "${svc_certs}/gateway.p12"
+    [[ -f "${cert_dir}/truststore.pem" ]] && cp "${cert_dir}/truststore.pem" "${svc_certs}/truststore.pem"
+    local pwd_val="${TAK_P12_PASSWORD_OVERRIDE:-${TAK_P12_PASSWORD:-takpoc}}"
+    export TAK_P12_PASSWORD="${pwd_val}"
+    cert_block=$(cat <<EOF
+  cert_file: config/certs/gateway.p12
+  cert_password: "\${TAK_P12_PASSWORD}"
+EOF
+)
+  fi
+
   cat > "${cfg}" <<EOF
 echoshield:
   host: ${GATEWAY_ECHOSHIELD_HOST}
@@ -346,6 +376,7 @@ tak_server:
   port: ${GATEWAY_TAK_PORT}
   use_ssl: ${TAK_USE_SSL}
   use_ssl_verify: false
+${cert_block}
   max_retries: 5
   backoff_initial_s: 1.0
   backoff_cap_s: 60.0

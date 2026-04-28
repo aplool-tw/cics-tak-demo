@@ -1,0 +1,87 @@
+name: cics-tak-demo
+
+# TAK Server for the CICS TAK PoC.
+#
+# Two profiles are supported:
+#
+#   1. PoC default (profile: stub) — runs the bundled Python stub server,
+#      requires no external license, and is sufficient for exercising the
+#      CoT Gateway → TAK uplink path. Default if no profile is set.
+#
+#   2. Production (profile: prod) — connects to the real TAK Server image
+#      that you have separately obtained from TAK.gov. The service is
+#      pre-wired but commented out below; uncomment + set TAK_IMAGE.
+#
+# Certificates are mounted read-only from ../certs (run scripts/gen-certs.sh
+# from the repository root to generate self-signed certs, or drop in your
+# production CA-issued certs with the same filenames).
+
+services:
+  tak-server-stub:
+    profiles: ["stub", ""]   # default profile when none specified
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cics-tak/tak-stub:latest
+    container_name: cics-tak-stub
+    restart: unless-stopped
+    ports:
+      - "${TAK_PORT:-8089}:8089"
+    volumes:
+      - ../certs:/certs:ro
+      - tak_stub_logs:/var/log/tak-stub
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    networks:
+      - tak-network
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Production TAK Server — uncomment and set TAK_IMAGE in .env to enable.
+  # Requires you to obtain the official TAK Server Docker image from
+  # https://tak.gov (login required) and set the certificate authentication.
+  # ─────────────────────────────────────────────────────────────────────
+  #
+  # tak-server:
+  #   profiles: ["prod"]
+  #   image: ${TAK_IMAGE}                      # e.g. takserver:5.4
+  #   container_name: takserver
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8087:8087"     # CoT TCP plaintext (testing only)
+  #     - "${TAK_PORT:-8089}:8089"   # CoT TCP SSL (primary)
+  #     - "8443:8443"     # HTTPS web console
+  #     - "8446:8446"     # HTTPS PKI auto-enrollment
+  #     - "4242:4242/udp" # SA UDP
+  #   volumes:
+  #     - ../certs:/opt/tak/certs:ro
+  #     - tak_data:/opt/tak/data
+  #     - tak_logs:/opt/tak/logs
+  #     - ./CoreConfig.xml:/opt/tak/CoreConfig.xml:ro
+  #   environment:
+  #     - TAK_JAVA_OPTS=${TAK_JAVA_OPTS:--Xmx2g -Xms512m}
+  #   networks:
+  #     - tak-network
+  #
+  # tak-db:
+  #   profiles: ["prod"]
+  #   image: postgis/postgis:15-3.4
+  #   container_name: tak-db
+  #   restart: unless-stopped
+  #   environment:
+  #     - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD env var required}
+  #     - POSTGRES_USER=tak
+  #     - POSTGRES_DB=cot
+  #   volumes:
+  #     - tak_db:/var/lib/postgresql/data
+  #   networks:
+  #     - tak-network
+
+volumes:
+  tak_stub_logs:
+  tak_data:
+  tak_logs:
+  tak_db:
+
+networks:
+  tak-network:
+    driver: bridge

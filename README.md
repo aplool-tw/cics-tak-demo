@@ -104,6 +104,12 @@ scripts/dev-launcher.sh --services cot-gateway \
   --gateway-echoshield-host 10.0.0.5 \
   --gateway-tak-host tak.example.com --gateway-tak-port 8089
 
+# 啟用 TAK SSL 上傳（搭配 infra/tak-server 內建 stub 或正式 TAK Server）
+scripts/gen-certs.sh                                   # 產生 PoC 自簽 PKI
+( cd infra/tak-server && docker compose up -d )        # 啟動 stub
+scripts/dev-launcher.sh --services cot-gateway \
+  --tak-host localhost --tak-port 8089 --tak-use-ssl
+
 # 完整跨服務 URL 覆寫
 scripts/dev-launcher.sh \
   --uds-map-sim-url   http://map-host:8090 \
@@ -129,6 +135,29 @@ nc localhost 9000   # 每 100ms 一行 NDJSON
 # 5. 觀察 Gateway 推送至 TAK（無 TAK 時 Gateway 會自動退避重試）
 tail -f .dev-runtime/logs/cot-gateway.log
 ```
+
+### TAK Server（PoC stub & 生產切換）
+
+倉庫附帶輕量 TAK Server stub（asyncio TLS CoT collector），無需 TAK.gov 帳號即可端對端測試：
+
+```bash
+# 1. 產生 PoC 自簽 PKI（CA + 伺服器憑證 + Gateway p12）
+scripts/gen-certs.sh
+
+# 2. 啟動 stub（profile=stub 為預設）
+( cd infra/tak-server && docker compose up -d )
+
+# 3. Gateway 啟用 SSL 上傳
+scripts/dev-launcher.sh --services cot-gateway \
+  --tak-host localhost --tak-port 8089 --tak-use-ssl
+
+# 4. 觀察 stub 收到的 CoT
+docker compose -f infra/tak-server/docker-compose.yaml logs -f tak-server-stub
+```
+
+切換到正式 TAK Server：替換 `infra/certs/` 內的憑證（檔名相同），開啟 `docker-compose.yaml`
+中註解的 `tak-server` / `tak-db` 服務並設定 `TAK_IMAGE`，詳見
+[`docs/tak-server-deployment.md`](./docs/tak-server-deployment.md)。
 
 ---
 
@@ -285,9 +314,10 @@ artifacts 落於 `specs/00X-*/`，開發紀錄落於 `dev-docs/00X-*.md`。
 
 ## 6. 已知遺留 / 未來工作
 
-- **TAK Server SSL**：PoC 採 `CERT_NONE`（接受自簽憑證）；正式部署需啟用憑證驗證
-- **多主機部署**：launcher 已支援跨主機 URL 覆寫，但缺 docker-compose / k8s manifests
-- **真實 TAK Server 整合測試**：目前僅以本地明文 TCP stub 驗證 Gateway 上傳
+- **TAK Server**：`infra/tak-server/` 提供 PoC stub（asyncio TLS CoT collector）+ 自簽 PKI；
+  生產環境改用 TAK.gov 提供的官方 image，cert 檔名相容（見 [`docs/tak-server-deployment.md`](./docs/tak-server-deployment.md)）
+- **多主機部署**：launcher 已支援跨主機 URL 覆寫與 TAK 憑證注入，但缺 k8s manifests
+- **真實 TAK Server 整合測試**：目前僅以 PoC stub 驗證；待官方 image 在實驗環境上線後補齊
 - **效能基線**：各服務 SC 已含 p95 < 100ms / 吞吐目標，但缺多服務聯合壓測
 - **Constitution**：`.specify/memory/constitution.md` 仍為 placeholder，沿用 PoC 自律準則 G1–G7
 
