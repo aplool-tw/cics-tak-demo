@@ -1,0 +1,65 @@
+"""CLI entry point: argparse + asyncio + signal handlers."""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import signal
+import sys
+from typing import Optional
+
+from .config import GatewayConfig, load_config
+from .logging import configure_logging, get_logger
+from .loop import GatewayMain
+from .tak.ssl_context import build_ssl_context
+
+
+def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
+    p = argparse.ArgumentParser(prog="cot-gateway", description="CoT Gateway")
+    p.add_argument("--config", required=True, help="Path to gateway.yaml")
+    p.add_argument("--verbose", action="store_true", help="Enable DEBUG logging")
+    return p.parse_args(argv)
+
+
+async def _run_with_signals(config: GatewayConfig) -> int:
+    ssl_ctx = None
+    if config.tak_server.use_ssl:
+        ssl_ctx = build_ssl_context(config.tak_server)
+    gw = GatewayMain(config, ssl_context=ssl_ctx)
+
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(sig, gw.request_stop)
+        except NotImplementedError:
+            pass
+    try:
+        return await gw.run()
+    except asyncio.CancelledError:
+        return 0
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    args = _parse_args(argv)
+
+    try:
+        cfg = load_config(args.config)
+    except Exception as exc:  # pragma: no cover
+        # Pre-logging error; print raw
+        print(f"config_load_failed: {exc!r}", file=sys.stderr)
+        return 2
+
+    configure_logging(level=cfg.logging.level, json=cfg.logging.json, verbose=args.verbose)
+    log = get_logger("cot_gateway.cli")
+    log.info("cli_start", config=args.config, verbose=args.verbose)
+
+    try:
+        rc = asyncio.run(_run_with_signals(cfg))
+    except KeyboardInterrupt:
+        rc = 0
+    log.info("cli_stop", exit_code=rc)
+    return rc
+
+
+if __name__ == "__main__":
+    sys.exit(main())

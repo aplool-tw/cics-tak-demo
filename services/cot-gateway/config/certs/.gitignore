@@ -1,0 +1,4 @@
+*.p12
+*.key
+*.pem
+!README.md
