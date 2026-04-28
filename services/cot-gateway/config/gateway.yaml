@@ -1,0 +1,32 @@
+echoshield:
+  host: echoshield-sim
+  port: 9000
+  reconnect_interval_s: 5.0
+
+sentrycs:
+  enabled: true
+  host: sentrycs-sim
+  port: 7070
+  poll_interval_s: 1.0
+  timeout_s: 2.0
+
+correlator:
+  distance_threshold_m: 50.0
+  time_window_s: 3.0
+  ttl_s: 10.0
+
+tak_server:
+  host: tak-server
+  port: 8089
+  use_ssl: true
+  use_ssl_verify: false
+  cert_file: config/certs/gateway.p12
+  cert_password: "${TAK_P12_PASSWORD}"
+  max_retries: 5
+  backoff_initial_s: 1.0
+  backoff_cap_s: 60.0
+  queue_maxsize: 500
+
+logging:
+  level: INFO
+  json: true
