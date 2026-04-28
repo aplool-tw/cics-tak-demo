@@ -15,3 +15,6 @@ dist/
 build/
 .venv/
 venv/
+
+# Local dev launcher runtime (logs, pids, generated configs)
+.dev-runtime/
