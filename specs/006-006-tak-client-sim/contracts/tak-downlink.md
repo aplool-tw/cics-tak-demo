@@ -35,8 +35,8 @@ async def receive_loop(
         try:
             raw_bytes = await reader.readuntil(b'\n', limit=65536)
         except asyncio.LimitOverrunError:
-            await reader.read(65536)           # 排空剩餘
-            log.warning("cot_oversized")
+            partial = await reader.read(65536)   # 排空剩餘
+            log.warning("cot_oversized", bytes_seen=65536 + len(partial))
             stats.total_oversized += 1
             continue
         except (asyncio.IncompleteReadError, ConnectionResetError, OSError):
@@ -58,8 +58,8 @@ async def receive_loop(
 
         log.info("cot_received",
                  uid=event.uid, source=event.source, color=event.color,
-                 type=event.cot_type, lat=event.lat, lon=event.lon,
-                 hae=event.hae, delta_s=event.delta_s,
+                 type=event.cot_type, time=event.time.isoformat(), stale=event.stale.isoformat(),
+                 lat=event.lat, lon=event.lon, hae=event.hae, delta_s=event.delta_s,
                  speed=event.speed, course=event.course,
                  remarks=event.remarks, filtered=filtered)
 
@@ -181,7 +181,7 @@ def build_ssl_context(config: ClientConfig) -> ssl.SSLContext:
 | `reconnecting` | 每次重連嘗試前 | `attempt`, `delay_s` |
 | `tak_reconnected` | 重連成功後 | `attempt` |
 | `max_retries_exceeded` | 達重連上限 | `max_retries` |
-| `cot_received` | 成功解析 CoT | `uid`, `source`, `color`, `type`, `lat`, `lon`, `hae`, `delta_s`, `speed`, `course`, `remarks`, `filtered` |
+| `cot_received` | 成功解析 CoT | `uid`, `source`, `color`, `type`, `time`, `stale`, `lat`, `lon`, `hae`, `delta_s`, `speed`, `course`, `remarks`, `filtered` |
 | `cot_parse_error` | XML 解析失敗 | `raw_preview`（前 200 字元） |
 | `cot_oversized` | 行超過 64 KB | `bytes_seen` |
 | `session_summary` | 優雅關閉時 | `total_received`, `total_filtered`, `total_parse_errors`, `total_oversized`, `reconnect_count`, `per_source`, `per_uid` |
@@ -203,10 +203,10 @@ def build_ssl_context(config: ClientConfig) -> ssl.SSLContext:
 | 7 | `test_fused_mitigating` | uid=`FUSED-DRN-001`, source=`FUSED`, color=`RED`, delta_s=11 |
 | 8 | `test_fused_neutralized` | uid=`FUSED-DRN-001`, source=`FUSED`, color=`RED`, delta_s=30 |
 
-附加 contract test：
-- `test_stub_server_3_cot` — stub TCP server 發 3 筆 CoT，驗證 console 輸出含正確 uid/lat/lon
-- `test_reconnect_sequence` — stub 中途斷線，驗證重連 delay 序列（freezegun mock）
-- `test_filter_console_vs_log` — `--filter FUSED` 時，console 僅含 FUSED 行，structlog 含全部（`filtered=true`）
+附加測試（位置說明）：
+- `test_stub_server_3_cot` — **contract test**（`tests/contract/`）：stub TCP server 發 3 筆 CoT，驗證 console 輸出含正確 uid/lat/lon
+- `test_reconnect_sequence` — **unit test**（`tests/unit/test_connection.py`）：mock asyncio.sleep，驗證退避 delay 序列（freezegun mock）
+- `test_filter_console_vs_log` — **integration test**（`tests/integration/test_runner.py`）：`--filter FUSED` 時，console 僅含 FUSED 行，structlog 含全部（`filtered=true`）
 
 ---
 

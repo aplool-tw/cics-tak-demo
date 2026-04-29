@@ -148,11 +148,11 @@ Demo 期間 TAK Server 可能因環境問題短暫不可用。`tak-client-sim` �
   ```
   範例：
   ```
-  [2026-04-24T12:34:56Z] [ECHO][GREY] ECHO-TRK-001  25.059800/121.565400  101.0m  12.5m/s  045°  delta_s=+11  Source: ECHOSHIELD | Speed: 12.5m/s | Alt: 101m
+  [2026-04-24T12:34:56.789Z] [ECHO][GREY] ECHO-TRK-001  25.059800/121.565400  101.0m  12.5m/s  045°  delta_s=+11  Source: ECHOSHIELD | Speed: 12.5m/s | Alt: 101m
   ```
 - **FR-TCS-021**: 若收到事件的 stale 時間早於當前時刻超過 30 秒，MUST 在行首附加 `[STALE]` 標記
 - **FR-TCS-022**: `--filter <PREFIX>` 參數生效時，uid 不以指定前綴開頭的事件 MUST 不輸出至 console（但仍記錄至 structlog）
-- **FR-TCS-023**: console 輸出使用 `print()`（CLI smoke 場景允許）；**禁止**在核心解析與連線邏輯中使用 `print()`
+- **FR-TCS-023**: console 輸出使用 `print()`（CLI smoke 場景允許）；**禁止**在核心解析（parser.py）與連線邏輯（connection.py）中使用 `print()`，**例外**：`connection.py` 的 `connect_with_retry()` 允許以 `print()` 輸出重連進度訊息（`Reconnecting...`），因其為面向操作員的即時 console 提示
 
 #### 結構化日誌
 
@@ -171,7 +171,7 @@ Demo 期間 TAK Server 可能因環境問題短暫不可用。`tak-client-sim` �
   |------|--------|------|
   | `--host` | `tak-server` | TAK Server 主機名稱或 IP |
   | `--port` | `8089` | TAK Server 連接埠 |
-  | `--no-ssl-verify` | false（即 `use_ssl_verify=true`） | PoC 模式，跳過 SSL 憑證驗證 |
+  | `--no-ssl-verify` | （不設定，依 config 預設 `use_ssl_verify=false`） | PoC 模式，跳過 SSL 憑證驗證（旗標存在即 `use_ssl_verify=False`） |
   | `--filter` | （不設定） | 僅顯示符合此 UID 前綴的事件 |
   | `--log-file` | （不設定） | structlog JSON 寫入目標檔案路徑 |
   | `--max-retries` | `0`（無限） | 最多重連次數，0 為無限 |

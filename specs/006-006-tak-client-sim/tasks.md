@@ -38,7 +38,7 @@ generated: "2026-04-29"
 
 ⚠️ **CRITICAL**: 此 Phase 須全部完成才能進入任何 User Story Phase
 
-- [ ] T004 建立 `services/tak-client-sim/src/tak_client_sim/models.py`：`CotEvent`（`dataclasses.dataclass(frozen=True)`，含 `uid`/`cot_type`/`source`/`color`/`time`/`stale`/`delta_s`/`lat`/`lon`/`hae`/`speed`/`course`/`remarks`/`raw_xml`，`SourceLabel = Literal["ECHO","SENTRYCS","FUSED","UNKNOWN"]`，`ColorLabel = Literal["GREY","RED","UNKNOWN"]`）；`ConnectionStats`（mutable dataclass，含 `total_received`/`total_filtered`/`total_parse_errors`/`total_oversized`/`reconnect_count`/`per_source`/`per_uid`，`record_event()`、`to_dict()` 方法）；所有檔案加 `from __future__ import annotations`
+- [ ] T004 [P] 建立 `services/tak-client-sim/src/tak_client_sim/models.py`：`CotEvent`（`dataclasses.dataclass(frozen=True)`，含 `uid`/`cot_type`/`source`/`color`/`time`/`stale`/`delta_s`/`lat`/`lon`/`hae`/`speed`/`course`/`remarks`/`raw_xml`，`SourceLabel = Literal["ECHO","SENTRYCS","FUSED","UNKNOWN"]`，`ColorLabel = Literal["GREY","RED","UNKNOWN"]`）；`ConnectionStats`（mutable dataclass，含 `total_received`/`total_filtered`/`total_parse_errors`/`total_oversized`/`reconnect_count`/`per_source`/`per_uid`，`record_event()`、`to_dict()` 方法）；所有檔案加 `from __future__ import annotations`
 - [ ] T005 [P] 建立 `services/tak-client-sim/tests/conftest.py`：定義 8 筆合規矩陣 CoT XML fixture（pytest `@pytest.fixture`），涵蓋 ECHO-TRK-001 Active（delta_s=11）/Lost（delta_s=0）、SENTRYCS-DRN-001 DETECTED/MITIGATING（delta_s=11）/NEUTRALIZED（delta_s=30）、FUSED-DRN-001 DETECTED/MITIGATING（delta_s=11）/NEUTRALIZED（delta_s=30）；每筆含完整 `<event>/<point>/<detail>/<track>/<remarks>` XML；`pytest_configure` 設定 `asyncio_mode="auto"`
 
 **Checkpoint**: `python -c "from tak_client_sim.models import CotEvent, ConnectionStats"` 無錯
@@ -55,7 +55,8 @@ generated: "2026-04-29"
 
 - [ ] T006 [US2] 建立 `services/tak-client-sim/tests/contract/test_tak_downlink.py`：針對 conftest 8 個 CoT XML fixture 撰寫 `test_echo_active`/`test_echo_lost`/`test_sentrycs_detected`/`test_sentrycs_mitigating`/`test_sentrycs_neutralized`/`test_fused_detected`/`test_fused_mitigating`/`test_fused_neutralized`，每個斷言 `event.uid`/`event.source`/`event.color`/`event.delta_s`；附加 `test_stub_server_3_cot`（asyncio stub TCP server 發 3 筆 CoT，驗證解析結果含正確 uid/lat/lon）；**確認全部 FAIL（ImportError 或 AssertionError）**
 - [ ] T007 [P] [US2] 建立 `services/tak-client-sim/tests/unit/test_parser.py`：`test_parse_happy_path`（含 track/remarks 完整 CoT）、`test_missing_point_defaults_to_zero`、`test_missing_track_defaults_to_zero`、`test_missing_remarks_empty_string`、`test_invalid_xml_returns_none`（格式錯誤 XML）、`test_missing_uid_returns_none`（`<event type=...>` 無 uid 屬性）、`test_missing_type_returns_none`、`test_stale_lt_time_delta_s_zero`（stale < time → delta_s=0）、`test_delta_s_rounds_to_int`；**確認全部 FAIL**
-- [ ] T008 [P] [US2] 建立 `services/tak-client-sim/tests/unit/test_formatter.py`：`test_format_event_normal`（驗證輸出含 `[ECHO][GREY]`/`lat/lon`/`delta_s=+11`/`remarks`）、`test_format_event_stale_prefix`（stale 比 now 早 35 秒 → 輸出以 `[STALE]` 開頭，使用 freezegun mock now）、`test_format_event_no_stale_prefix`（stale 比 now 早 25 秒 → 無 `[STALE]`）、`test_format_delta_s_zero`（Lost 狀態 → `delta_s=+0`）、`test_is_stale_at_receive_true`/`test_is_stale_at_receive_false`；**確認全部 FAIL**
+- [ ] T007b [P] [US2] 在 `tests/unit/test_parser.py` 新增 `test_cot_oversized_handling`：mock `asyncio.StreamReader.readuntil` 以在 `runner.receive_loop` 內拋出 `asyncio.LimitOverrunError`；斷言 `stats.total_oversized == 1`；以 `caplog` 或 structlog capture 驗證有 `cot_oversized` warning 事件，且 `bytes_seen` 欄位存在；斷言迴圈繼續正常處理下一行（不崩潰）；**確認 FAIL**（覆蓋 SC-TCS-008 第 4 類錯誤情境）
+- [ ] T008 [P] [US2] 建立 `services/tak-client-sim/tests/unit/test_formatter.py`：`test_format_event_normal`（驗證輸出含 `[ECHO][GREY]`/`lat/lon`/`delta_s=+11`/`remarks`，timestamp 含毫秒 `.sssZ`）、`test_format_event_stale_prefix`（stale 比 now 早 35 秒 → 輸出以 `[STALE]` 開頭，使用 freezegun mock now）、`test_format_event_no_stale_prefix`（stale 比 now 早 25 秒 → 無 `[STALE]`）、`test_format_delta_s_zero`（Lost 狀態 → `delta_s=+0`）、`test_is_stale_at_receive_true`/`test_is_stale_at_receive_false`；**確認全部 FAIL**
 
 ### 實作
 
@@ -168,10 +169,11 @@ generated: "2026-04-29"
 
 **目的**: 文件、smoke test、全套測試驗收、lint 合規
 
-- [ ] T030 [P] 建立 `services/tak-client-sim/README.md`：安裝（`pip install -e ".[dev]"`）、基本啟動（PoC mode / filter / log-file / YAML config / max-retries）、console 輸出格式（含 `[STALE]` 範例）、structlog JSON 格式範例、優雅關閉輸出範例、測試指令（`pytest -q` / `pytest tests/contract/` / `pytest tests/unit/` / `pytest tests/integration/`）、lint 指令（`ruff check . && black --check src tests`）
+- [ ] T030 [P] 建立 `services/tak-client-sim/README.md`：安裝（`pip install -e ".[dev]"`）、基本啟動（PoC mode / filter / log-file / YAML config / max-retries）、console 輸出格式（含 `[STALE]` 範例，timestamp 含毫秒 `.sssZ`）、structlog JSON 格式範例、優雅關閉輸出範例、測試指令（`pytest -q` / `pytest tests/contract/` / `pytest tests/unit/` / `pytest tests/integration/`）、lint 指令（`ruff check . && black --check src tests`）
 - [ ] T031 [P] 建立 `services/tak-client-sim/scripts/smoke.sh`：①後台啟動 asyncio Python stub TCP server（發送 ECHO + FUSED 各 1 筆，loop 3 次）；②後台啟動 `python -m tak_client_sim --host 127.0.0.1 --port 8089 --no-ssl-verify --log-file /tmp/smoke-tak.jsonl`；③等待 5 秒；④發送 SIGINT；⑤等待 2 秒；⑥`grep -c '"event":"cot_received"' /tmp/smoke-tak.jsonl` 斷言 ≥ 2；⑦`grep -c '"event":"session_summary"' /tmp/smoke-tak.jsonl` 斷言 = 1；⑧全通 → `echo SMOKE PASS`，任一失敗 → `echo SMOKE FAIL; exit 1`
+- [ ] T031b [P] 在 `tests/integration/test_runner.py` 新增效能測試：`test_50_ups_no_backlog`（asyncio 並行發送 50 筆合規 CoT，以 `asyncio.timeout(5.0)` 等待 `receive_loop` 消費完畢，斷言 `stats.total_received == 50` 且 `stats.total_parse_errors == 0`；驗證 SC-TCS-005）；`test_shutdown_within_3s`（使用 `time.monotonic()` 量測從 `stop.set()` 到 `main()` 返回的耗時 ≤ 3.0 秒；驗證 SC-TCS-006）；**確認 FAIL**
 - [ ] T032 執行 `cd services/tak-client-sim && ruff check src/ tests/` 並修正全部 lint 錯誤；執行 `black src/ tests/` 自動格式化；確認 `ruff check . && black --check src tests` 零輸出
-- [ ] T033 執行 `cd services/tak-client-sim && python -m pytest -q`，確認全部測試 PASS（contract × 8 場景 + unit test_parser + test_formatter + test_config + test_connection + integration test_runner 含全部子測試）；輸出通過測試總數
+- [ ] T033 執行 `cd services/tak-client-sim && python -m pytest -q`，確認全部測試 PASS（contract × 8 場景 + unit test_parser（含 T007b oversized）+ test_formatter + test_config + test_connection + integration test_runner 含全部子測試含 T031b 效能測試）；輸出通過測試總數
 - [ ] T034 [P] 驗證 FR-TCS-063 合規：確認 `pyproject.toml` 無 `lxml`/`aiohttp`/`cryptography` 依賴；執行 `grep -r "import lxml\|from lxml\|import aiohttp\|from cryptography" services/tak-client-sim/src/` → 無輸出
 
 ---
