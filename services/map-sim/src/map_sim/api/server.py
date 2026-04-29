@@ -1,4 +1,5 @@
 """aiohttp application factory — wires registry, routes, lifecycle hooks."""
+
 from __future__ import annotations
 
 import asyncio
@@ -11,7 +12,7 @@ from ..cleanup.ttl_task import run_cleanup_loop
 from ..config import Settings
 from ..logging import get_logger
 from ..registry.object_registry import ObjectRegistry
-from . import handlers_admin, handlers_query, handlers_update
+from . import handlers_admin, handlers_map, handlers_query, handlers_update
 
 
 def build_app(settings: Settings, *, registry: ObjectRegistry | None = None) -> web.Application:
@@ -33,6 +34,7 @@ def build_app(settings: Settings, *, registry: ObjectRegistry | None = None) -> 
     app.router.add_get("/objects/all", handlers_admin.objects_all)
     app.router.add_delete("/objects/{drone_id}", handlers_admin.delete_drone)
     app.router.add_get("/health", handlers_admin.health)
+    app.router.add_get("/map", handlers_map.map_view)
 
     async def _on_startup(app_: web.Application) -> None:
         task = asyncio.create_task(
