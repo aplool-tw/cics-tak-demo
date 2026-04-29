@@ -292,7 +292,7 @@ _MAP_HTML = """\
       const lostClass  = o.is_lost ? ' lost' : '';
       const lostText   = o.is_lost ? ' ⚠ LOST' : '';
       return '<div class="drone-card' + (o.drone_id === selectedId ? ' selected' : '') +
-             '" id="card-' + o.drone_id + '" onclick="selectDrone(\'' + o.drone_id + '\')">' +
+             '" id="card-' + o.drone_id + '" data-id="' + o.drone_id + '">' +
         '<div class="drone-card-head">' +
           '<span class="drone-id">' + o.drone_id + '</span>' +
           '<span class="drone-status' + lostClass + '">' + o.status + lostText + '</span>' +
@@ -367,8 +367,10 @@ _MAP_HTML = """\
             const tt = markers[obj.drone_id].getTooltip();
             if (tt) {
               tt.setContent(obj.drone_id);
-              L.DomUtil.removeClass(tt.getElement() || document.createElement('div'), 'lost-label');
-              if (obj.is_lost) L.DomUtil.addClass(tt.getElement() || document.createElement('div'), 'lost-label');
+              const el = tt.getElement();
+              if (el) {
+                el.classList.toggle('lost-label', obj.is_lost);
+              }
             }
           } else {
             // create new marker
@@ -404,6 +406,10 @@ _MAP_HTML = """\
           panelBody.innerHTML = '<div id="panel-empty" style="color:#546e7a;font-size:11px;padding:8px">尚無物件資料</div>';
         } else {
           panelBody.innerHTML = panelHtml;
+          // attach click via delegation (avoids inline onclick + escaping issues)
+          panelBody.querySelectorAll('.drone-card').forEach(card => {
+            card.addEventListener('click', () => selectDrone(card.dataset.id));
+          });
         }
 
         // auto-fit on first load with objects
