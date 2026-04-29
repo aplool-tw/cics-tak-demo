@@ -2,13 +2,13 @@
 
 > 台灣反無人機 TAK 戰術感知 PoC：整合 EchoShield 4D 雷達與 Sentrycs C-UAS 射頻偵測，融合輸出 CoT 至 TAK Server / ATAK 顯示端。
 
-[![tests](https://img.shields.io/badge/tests-463%20passing-brightgreen)]() [![python](https://img.shields.io/badge/python-3.11+-blue)]() [![status](https://img.shields.io/badge/PoC%20v1-complete-success)]()
+[![tests](https://img.shields.io/badge/tests-553%20passing-brightgreen)]() [![python](https://img.shields.io/badge/python-3.11+-blue)]() [![status](https://img.shields.io/badge/PoC%20v1-complete-success)]()
 
 ---
 
 ## 1. 概覽
 
-本專案以五個獨立 Python 服務模擬完整的反無人機戰術感知鏈路。所有感測器皆以 PoC 模擬器替代，方便在單機開發環境上端對端驗證融合與 CoT 推送邏輯。
+本專案以六個獨立 Python 服務模擬完整的反無人機戰術感知鏈路。所有感測器皆以 PoC 模擬器替代，方便在單機開發環境上端對端驗證融合與 CoT 推送邏輯。
 
 ```
 ┌─────────────────┐  POST /command/takeover   ┌───────────────────┐
@@ -42,10 +42,13 @@
 │  └──────────────┘                  TCP+SSL :8089       │
 └─────────────────────────────────────────┬───────────────┘
                                           │
-                                          ▼
-                                  ┌──────────────┐
-                                  │  TAK Server  │ ─▶ ATAK
-                                  └──────────────┘
+                     ┌────────────────────┴────────────────┐
+                     ▼                                     ▼
+             ┌──────────────┐                   ┌─────────────────────┐
+             │  TAK Server  │                   │   TAK Client Sim    │
+             │  (stub/prod) │ ─── CoT push ──▶  │  console validator  │
+             └──────────────┘                   │  (no ATAK needed)   │
+                                                └─────────────────────┘
 ```
 
 | 服務 | 路徑 | 角色 | 預設 Port |
@@ -55,6 +58,7 @@
 | **EchoShield Sim** | `services/echoshield-sim/` | 雷達 4D 模擬 + 噪點 | TCP NDJSON `:9000` |
 | **Sentrycs Sim** | `services/sentrycs-sim/` | RF C-UAS 反制設備模擬 | HTTP JSON `:7070` |
 | **CoT Gateway** | `services/cot-gateway/` | 雷達/RF 融合 + CoT XML 推送 | → TAK `:8089` |
+| **TAK Client Sim** | `services/tak-client-sim/` | CoT 接收驗證器（取代 ATAK） | TCP+SSL `:8089` |
 
 ---
 
@@ -71,7 +75,7 @@
 每個服務有獨立 `pyproject.toml`，可分別安裝：
 
 ```bash
-for svc in uds map-sim echoshield-sim sentrycs-sim cot-gateway; do
+for svc in uds map-sim echoshield-sim sentrycs-sim cot-gateway tak-client-sim; do
   pip install -e "services/${svc}[dev]" --break-system-packages
 done
 ```
@@ -81,7 +85,7 @@ done
 ### 一鍵啟動全部服務
 
 ```bash
-scripts/dev-launcher.sh                  # 啟動全部 5 個服務（預設 ports）
+scripts/dev-launcher.sh                  # 啟動全部 6 個服務（預設 ports）
 scripts/dev-launcher.sh --help           # 看完整選項
 ```
 
@@ -136,7 +140,36 @@ nc localhost 9000   # 每 100ms 一行 NDJSON
 tail -f .dev-runtime/logs/cot-gateway.log
 ```
 
-### TAK Server（PoC stub & 生產切換）
+### E2E 情境驗證（不需要 ATAK）
+
+Feature 007 提供兩個端對端模擬情境，用於驗證整條鏈路。搭配 `tak-client-sim` 即可在 console 上觀察 CoT 推送結果。
+
+```bash
+# Scenario 1 — 單架無人機（TRK-E01，15 m/s，從正北 5 km 逼近）
+scripts/dev-launcher.sh \
+  --uds-scenario services/uds/scenarios/e2e_single_drone.yaml \
+  --sentrycs-scenario services/sentrycs-sim/config/e2e_single_drone.yaml \
+  --echoshield-config services/echoshield-sim/config/e2e_scenario.yaml
+
+# Scenario 2 — 三架無人機（TRK-E0A/B/C，12 m/s，交錯 0/30/60 s 起飛）
+scripts/dev-launcher.sh \
+  --uds-scenario services/uds/scenarios/e2e_multi_drone.yaml \
+  --sentrycs-scenario services/sentrycs-sim/config/e2e_multi_drone.yaml \
+  --echoshield-config services/echoshield-sim/config/e2e_scenario.yaml
+
+# 離線驗證 YAML 文件格式
+python3 specs/007-scenario/scripts/validate_scenario.py \
+  --uds   services/uds/scenarios/e2e_single_drone.yaml \
+  --sntr  services/sentrycs-sim/config/e2e_single_drone.yaml \
+  --echo  services/echoshield-sim/config/e2e_scenario.yaml
+
+# 驗證 CoT XML 串流（從 tak-client-sim 導出後驗證）
+python3 specs/007-scenario/scripts/validate_cot.py --file /tmp/cot_capture.ndjson
+```
+
+詳見 [`dev-docs/007-scenario.md`](dev-docs/007-scenario.md) 與 [`specs/007-scenario/quickstart.md`](specs/007-scenario/quickstart.md)。
+
+---
 
 倉庫附帶輕量 TAK Server stub（asyncio TLS CoT collector），無需 TAK.gov 帳號即可端對端測試：
 
@@ -175,21 +208,30 @@ cics-tak-demo/
 │   ├── 002-map-sim/
 │   ├── 003-echoshield-sim/
 │   ├── 004-sentrycs-sim/
-│   └── 005-cot-gateway/
+│   ├── 005-cot-gateway/
+│   ├── 006-tak-client-sim/
+│   └── 007-scenario/         ← E2E 情境 + scripts/validate_*.py
 ├── dev-docs/                 ← 各 feature 開發完成紀錄
 │   ├── 001-uds.md
 │   ├── 002-map-sim.md
 │   ├── 003-echoshield-sim.md
 │   ├── 004-sentrycs-sim.md
-│   └── 005-cot-gateway.md
-├── services/                 ← 五個獨立 Python 服務
+│   ├── 005-cot-gateway.md
+│   ├── 006-tak-client-sim.md
+│   └── 007-scenario.md
+├── services/                 ← 六個獨立 Python 服務
 │   ├── uds/
 │   ├── map-sim/
 │   ├── echoshield-sim/
+│   │   └── config/           ← e2e_scenario.yaml（感測器設於 SP）
 │   ├── sentrycs-sim/
-│   └── cot-gateway/
+│   │   └── config/           ← e2e_single_drone.yaml / e2e_multi_drone.yaml
+│   ├── cot-gateway/
+│   └── tak-client-sim/
+│       └── ...               ← CoT 接收 + console 輸出（取代 ATAK）
 ├── scripts/
-│   └── dev-launcher.sh       ← 多服務啟動腳本
+│   ├── dev-launcher.sh       ← 多服務啟動腳本（含 --echoshield-config）
+│   └── dev-launcher.example.conf
 └── .specify/                 ← Speckit 工具與模板
 ```
 
@@ -218,12 +260,15 @@ services/<name>/
 ( cd services/cot-gateway && python3 -m pytest -q )
 
 # 全部服務
-for svc in uds map-sim echoshield-sim sentrycs-sim cot-gateway; do
+for svc in uds map-sim echoshield-sim sentrycs-sim cot-gateway tak-client-sim; do
   ( cd "services/${svc}" && python3 -m pytest -q ) || exit 1
 done
+
+# 情境驗證腳本
+python3 -m pytest specs/007-scenario/scripts/ -q
 ```
 
-當前測試總計：**463/463 pass**
+當前測試總計：**553 pass**（服務 522 + 情境驗證 31）
 
 | Service | Tests |
 |---------|-------|
@@ -232,6 +277,8 @@ done
 | EchoShield Sim | 74 |
 | Sentrycs Sim | 110 |
 | CoT Gateway | 94 |
+| TAK Client Sim | 59 |
+| 情境驗證腳本 | 31 |
 
 ### Lint
 
@@ -328,6 +375,7 @@ artifacts 落於 `specs/00X-*/`，開發紀錄落於 `dev-docs/00X-*.md`。
 - 規格權威：[`docs/system-docs/00-index.md`](docs/system-docs/00-index.md)
 - 各 feature spec：[`specs/00X-*/spec.md`](specs/)
 - 各 feature 開發紀錄：[`dev-docs/`](dev-docs/)
+- E2E 情境快速入門：[`specs/007-scenario/quickstart.md`](specs/007-scenario/quickstart.md)
 - AI agent 守則：[`AGENTS.md`](AGENTS.md)
 
 ---

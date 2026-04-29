@@ -90,7 +90,7 @@ Specify → Clarify → Plan → Tasks → Analyze → Implement → Test → Do
 - `pydantic v2` model 設定 `model_config = ConfigDict(extra="forbid", frozen=True)`，YAML 多餘欄位即 fail-fast
 - `from __future__ import annotations` 全檔啟用
 - 結構化日誌：`logger.info("event_name", key1=v1, key2=v2)`，**禁用** f-string log
-- 不使用 `print()`（除 CLI smoke 工具）
+- 不使用 `print()`（**例外**：`tak-client-sim` 的 `formatter.py#print_event()` 及 `connection.py` 為 FR-TCS-023 要求的 console 輸出，允許使用 `print()`）
 - `asyncio.Lock` 內**禁止** await I/O
 - 所有 wire JSON 經 pydantic 驗證；reject 時 log `invalid_wire_fields` 並繼續（不退出）
 - 時間戳統一 ISO 8601 UTC 含毫秒：`2026-04-28T01:42:41.123Z`
@@ -122,8 +122,9 @@ Specify → Clarify → Plan → Tasks → Analyze → Implement → Test → Do
 ### EchoShield TCP :9000 NDJSON
 
 `track_status ∈ {"Active", "Lost"}`（**不是** NEW/UPDATED/LOST）；
-`track_id` 格式 `ECHO-NNNNNN`；
+`track_id = drone_id`（例如 `TRK-E01`；**不含** `ECHO-` 前綴，前綴由 CoT Gateway 加）；
 `latitude/longitude/altitude_m`（注意命名：底層 wire 用全名，內部模型用 `lat/lon/alt_m`，CoT XML 用 `lat/lon/hae`）。
+2 秒 grace window 內 drone_id 重現沿用同一 `track_id`（= drone_id，行為不變）。
 
 ### Sentrycs HTTP :7070 /detections
 
@@ -190,6 +191,12 @@ scripts/dev-launcher.sh
 # 部分啟動 + 自訂 port
 scripts/dev-launcher.sh --services map-sim,uds --uds-port 18080
 
+# E2E 情境一（單機）
+scripts/dev-launcher.sh \
+  --uds-scenario services/uds/scenarios/e2e_single_drone.yaml \
+  --sentrycs-scenario services/sentrycs-sim/config/e2e_single_drone.yaml \
+  --echoshield-config services/echoshield-sim/config/e2e_scenario.yaml
+
 # 跑單一服務測試
 ( cd services/cot-gateway && python3 -m pytest -q )
 
@@ -197,6 +204,15 @@ scripts/dev-launcher.sh --services map-sim,uds --uds-port 18080
 for svc in uds map-sim echoshield-sim sentrycs-sim cot-gateway tak-client-sim; do
   ( cd "services/${svc}" && python3 -m pytest -q ) || exit 1
 done
+
+# 跑情境驗證腳本
+python3 -m pytest specs/007-scenario/scripts/ -q
+
+# 離線驗證 YAML 場景文件
+python3 specs/007-scenario/scripts/validate_scenario.py \
+  --uds   services/uds/scenarios/e2e_single_drone.yaml \
+  --sntr  services/sentrycs-sim/config/e2e_single_drone.yaml \
+  --echo  services/echoshield-sim/config/e2e_scenario.yaml
 
 # Lint 檢查單一服務
 ( cd services/cot-gateway && ruff check . && black --check src tests )
