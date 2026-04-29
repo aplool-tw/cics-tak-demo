@@ -6,11 +6,11 @@
 
 ## 1. 專案脈絡（Project Context）
 
-本專案為 **台灣反無人機 TAK 戰術感知 PoC**。五個獨立 Python 服務組成端對端鏈路：
+本專案為 **台灣反無人機 TAK 戰術感知 PoC**。六個獨立 Python 服務組成端對端鏈路：
 
 ```
-UDS ─push─▶ Map Sim ◀─poll─ EchoShield Sim ─NDJSON─▶ CoT Gateway ─CoT XML─▶ TAK
-                       ◀─poll─ Sentrycs Sim   ─HTTP─▶
+UDS ─push─▶ Map Sim ◀─poll─ EchoShield Sim ─NDJSON─▶ CoT Gateway ─CoT XML─▶ TAK ◀─TCP+SSL─ TAK Client Sim
+                       ◀─poll─ Sentrycs Sim   ─HTTP─▶                              (驗證用，無 ATAK 需求)
                                     └─ POST /command/takeover ─▶ UDS
 ```
 
@@ -194,7 +194,7 @@ scripts/dev-launcher.sh --services map-sim,uds --uds-port 18080
 ( cd services/cot-gateway && python3 -m pytest -q )
 
 # 跑全部服務測試
-for svc in uds map-sim echoshield-sim sentrycs-sim cot-gateway; do
+for svc in uds map-sim echoshield-sim sentrycs-sim cot-gateway tak-client-sim; do
   ( cd "services/${svc}" && python3 -m pytest -q ) || exit 1
 done
 
