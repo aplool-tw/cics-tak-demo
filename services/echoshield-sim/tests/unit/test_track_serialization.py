@@ -7,7 +7,7 @@ import json
 from echoshield_sim.models.track import RadarTrack
 
 VALID = dict(
-    track_id="echo-1a2b3c4d",
+    track_id="TRK-E01",
     latitude=24.0008934,
     longitude=121.0001205,
     altitude_m=98.7,
@@ -51,7 +51,7 @@ def test_field_order_matches_schema():
 
 def test_numeric_precision_roundtrip():
     rt = RadarTrack(
-        track_id="echo-aabbccdd",
+        track_id="TRK-E01",
         latitude=24.12345678,
         longitude=121.87654321,
         altitude_m=12.345,

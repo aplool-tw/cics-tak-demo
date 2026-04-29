@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class RadarTrack(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    track_id: str = Field(..., pattern=r"^echo-[0-9a-f]{8}$")
+    track_id: str = Field(..., min_length=1)
     latitude: float = Field(..., ge=-90.0, le=90.0)
     longitude: float = Field(..., ge=-180.0, le=180.0)
     altitude_m: float

@@ -11,7 +11,7 @@ from echoshield_sim.models.track import RadarTrack
 
 def _track(n: int) -> bytes:
     return RadarTrack(
-        track_id=f"echo-0000000{n}",
+        track_id=f"TRK-E{n:02d}",
         latitude=24.0 + n * 0.0001,
         longitude=121.0,
         altitude_m=100.0,
