@@ -4,8 +4,10 @@
 # Allows the developer to:
 #   1. Choose which services to start (--services <csv>, default: all)
 #   2. Override each service port and the URL of any upstream dependency
+#   3. Stop previously-started services (--stop) with live status display
+#   4. List current service status (--status)
 #
-# All five services are designed to run on a single host. Inter-service URLs
+# All six services are designed to run on a single host. Inter-service URLs
 # are computed automatically from --bind-host plus the per-service ports;
 # any URL can be overridden explicitly with the --*-url flags below.
 #
@@ -16,6 +18,9 @@
 #   scripts/dev-launcher.sh --services map-sim,uds             # only two services
 #   scripts/dev-launcher.sh --uds-port 18080 --map-sim-port 18090
 #   scripts/dev-launcher.sh --services cot-gateway --echoshield-host 10.0.0.5
+#   scripts/dev-launcher.sh --status                           # show all service status
+#   scripts/dev-launcher.sh --stop                             # stop all services
+#   scripts/dev-launcher.sh --stop --services cot-gateway      # stop one service
 #
 # Tested under bash 5.x on Linux/macOS.
 set -euo pipefail
@@ -23,7 +28,7 @@ set -euo pipefail
 # -------------------------------------------------------------------------
 # Defaults
 # -------------------------------------------------------------------------
-ALL_SERVICES=(map-sim uds echoshield-sim sentrycs-sim cot-gateway)
+ALL_SERVICES=(map-sim uds echoshield-sim sentrycs-sim cot-gateway tak-client-sim)
 SERVICES_CSV="all"
 
 BIND_HOST="127.0.0.1"
@@ -55,6 +60,11 @@ GATEWAY_TAK_PORT=""
 
 VERBOSE_FLAG=""
 KEEP_RUNTIME="false"
+STOP_MODE="false"
+STATUS_MODE="false"
+
+# tak-client-sim specific options (reuses TAK_HOST / TAK_PORT)
+TAK_CLIENT_SIM_FILTER=""      # e.g. "FUSED" – empty = show all
 
 # -------------------------------------------------------------------------
 # Paths
@@ -77,11 +87,16 @@ usage() {
   cat <<'EOF'
 Usage: scripts/dev-launcher.sh [options]
 
+Modes
+  (default)                  Start selected services
+  --stop                     Stop previously-started services (reads PID files)
+  --status                   Show current status of all services (no start/stop)
+
 Service selection
-  --services <csv>           Comma list of services to start. Use 'all' for
-                             everything. Default: all
+  --services <csv>           Comma list of services to start/stop/status. Use 'all'
+                             for everything. Default: all
                              Valid: map-sim, uds, echoshield-sim,
-                                    sentrycs-sim, cot-gateway
+                                    sentrycs-sim, cot-gateway, tak-client-sim
 
 Bind / per-service ports
   --bind-host <host>         Host the services bind to. Default: 127.0.0.1
@@ -109,6 +124,10 @@ Upstream URL/host overrides (optional; default: derived from --bind-host + ports
   --gateway-tak-host <host>          Override TAK host for gateway
   --gateway-tak-port <port>          Override TAK port for gateway
 
+TAK Client Simulator options
+  --tak-client-sim-filter <prefix>   Only print CoT events whose UID starts with
+                                     this prefix (e.g. FUSED). Default: show all.
+
 Scenarios (optional)
   --uds-scenario <path>      Default: services/uds/scenarios/single_drone_invasion.yaml
   --sentrycs-scenario <path> Default: services/sentrycs-sim/config/local.yaml
@@ -125,9 +144,15 @@ Examples
   # Only Map Sim + UDS, with custom Map Sim port
   scripts/dev-launcher.sh --services map-sim,uds --map-sim-port 18090
 
-  # Connect Gateway to a remote EchoShield/TAK
-  scripts/dev-launcher.sh --services cot-gateway \
+  # Connect Gateway to a remote EchoShield/TAK and watch the CoT output
+  scripts/dev-launcher.sh --services cot-gateway,tak-client-sim \
       --gateway-echoshield-host 10.0.0.5 --gateway-tak-host tak.example.com
+
+  # Show status of all services
+  scripts/dev-launcher.sh --status
+
+  # Stop only the gateway
+  scripts/dev-launcher.sh --stop --services cot-gateway
 EOF
 }
 
@@ -161,6 +186,9 @@ while [[ $# -gt 0 ]]; do
     --sentrycs-scenario)      SENTRYCS_SCENARIO="$2"; shift 2 ;;
     --verbose)                VERBOSE_FLAG="--verbose"; shift ;;
     --keep-runtime)           KEEP_RUNTIME="true"; shift ;;
+    --stop)                   STOP_MODE="true"; shift ;;
+    --status)                 STATUS_MODE="true"; shift ;;
+    --tak-client-sim-filter)  TAK_CLIENT_SIM_FILTER="$2"; shift 2 ;;
     -h|--help)                usage; exit 0 ;;
     *)                        die "Unknown argument: $1 (use --help)" ;;
   esac
@@ -176,7 +204,7 @@ else
   IFS=',' read -r -a SELECTED <<< "${SERVICES_CSV}"
   for s in "${SELECTED[@]}"; do
     case "$s" in
-      map-sim|uds|echoshield-sim|sentrycs-sim|cot-gateway) ;;
+      map-sim|uds|echoshield-sim|sentrycs-sim|cot-gateway|tak-client-sim) ;;
       *) die "Unknown service: '$s'" ;;
     esac
   done
@@ -217,6 +245,7 @@ SVC_NAMES=()
 
 cleanup() {
   trap - INT TERM EXIT
+  [[ ${#PIDS[@]} -eq 0 ]] && return 0   # nothing was started — status/stop modes
   log "Shutting down (${#PIDS[@]} processes)..."
   for i in "${!PIDS[@]}"; do
     local pid="${PIDS[$i]}"
@@ -329,8 +358,7 @@ PY
     python3 -m sentrycs_sim --scenario "${cfg}" --api-port "${SENTRYCS_PORT}" ${VERBOSE_FLAG}
 }
 
-launch_cot_gateway() {
-  local cfg="${GEN_DIR}/gateway.yaml"
+launch_cot_gateway() {  local cfg="${GEN_DIR}/gateway.yaml"
 
   # Cert plumbing (only meaningful when --tak-use-ssl is on)
   local cert_dir="${TAK_CERT_DIR:-${ROOT_DIR}/infra/certs}"
@@ -390,12 +418,136 @@ EOF
     python3 -m cot_gateway --config "${cfg}" ${VERBOSE_FLAG}
 }
 
+launch_tak_client_sim() {
+  local args=(
+    --host "${GATEWAY_TAK_HOST}"
+    --port "${GATEWAY_TAK_PORT}"
+    --max-retries 0
+    --log-file "${LOG_DIR}/tak-client-sim-events.jsonl"
+  )
+  [[ -n "${TAK_CLIENT_SIM_FILTER}" ]] && args+=(--filter "${TAK_CLIENT_SIM_FILTER}")
+  [[ "${TAK_USE_SSL}" == "true" ]]    && args+=(--use-ssl-verify)
+  spawn "tak-client-sim" "${ROOT_DIR}/services/tak-client-sim" \
+    python3 -m tak_client_sim "${args[@]}"
+}
+
+# -------------------------------------------------------------------------
+# Stop mode: send SIGTERM/SIGKILL to processes from saved PID files
+# -------------------------------------------------------------------------
+stop_services() {
+  local targets=("${SELECTED[@]}")
+  local found=0
+
+  log "Stopping services: ${targets[*]}"
+  for name in "${targets[@]}"; do
+    local pidfile="${PID_DIR}/${name}.pid"
+    if [[ ! -f "${pidfile}" ]]; then
+      warn "  ${name}: no pid file (${pidfile}), skipping"
+      continue
+    fi
+    local pid
+    pid=$(<"${pidfile}")
+    if kill -0 "${pid}" 2>/dev/null; then
+      log "  -> SIGTERM ${name} (pid ${pid})"
+      kill -TERM "${pid}" 2>/dev/null || true
+      found=$((found + 1))
+    else
+      warn "  ${name} (pid ${pid}): not running"
+    fi
+  done
+
+  # Wait up to 5 s for graceful exit, then SIGKILL stragglers
+  for _ in 1 2 3 4 5; do
+    local still=0
+    for name in "${targets[@]}"; do
+      local pidfile="${PID_DIR}/${name}.pid"
+      [[ -f "${pidfile}" ]] || continue
+      local pid; pid=$(<"${pidfile}")
+      kill -0 "${pid}" 2>/dev/null && still=$((still + 1)) || true
+    done
+    [[ $still -eq 0 ]] && break
+    sleep 1
+  done
+  for name in "${targets[@]}"; do
+    local pidfile="${PID_DIR}/${name}.pid"
+    [[ -f "${pidfile}" ]] || continue
+    local pid; pid=$(<"${pidfile}")
+    if kill -0 "${pid}" 2>/dev/null; then
+      warn "  -> SIGKILL ${name} (pid ${pid})"
+      kill -KILL "${pid}" 2>/dev/null || true
+    fi
+    rm -f "${pidfile}"
+  done
+
+  log "Done. (${found} process(es) signalled)"
+  echo ""
+  show_status
+}
+
+# -------------------------------------------------------------------------
+# Status display: print a colour-coded table of service states
+# -------------------------------------------------------------------------
+show_status() {
+  local all_svcs=("${ALL_SERVICES[@]}")
+  local running=0 stopped=0 absent=0
+
+  printf "\n"
+  printf "  \033[1;37m%-20s %-8s %-10s %s\033[0m\n" "SERVICE" "PID" "STATUS" "LOG"
+  printf "  %s\n" "----------------------------------------------------------------------"
+
+  for name in "${all_svcs[@]}"; do
+    local pidfile="${PID_DIR}/${name}.pid"
+    local logfile="${LOG_DIR}/${name}.log"
+    local pid_str="-"
+    local status_label
+    local log_str="-"
+
+    [[ -f "${logfile}" ]] && log_str="${logfile}"
+
+    if [[ -f "${pidfile}" ]]; then
+      pid_str=$(<"${pidfile}")
+      if kill -0 "${pid_str}" 2>/dev/null; then
+        status_label="\033[1;32mrunning\033[0m"
+        running=$((running + 1))
+      else
+        status_label="\033[1;31mstopped\033[0m"
+        stopped=$((stopped + 1))
+      fi
+    else
+      pid_str="-"
+      status_label="\033[1;33mno-pid\033[0m"
+      absent=$((absent + 1))
+    fi
+
+    printf "  %-20s %-8s %-20b %s\n" "${name}" "${pid_str}" "${status_label}" "${log_str}"
+  done
+
+  printf "  %s\n" "----------------------------------------------------------------------"
+  printf "  running: \033[1;32m%d\033[0m  stopped: \033[1;31m%d\033[0m  no-pid: \033[1;33m%d\033[0m\n\n" \
+    "${running}" "${stopped}" "${absent}"
+}
+
 # -------------------------------------------------------------------------
 # Main: print plan, then launch in dependency order
 # -------------------------------------------------------------------------
 log "CICS TAK PoC dev launcher"
 log "  bind host           : ${BIND_HOST}"
 log "  selected services   : ${SELECTED[*]}"
+
+# --status mode: show current service states and exit
+if [[ "${STATUS_MODE}" == "true" ]]; then
+  show_status
+  exit 0
+fi
+
+# --stop mode: show status, terminate previously-started services, show status again
+if [[ "${STOP_MODE}" == "true" ]]; then
+  log "Current status before stop:"
+  show_status
+  stop_services
+  exit 0
+fi
+
 log "  uds port            : ${UDS_PORT}"
 log "  map-sim port        : ${MAP_SIM_PORT}"
 log "  echoshield port     : ${ECHOSHIELD_PORT}"
@@ -408,18 +560,20 @@ log "  sentrycs -> uds     : ${SENTRYCS_UDS_URL}"
 log "  gw -> echoshield    : ${GATEWAY_ECHOSHIELD_HOST}:${GATEWAY_ECHOSHIELD_PORT}"
 log "  gw -> sentrycs      : ${GATEWAY_SENTRYCS_HOST}:${GATEWAY_SENTRYCS_PORT}"
 log "  gw -> tak           : ${GATEWAY_TAK_HOST}:${GATEWAY_TAK_PORT}"
+log "  tak-client-sim      : ${GATEWAY_TAK_HOST}:${GATEWAY_TAK_PORT} filter=${TAK_CLIENT_SIM_FILTER:-<all>}"
 log "  runtime dir         : ${RUNTIME_DIR}"
 
 # Order matters: start upstream services first so dependents have something to
 # connect to. We keep it deterministic regardless of --services input order.
-for svc in map-sim uds echoshield-sim sentrycs-sim cot-gateway; do
+for svc in map-sim uds echoshield-sim sentrycs-sim cot-gateway tak-client-sim; do
   is_selected "$svc" || continue
   case "$svc" in
-    map-sim)        launch_map_sim ;;
-    uds)            launch_uds ;;
-    echoshield-sim) launch_echoshield_sim ;;
-    sentrycs-sim)   launch_sentrycs_sim ;;
-    cot-gateway)    launch_cot_gateway ;;
+    map-sim)          launch_map_sim ;;
+    uds)              launch_uds ;;
+    echoshield-sim)   launch_echoshield_sim ;;
+    sentrycs-sim)     launch_sentrycs_sim ;;
+    cot-gateway)      launch_cot_gateway ;;
+    tak-client-sim)   launch_tak_client_sim ;;
   esac
   sleep 0.4   # tiny stagger so logs interleave readably
 done
