@@ -1,0 +1,74 @@
+scenario:
+  name: "e2e_multi_drone_invasion"
+  description: "三架無人機從不同方向同時逼近 SP(24.725806N,121.033750E)，驗證多機並行追蹤與接管不干擾"
+  update_hz: 10
+  servers:
+    command_api_port: 8080
+  drones:
+    - drone_id: "TRK-E0A"
+      model: "DJI Mavic 3"
+      start_lat: 24.806556   # 正北 ~8.99km
+      start_lon: 121.033750
+      start_alt_m: 120.0
+      speed_ms: 12.0
+      heading_deg: 180.0     # 向正南飛
+      operator_bearing_deg: 180
+      operator_distance_m: 300
+      waypoints:
+        - lat: 24.725806
+          lon: 121.033750
+          alt_m: 120.0
+      landing_point:
+        lat: 24.725806
+        lon: 121.071889
+        alt_m: 0.0
+        descent_speed_ms: 3.0
+
+    - drone_id: "TRK-E0B"
+      model: "Autel EVO II"
+      start_lat: 24.725806   # 正西 ~7.22km
+      start_lon: 120.962306
+      start_alt_m: 130.0
+      speed_ms: 12.0
+      heading_deg: 90.0      # 向正東飛（往 SP 方向）
+      operator_bearing_deg: 270
+      operator_distance_m: 350
+      waypoints:
+        - lat: 24.725806
+          lon: 121.033750
+          alt_m: 130.0
+      landing_point:
+        lat: 24.725806
+        lon: 121.071889
+        alt_m: 0.0
+        descent_speed_ms: 3.0
+
+    - drone_id: "TRK-E0C"
+      model: "Skydio 2+"
+      start_lat: 24.784500   # 東北 ~8.49km
+      start_lon: 121.087278
+      start_alt_m: 140.0
+      speed_ms: 12.0
+      heading_deg: 220.0     # 向西南飛（往 SP 方向）
+      operator_bearing_deg: 45
+      operator_distance_m: 280
+      waypoints:
+        - lat: 24.725806
+          lon: 121.033750
+          alt_m: 140.0
+      landing_point:
+        lat: 24.725806
+        lon: 121.071889
+        alt_m: 0.0
+        descent_speed_ms: 3.0
+
+  timeline:
+    - at_s: 0
+      action: start_flying
+      drone_id: "TRK-E0A"
+    - at_s: 30
+      action: start_flying
+      drone_id: "TRK-E0B"
+    - at_s: 60
+      action: start_flying
+      drone_id: "TRK-E0C"

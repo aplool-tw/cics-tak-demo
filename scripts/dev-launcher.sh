@@ -45,6 +45,7 @@ TAK_P12_PASSWORD_OVERRIDE="" # empty = use $TAK_P12_PASSWORD env or "takpoc"
 
 UDS_SCENARIO=""
 SENTRYCS_SCENARIO=""
+ECHOSHIELD_CONFIG=""    # empty = use generated default (sensor@24.0,121.0)
 
 # Optional explicit URL overrides (empty = derive from host+port)
 UDS_MAP_SIM_URL=""           # consumed by uds (push)
@@ -150,6 +151,9 @@ TAK Client Simulator options
 Scenarios (optional)
   --uds-scenario <path>      Default: services/uds/scenarios/single_drone_invasion.yaml
   --sentrycs-scenario <path> Default: services/sentrycs-sim/config/local.yaml
+  --echoshield-config <path> EchoShield sensor config file (e.g. services/echoshield-sim/config/e2e_scenario.yaml).
+                             Overrides sensor lat/lon/range from the file; map_sim_url/feed_host/feed_port
+                             are still injected dynamically. Default: generated config with sensor@24.0,121.0.
 
 Misc
   --config <file>            Load configuration from a file (sourced as shell vars).
@@ -209,6 +213,7 @@ while [[ $# -gt 0 ]]; do
     --gateway-tak-port)       GATEWAY_TAK_PORT="$2"; shift 2 ;;
     --uds-scenario)           UDS_SCENARIO="$2"; shift 2 ;;
     --sentrycs-scenario)      SENTRYCS_SCENARIO="$2"; shift 2 ;;
+    --echoshield-config)      ECHOSHIELD_CONFIG="$2"; shift 2 ;;
     --verbose)                VERBOSE_FLAG="--verbose"; shift ;;
     --keep-runtime)           KEEP_RUNTIME="true"; shift ;;
     --stop)                   STOP_MODE="true"; shift ;;
@@ -341,7 +346,24 @@ launch_uds() {
 
 launch_echoshield_sim() {
   local cfg="${GEN_DIR}/echoshield.yaml"
-  cat > "${cfg}" <<EOF
+
+  if [[ -n "${ECHOSHIELD_CONFIG}" ]]; then
+    [[ -f "${ECHOSHIELD_CONFIG}" ]] || die "EchoShield config not found: ${ECHOSHIELD_CONFIG}"
+    # Merge user config with dynamic fields (map_sim_url, feed_host, feed_port)
+    python3 - "${ECHOSHIELD_CONFIG}" "${cfg}" \
+        "${ECHOSHIELD_MAP_SIM_URL}" "${BIND_HOST}" "${ECHOSHIELD_PORT}" <<'PY'
+import sys, pathlib
+import yaml
+src, dst, map_url, host, port = sys.argv[1:]
+data = yaml.safe_load(pathlib.Path(src).read_text()) or {}
+data["map_sim_url"] = map_url
+data["feed_host"] = host
+data["feed_port"] = int(port)
+pathlib.Path(dst).write_text(yaml.safe_dump(data, sort_keys=False))
+PY
+    log "  echoshield config : ${ECHOSHIELD_CONFIG}"
+  else
+    cat > "${cfg}" <<EOF
 sensor_lat: 24.0
 sensor_lon: 121.0
 sensor_alt_m: 10.0
@@ -358,6 +380,7 @@ map_sim_url: ${ECHOSHIELD_MAP_SIM_URL}
 feed_host: ${BIND_HOST}
 feed_port: ${ECHOSHIELD_PORT}
 EOF
+  fi
   spawn "echoshield-sim" "${ROOT_DIR}/services/echoshield-sim" \
     python3 -m echoshield_sim --config "${cfg}" ${VERBOSE_FLAG}
 }

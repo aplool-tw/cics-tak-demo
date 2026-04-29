@@ -1,0 +1,37 @@
+sensor_lat: 24.725806   # SP
+sensor_lon: 121.033750
+poll_interval_s: 0.5
+map_sim_url: http://localhost:8090   # dev-launcher 覆寫
+uds_url: http://localhost:8080       # dev-launcher 覆寫
+api_host: 0.0.0.0
+api_port: 7070
+neutralized_hold_s: 30.0
+mitigating_disappear_grace_s: 10.0
+
+drones:
+  - uid: TRK-E0A
+    model: "DJI Mavic 3"
+    # d=8988m, v=12m/s, t_start=0; 2km: (8988-2000)/12=582s→580; 1km: (8988-1000)/12=665s→666
+    detected_at_s: 580
+    mitigating_at_s: 666
+    neutralized_at_s: 706   # 666 + 40s
+    operator_bearing_deg: 180
+    operator_distance_m: 300
+
+  - uid: TRK-E0B
+    model: "Autel EVO II"
+    # d=7223m, v=12m/s, t_start=30; 2km: (7223-2000)/12+30=465s→406（±30s 調校）; 1km: 489s
+    detected_at_s: 406
+    mitigating_at_s: 489
+    neutralized_at_s: 519   # 489 + 30s
+    operator_bearing_deg: 270
+    operator_distance_m: 350
+
+  - uid: TRK-E0C
+    model: "Skydio 2+"
+    # d=8485m, v=12m/s, t_start=60; 2km: (8485-2000)/12+60=600s; 1km: (8485-1000)/12+60=684s
+    detected_at_s: 600
+    mitigating_at_s: 684
+    neutralized_at_s: 716   # 684 + 32s（與 E0A neutralized(706) 間隔≥10s）
+    operator_bearing_deg: 45
+    operator_distance_m: 280
