@@ -77,6 +77,25 @@ PID_DIR="${RUNTIME_DIR}/pids"
 GEN_DIR="${RUNTIME_DIR}/generated"
 
 # -------------------------------------------------------------------------
+# Early --config sourcing  (must happen before arg-parse so CLI flags win)
+# -------------------------------------------------------------------------
+CONFIG_FILE=""
+for _i in "$@"; do
+  if [[ "${_CONFIG_NEXT:-}" == "1" ]]; then
+    CONFIG_FILE="${_i}"
+    _CONFIG_NEXT=""
+  fi
+  [[ "${_i}" == "--config" ]] && _CONFIG_NEXT="1"
+done
+unset _i _CONFIG_NEXT
+
+if [[ -n "${CONFIG_FILE}" ]]; then
+  [[ -f "${CONFIG_FILE}" ]] || { echo "[launcher] ERROR: config file not found: ${CONFIG_FILE}" >&2; exit 1; }
+  # shellcheck source=/dev/null
+  source "${CONFIG_FILE}"
+fi
+
+# -------------------------------------------------------------------------
 # Helpers
 # -------------------------------------------------------------------------
 log()  { printf "\033[1;36m[launcher]\033[0m %s\n" "$*"; }
@@ -133,6 +152,9 @@ Scenarios (optional)
   --sentrycs-scenario <path> Default: services/sentrycs-sim/config/local.yaml
 
 Misc
+  --config <file>            Load configuration from a file (sourced as shell vars).
+                             See scripts/dev-launcher.example.conf for all options.
+                             CLI flags always override config file values.
   --verbose                  Pass --verbose to every service
   --keep-runtime             Keep .dev-runtime/ after shutdown (logs + pid files)
   -h, --help                 Show this help
@@ -140,6 +162,9 @@ Misc
 Examples
   # Start everything on default ports
   scripts/dev-launcher.sh
+
+  # Load a custom config file
+  scripts/dev-launcher.sh --config scripts/dev-launcher.conf
 
   # Only Map Sim + UDS, with custom Map Sim port
   scripts/dev-launcher.sh --services map-sim,uds --map-sim-port 18090
@@ -189,6 +214,7 @@ while [[ $# -gt 0 ]]; do
     --stop)                   STOP_MODE="true"; shift ;;
     --status)                 STATUS_MODE="true"; shift ;;
     --tak-client-sim-filter)  TAK_CLIENT_SIM_FILTER="$2"; shift 2 ;;
+    --config)                 shift 2 ;;  # already processed above; skip both tokens
     -h|--help)                usage; exit 0 ;;
     *)                        die "Unknown argument: $1 (use --help)" ;;
   esac

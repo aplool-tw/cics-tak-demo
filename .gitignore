@@ -22,3 +22,6 @@ venv/
 # TAK Server PKI (private keys, p12 bundles). Never commit; regenerate with
 # scripts/gen-certs.sh or supply production certs out-of-band.
 infra/certs/
+
+# Personal dev-launcher config (copy from scripts/dev-launcher.example.conf)
+scripts/dev-launcher.conf
