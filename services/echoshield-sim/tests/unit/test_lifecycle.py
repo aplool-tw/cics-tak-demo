@@ -14,8 +14,7 @@ def test_first_appearance_allocates_track_id():
     active, lost = reg.update_from_tick([_obj("A")], now_mono=0.0)
     assert len(active) == 1
     assert not lost
-    assert active[0].track_id.startswith("echo-")
-    assert len(active[0].track_id) == 5 + 8
+    assert active[0].track_id == "A"  # track_id equals drone_id per spec
 
 
 def test_active_to_active_same_id():
@@ -50,13 +49,14 @@ def test_grace_timeout_emits_lost_exactly_once():
     assert len(reg) == 0
 
 
-def test_after_lost_new_id_assigned():
+def test_after_lost_reappear_same_track_id():
+    """After lost, re-appearing drone reuses same track_id (= drone_id) per spec."""
     reg = TrackRegistry(lost_grace_sec=2.0)
     a1, _ = reg.update_from_tick([_obj("A")], now_mono=0.0)
     _, lost = reg.update_from_tick([], now_mono=3.0)
     assert lost
     a2, _ = reg.update_from_tick([_obj("A")], now_mono=10.0)
-    assert a2[0].track_id != a1[0].track_id
+    assert a2[0].track_id == a1[0].track_id
 
 
 def test_grace_at_exactly_threshold_is_still_grace():

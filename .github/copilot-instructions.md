@@ -1,32 +1,23 @@
 <!-- SPECKIT START -->
-Active feature plan: `specs/006-006-tak-client-sim/plan.md` (TAK Client
-Simulator — lightweight asyncio Python service acting as a passive TAK
-client, receiving Newline-delimited CoT XML over TCP+SSL from TAK Server
-:8089, parsing with stdlib xml.etree.ElementTree, and outputting
-human-readable lines to stdout + structlog JSON to stderr/log-file).
-Related artifacts: `specs/006-006-tak-client-sim/spec.md`,
-`specs/006-006-tak-client-sim/research.md`,
-`specs/006-006-tak-client-sim/data-model.md`,
-`specs/006-006-tak-client-sim/contracts/tak-downlink.md`,
-`specs/006-006-tak-client-sim/quickstart.md`.
-Tech stack: Python 3.11+, asyncio (single TCP+SSL connection:
-asyncio.open_connection + StreamReader.readuntil(b'\n', limit=65536)),
-stdlib `ssl` (PoC: CERT_NONE+check_hostname=False; NO cryptography dep —
-client does not need p12/client-cert), stdlib `xml.etree.ElementTree`
-(no lxml), pydantic v2 `ClientConfig` (extra=forbid, frozen=True),
-structlog JSON logs, pyyaml (optional --config); tests with pytest +
-pytest-asyncio + freezegun. Service lives under `services/tak-client-sim/`
-(hyphen), Python module `tak_client_sim` (underscore), G5-symmetric to
-`services/cot-gateway/`. Key modules: connection.py (TakConnection +
-exponential backoff reconnect: min(1×2^(n-1), 60)s, max_retries=0
-means unlimited), parser.py (parse_cot_xml → CotEvent frozen dataclass;
-source: ECHO-/SENTRYCS-/FUSED-/UNKNOWN; color: a-u-→GREY/a-h-→RED;
-delta_s=max(0,round(stale-time)); oversized→cot_oversized warning,
-invalid XML→cot_parse_error warning), formatter.py (format_event +
-[STALE] if now-stale>30s; print() allowed here only), runner.py
-(receive_loop + signal handler + graceful shutdown → session_summary).
-Upstream: `specs/005-cot-gateway/` (CoT Gateway sends uplink on :8089;
-frozen contracts: tak-uplink.md, cot-xml.md §7 compliance matrix 8
-scenarios). Exit codes: 0=graceful, 1=max_retries exceeded, 2=config
-error. G6: no persistence; G7: no cryptography/lxml/geopy.
+Active feature plan: `specs/007-scenario/plan.md` (007-e2e-scenarios —
+End-to-end scenario validation with strategic coordinates for Taiwan
+anti-drone TAK PoC. Delivers two scenario YAML sets (single-drone
+invasion + three-drone multi-direction), EchoShield e2e config, and
+validation scripts).
+Related artifacts: `specs/007-scenario/spec.md`,
+`specs/007-scenario/research.md`,
+`specs/007-scenario/data-model.md`,
+`specs/007-scenario/quickstart.md`,
+`specs/007-scenario/contracts/scenario-yaml.md`,
+`specs/007-scenario/contracts/sentrycs-yaml.md`.
+Key coords: SP=(24.725806, 121.033750), HP=(24.725806, 121.071889).
+Scenario 1: TRK-E01 (15m/s, N→S, 8.99km) milestones M3=460s, M4=525s.
+Scenario 2: TRK-E0A/B/C (12m/s) M4 at 666/489/684s.
+Critical finding: dev-launcher.sh echoshield sensor hardcoded at
+(24.0, 121.0) — 80.9km from SP → Phase F adds --echoshield-config
+param + `services/echoshield-sim/config/e2e_scenario.yaml`
+(sensor at SP, max_range_m=3200). Validation: validate_scenario.py
+(map-sim poll M1 + tak-client-sim log parse M2-M4) + validate_cot.py
+(CoT type/stale/uid compliance). No new Python deps; Haversine
+self-implemented (G7). G2: no frozen contract changes.
 <!-- SPECKIT END -->

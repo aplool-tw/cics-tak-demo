@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
-from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict
 
@@ -31,8 +30,9 @@ class TrackState:
     phase: Literal["active", "grace"] = "active"
 
 
-def _new_track_id() -> str:
-    return f"echo-{uuid4().hex[:8]}"
+def _new_track_id(drone_id: str) -> str:
+    """track_id equals drone_id per specs/003-echoshield-sim contracts §2."""
+    return drone_id
 
 
 class TrackRegistry:
@@ -70,7 +70,7 @@ class TrackRegistry:
             if st is None:
                 st = TrackState(
                     drone_id=obj.drone_id,
-                    track_id=_new_track_id(),
+                    track_id=_new_track_id(obj.drone_id),
                     last_seen_mono=now_mono,
                     last_known=obj,
                     phase="active",

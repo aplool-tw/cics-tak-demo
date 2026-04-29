@@ -165,7 +165,9 @@ RadarProcessor，驗證 azimuth / elevation 在理論值的 ±0.1° 內、位置
 #### 輸出格式
 
 - **FR-ES-005**：每筆航跡 **MUST** 輸出為單行 JSON + `\n`（UTF-8），欄位同 §Key Entities `RadarTrack`。
-  `track_id` 格式為 `echo-{8-hex}`（由 uuid4 前 8 位產生）。
+  `track_id` **MUST** 直接沿用 Map Sim 回應的 `drone_id`（例：Map Sim `drone_id="TRK-E01"` → `track_id="TRK-E01"`）。
+  此設計確保跨服務 id 一致性，使 CoT Gateway 產生 `ECHO-{drone_id}` uid（如 `ECHO-TRK-E01`），可供下游驗證腳本斷言（FR-SCN-029）。
+  **禁止**使用 UUID 或其他隨機值——隨機 track_id 會使端對端測試的 uid 斷言無法實現。
 - **FR-ES-006**：每筆 `timestamp` **MUST** 為當次處理時間（以 Simulator 主機 UTC 時鐘為準），格式
   `YYYY-MM-DDTHH:MM:SS.sssZ`（毫秒精度、`Z` 後綴）。**不得**回傳 Map Sim 的原始 timestamp。
 - **FR-ES-007**：`classification` **MUST** 為固定字串 `"UAV"`（EchoShield 硬體無型號識別能力）。

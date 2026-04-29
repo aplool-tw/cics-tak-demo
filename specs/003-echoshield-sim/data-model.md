@@ -59,7 +59,7 @@ Simulator 內部每個被看到過的 `drone_id` 維護一筆 `TrackState`。
 | Field            | Type               | Description                                                 |
 | ---------------- | ------------------ | ----------------------------------------------------------- |
 | `drone_id`       | `str`              | Map Sim 主鍵                                                |
-| `track_id`       | `str`              | `echo-{8-hex}`（`uuid4().hex[:8]`），Active 期間不變         |
+| `track_id`       | `str`              | 直接沿用 Map Sim `drone_id`（FR-ES-005）；Active 期間不變         |
 | `last_seen_mono` | `float`            | `time.monotonic()` 時間戳（最後一次在 Map Sim 回應中出現）   |
 | `last_known`     | `MapSimObject`     | 最後一次已知的真實位置 + 速度，供 Lost 事件輸出最後已知值    |
 | `phase`          | `Literal["active", "grace"]` | 狀態枚舉（見 §4 狀態機）                          |
@@ -102,7 +102,7 @@ Simulator 內部每個被看到過的 `drone_id` 維護一筆 `TrackState`。
 
 **Invariants**
 - 同一個 `drone_id`，一次 Active 生命週期內 `track_id` 恒定（FR-ES-009）。
-- Lost 事件每次生命週期結束**恰發一次**（SC-ES-010）；發送後 `drone_id` 再出現分配全新 `track_id`。
+- Lost 事件後 drone_id 再出現，沿用相同 track_id（= drone_id），因為 track_id 由 drone_id 決定而非隨機生成；CoT Gateway 的 TTL 已清除該 uid，Gateway 側會重新觸發「首見」語意。
 - `TrackRegistry` 大小上限 = 當前 Active + GRACE 總數；Lost 後立即釋放，無洩漏（SC-ES-012）。
 
 ---

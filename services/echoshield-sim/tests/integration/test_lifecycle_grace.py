@@ -36,10 +36,11 @@ def test_scenario_b_lost_emitted_once_after_grace():
         assert not lost_ev
 
 
-def test_scenario_c_new_track_id_after_lost():
+def test_scenario_c_reappear_same_track_id():
+    """After Lost, re-appearing drone reuses same track_id (= drone_id) per spec."""
     reg = TrackRegistry(lost_grace_sec=2.0)
     a1, _ = reg.update_from_tick([_obj()], now_mono=0.0)
     _, lost = reg.update_from_tick([], now_mono=3.0)
     assert lost
     a2, _ = reg.update_from_tick([_obj()], now_mono=10.0)
-    assert a2[0].track_id != a1[0].track_id
+    assert a2[0].track_id == a1[0].track_id

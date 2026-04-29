@@ -1,0 +1,21 @@
+sensor_lat: 24.725806   # SP — Sentrycs RF 感測器位於戰略要點
+sensor_lon: 121.033750
+poll_interval_s: 0.5
+map_sim_url: http://localhost:8090   # dev-launcher 覆寫
+uds_url: http://localhost:8080       # dev-launcher 覆寫
+api_host: 0.0.0.0
+api_port: 7070
+neutralized_hold_s: 30.0
+mitigating_disappear_grace_s: 10.0
+
+drones:
+  - uid: TRK-E01
+    model: "DJI Mavic 3"
+    # 幾何計算：起點(24.806556,121.033750)，速度 15m/s，SP=(24.725806,121.033750)
+    # 起點距 SP = 8988m；2km 時 t = (8988-2000)/15 = 465.9s → 460s
+    # 1km 時 t = (8988-1000)/15 = 532.5s → 525s
+    detected_at_s: 460      # drone 距 SP ≈2km（M3 里程碑）
+    mitigating_at_s: 525    # drone 距 SP ≈1km（M4 里程碑，觸發 takeover 至 HP）
+    neutralized_at_s: 565   # mitigating + 40s
+    operator_bearing_deg: 225
+    operator_distance_m: 300

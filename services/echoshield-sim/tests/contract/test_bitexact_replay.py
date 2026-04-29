@@ -29,7 +29,7 @@ def _render_n(n: int) -> list[bytes]:
     obj = _obj()
     for i in range(n):
         track = build_radar_track(
-            track_id="echo-01234567",
+            track_id="TRK-E01",
             obj=obj,
             sensor_lat=cfg.sensor_lat,
             sensor_lon=cfg.sensor_lon,
@@ -55,7 +55,7 @@ def test_different_seed_different_bytes():
     n2 = make_noise(cfg2)
     obj = _obj()
     t1 = build_radar_track(
-        track_id="echo-01234567",
+        track_id="TRK-E01",
         obj=obj,
         sensor_lat=24.0,
         sensor_lon=121.0,
@@ -65,7 +65,7 @@ def test_different_seed_different_bytes():
         timestamp="2026-04-24T08:15:30.000Z",
     ).to_wire_bytes()
     t2 = build_radar_track(
-        track_id="echo-01234567",
+        track_id="TRK-E01",
         obj=obj,
         sensor_lat=24.0,
         sensor_lon=121.0,

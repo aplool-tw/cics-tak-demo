@@ -73,8 +73,8 @@
   "properties": {
     "track_id": {
       "type": "string",
-      "pattern": "^echo-[0-9a-f]{8}$",
-      "description": "`echo-{8-hex}`, stable during a single Active lifecycle."
+      "minLength": 1,
+      "description": "直接沿用 Map Sim `drone_id`（例：`\"TRK-E01\"`）；Active 生命週期內不變。禁止使用 UUID 或隨機值（FR-ES-005）。"
     },
     "latitude":      { "type": "number", "minimum":  -90, "maximum":  90, "description": "WGS84 deg, noised; 7 decimal places" },
     "longitude":     { "type": "number", "minimum": -180, "maximum": 180, "description": "WGS84 deg, noised; 7 decimal places" },
@@ -93,7 +93,7 @@
 
 | Field             | Rule                                                                                         |
 | ----------------- | -------------------------------------------------------------------------------------------- |
-| `track_id`        | `echo-` + `uuid4().hex[:8]`。Active 生命週期內不變；Lost 後釋放，再出現 → **新**的 track_id   |
+| `track_id`        | 直接沿用 Map Sim `drone_id`（例：`"TRK-E01"`）；Active 生命週期內不變。Lost 後釋放，再出現 → 沿用相同 `drone_id`（= track_id），但 CoT Gateway TTL 已清除舊 uid，Gateway 側視同「首見」重新觸發 `track_first_seen`   |
 | `latitude`/`longitude` | 真實位置 + Gaussian σ=5m（以 `σ/111320` 近似換算為度），`round(x, 7)`                     |
 | `altitude_m`      | 真實 HAE + Gaussian σ=2m，`round(x, 1)`                                                       |
 | `velocity_ms`     | 真實 speed + Gaussian σ=0.5m/s，`max(0.0, ·)`，`round(x, 2)`                                  |
@@ -106,7 +106,7 @@
 ### 3.3 Example
 
 ```json
-{"track_id":"echo-1a2b3c4d","latitude":24.0008934,"longitude":121.0001205,"altitude_m":98.7,"velocity_ms":12.34,"azimuth_deg":3.21,"elevation_deg":5.07,"timestamp":"2026-04-24T08:15:30.123Z","track_status":"Active","classification":"UAV"}
+{"track_id":"TRK-E01","latitude":24.0008934,"longitude":121.0001205,"altitude_m":98.7,"velocity_ms":12.34,"azimuth_deg":3.21,"elevation_deg":5.07,"timestamp":"2026-04-24T08:15:30.123Z","track_status":"Active","classification":"UAV"}
 ```
 
 ---

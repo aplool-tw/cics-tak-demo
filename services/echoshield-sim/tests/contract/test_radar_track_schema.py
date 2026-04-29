@@ -26,7 +26,7 @@ RADAR_TRACK_SCHEMA = {
         "classification",
     ],
     "properties": {
-        "track_id": {"type": "string", "pattern": "^echo-[0-9a-f]{8}$"},
+        "track_id": {"type": "string", "minLength": 1},
         "latitude": {"type": "number", "minimum": -90, "maximum": 90},
         "longitude": {"type": "number", "minimum": -180, "maximum": 180},
         "altitude_m": {"type": "number"},
@@ -43,7 +43,7 @@ RADAR_TRACK_SCHEMA = {
 }
 
 EXAMPLE = {
-    "track_id": "echo-1a2b3c4d",
+    "track_id": "TRK-E01",
     "latitude": 24.0008934,
     "longitude": 121.0001205,
     "altitude_m": 98.7,
@@ -64,9 +64,10 @@ def test_example_passes_schema():
     _validator().validate(EXAMPLE)
 
 
-def test_bad_track_id_pattern():
+def test_bad_track_id_empty():
+    """Empty track_id must fail schema validation."""
     bad = copy.deepcopy(EXAMPLE)
-    bad["track_id"] = "echo-XYZ"
+    bad["track_id"] = ""
     with pytest.raises(ValidationError):
         _validator().validate(bad)
 
