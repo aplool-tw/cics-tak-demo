@@ -44,7 +44,7 @@ scenario:
         descent_speed_ms: 3.0
 
     - drone_id: "TRK-E0C"
-      model: "Skydio 2+"
+      model: "DJI Matrice 30T"
       start_lat: 24.784500   # 東北 ~8.49km
       start_lon: 121.087278
       start_alt_m: 140.0
