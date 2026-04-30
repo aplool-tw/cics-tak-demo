@@ -1,0 +1,45 @@
+# CoT Gateway demo config — local dev, web map enabled, no TAK SSL cert required.
+# TAK server connection will retry indefinitely (max_retries: 9999) so the gateway
+# keeps running even without a real TAK server — use the web map viewer instead.
+
+echoshield:
+  host: 127.0.0.1
+  port: 9000
+  reconnect_interval_s: 5.0
+
+sentrycs:
+  enabled: true
+  host: 127.0.0.1
+  port: 7070
+  poll_interval_s: 1.0
+  timeout_s: 2.0
+
+correlator:
+  distance_threshold_m: 50.0
+  time_window_s: 3.0
+  ttl_s: 10.0
+
+tak_server:
+  host: 127.0.0.1
+  port: 8089
+  use_ssl: false
+  use_ssl_verify: false
+  cert_file: "config/certs/gateway.p12"  # not loaded (use_ssl: false)
+  max_retries: 9999                       # retry indefinitely — don't kill gateway
+  backoff_initial_s: 5.0
+  backoff_cap_s: 60.0
+  queue_maxsize: 500
+
+logging:
+  level: INFO
+  json: true
+
+web:
+  enabled: true
+  host: 0.0.0.0
+  port: 8092
+  sites_file: "config/sites.yaml"
+  echoshield_info_url: "http://127.0.0.1:9001/info"
+  sentrycs_sensor_url: "http://127.0.0.1:7070/sensor-info"
+  sp_lat: 24.725806
+  sp_lon: 121.033750

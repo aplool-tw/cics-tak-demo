@@ -1,0 +1,20 @@
+# Sentrycs demo config — local dev (all URLs point to 127.0.0.1)
+# For the CoT Gateway web map demo scenario (single drone, N→S, 15m/s).
+sensor_lat: 24.725806
+sensor_lon: 121.033750
+poll_interval_s: 0.5
+map_sim_url: http://127.0.0.1:8090
+uds_url: http://127.0.0.1:18080     # demo uses port 18080
+api_host: 0.0.0.0
+api_port: 7070
+neutralized_hold_s: 30.0
+mitigating_disappear_grace_s: 10.0
+
+drones:
+  - uid: TRK-E01
+    model: "DJI Mavic 3"
+    detected_at_s: 460      # drone ≈2km from SP (M3)
+    mitigating_at_s: 525    # drone ≈1km from SP (M4, triggers takeover to HP)
+    neutralized_at_s: 565   # mitigating + 40s
+    operator_bearing_deg: 225
+    operator_distance_m: 300
