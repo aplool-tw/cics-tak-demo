@@ -24,6 +24,17 @@ class ClientConfig(BaseModel):
     filter_prefix: Optional[str] = None
     log_file: Optional[str] = None
 
+    # Web map server (opt-in)
+    web_enabled: bool = False
+    web_host: str = "127.0.0.1"
+    web_port: int = Field(default=8091, ge=1, le=65535)
+
+    # Scenario coordinates: Strategic Point (two radar systems) and Holding Point
+    sp_lat: float = 24.725806
+    sp_lon: float = 121.033750
+    hp_lat: float = 24.725806
+    hp_lon: float = 121.071889
+
     @field_validator("filter_prefix", mode="before")
     @classmethod
     def _empty_str_to_none(cls, v: object) -> object:
@@ -73,6 +84,14 @@ def load_config(args: argparse.Namespace) -> ClientConfig:
         base["log_file"] = args.log_file
     if getattr(args, "max_retries", None) is not None:
         base["max_retries"] = args.max_retries
+    if getattr(args, "web", False):
+        base["web_enabled"] = True
+    if getattr(args, "no_web", False):
+        base["web_enabled"] = False
+    if getattr(args, "web_host", None) is not None:
+        base["web_host"] = args.web_host
+    if getattr(args, "web_port", None) is not None:
+        base["web_port"] = args.web_port
 
     try:
         return ClientConfig(**base)
