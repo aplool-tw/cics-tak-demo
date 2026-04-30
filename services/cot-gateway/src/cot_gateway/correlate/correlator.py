@@ -163,7 +163,17 @@ class TrackCorrelator:
     def _within_match(self, radar: UnifiedTrack, rf: UnifiedTrack) -> bool:
         if haversine_m(radar.lat, radar.lon, rf.lat, rf.lon) > self.distance_threshold_m:
             return False
-        dt = abs((radar.timestamp - rf.timestamp).total_seconds())
+        ts_radar = (
+            radar.timestamp
+            if radar.timestamp.tzinfo is not None
+            else radar.timestamp.replace(tzinfo=timezone.utc)
+        )
+        ts_rf = (
+            rf.timestamp
+            if rf.timestamp.tzinfo is not None
+            else rf.timestamp.replace(tzinfo=timezone.utc)
+        )
+        dt = abs((ts_radar - ts_rf).total_seconds())
         return dt <= self.time_window_s
 
     @staticmethod

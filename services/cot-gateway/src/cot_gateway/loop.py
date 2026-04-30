@@ -114,9 +114,9 @@ class GatewayMain:
             await self._emit_for_track(final_track, now)
 
     async def _emit_for_track(self, track: UnifiedTrack, now: datetime) -> None:
-        old_uid, new_uid = detect_source_switch(track, self.prev_uid_by_entity_key)
-        if old_uid is not None and old_uid != new_uid:
-            # Emit stale=time final CoT for old uid first
+        old_uids, new_uid = detect_source_switch(track, self.prev_uid_by_entity_key)
+        for old_uid in old_uids:
+            # Emit stale=time final CoT for each superseded uid
             final_xml = generate_cot(track, now=now, force_stale_eq_time=True, override_uid=old_uid)
             self.transmitter.enqueue(final_xml)
             self.seen_uids.discard(old_uid)

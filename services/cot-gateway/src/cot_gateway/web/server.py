@@ -139,6 +139,8 @@ document.getElementById('opa').addEventListener('input', applyTileStyle);
 const siteLayer   = L.layerGroup().addTo(map);
 const sensorLayer = L.layerGroup().addTo(map);
 const trackLayer  = L.layerGroup().addTo(map);
+const arrowLayer  = L.layerGroup().addTo(map);
+const droneMarkers = {};
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 function circle(lat, lon, r, color, dash) {
@@ -269,7 +271,6 @@ async function refreshTracks() {
     if (!r.ok) return;
     const tracks = await r.json();
 
-    trackLayer.clearLayers();
     document.getElementById('track-count').textContent='tracks: '+tracks.length;
     document.getElementById('last-upd').textContent=new Date().toLocaleTimeString();
 
@@ -279,21 +280,43 @@ async function refreshTracks() {
     let html='';
     for (const t of tracks) {
       const lost=t.track_status==='Lost';
-      const m=L.marker([t.lat,t.lon],{icon:droneIcon(t,lost),zIndexOffset:500});
+      const icon=droneIcon(t,lost);
       const ds=t.detection_status?` [${t.detection_status}]`:'';
       const vel=t.velocity_ms?` ${t.velocity_ms.toFixed(1)}m/s`:'';
-      m.bindTooltip(
-        `<b>${t.track_id}</b> (${t.source}${ds})<br>`+
+      const tooltip=`<b>${t.track_id}</b> (${t.source}${ds})<br>`+
         `${t.lat.toFixed(6)}, ${t.lon.toFixed(6)}<br>`+
-        `Alt: ${t.alt_m.toFixed(0)}m  Hdg: ${t.azimuth_deg.toFixed(0)}°${vel}`,
-        {className:'leaflet-tooltip-gw'}
-      ).addTo(trackLayer);
-      if (!lost && t.velocity_ms>0.5) arrowLine(t.lat,t.lon,t.azimuth_deg,SRC_COLOR[t.source]||'#888').addTo(trackLayer);
-
+        `Alt: ${t.alt_m.toFixed(0)}m  Hdg: ${t.azimuth_deg.toFixed(0)}°${vel}`;
+      if (droneMarkers[t.uid]) {
+        droneMarkers[t.uid].setLatLng([t.lat, t.lon]);
+        droneMarkers[t.uid].setIcon(icon);
+        droneMarkers[t.uid].bindTooltip(tooltip, {className:'leaflet-tooltip-gw'});
+      } else {
+        const m=L.marker([t.lat,t.lon],{icon,zIndexOffset:500});
+        m.bindTooltip(tooltip,{className:'leaflet-tooltip-gw'}).addTo(trackLayer);
+        droneMarkers[t.uid]=m;
+      }
       const cls='t-'+t.source.toLowerCase().replace('echoshield','echo').replace('sentrycs','sntr');
       html+=`<div class="t-row"><span class="t-id ${cls}">${t.track_id}</span>${ds}${t.takeover_issued ? ' <b style="color:#FF9800">[TAKEOVER]</b>' : ''}`+
             `<span class="t-coord"> ${t.lat.toFixed(4)},${t.lon.toFixed(4)} ${t.alt_m.toFixed(0)}m${vel}</span></div>`;
     }
+
+    // Remove stale markers by uid
+    const currentUids = new Set(tracks.map(t => t.uid));
+    for (const uid of Object.keys(droneMarkers)) {
+      if (!currentUids.has(uid)) {
+        trackLayer.removeLayer(droneMarkers[uid]);
+        delete droneMarkers[uid];
+      }
+    }
+
+    // Redraw arrows each cycle on dedicated layer (prevents accumulation)
+    arrowLayer.clearLayers();
+    for (const t of tracks) {
+      if (t.track_status!=='Lost' && t.velocity_ms>0.5) {
+        arrowLine(t.lat,t.lon,t.azimuth_deg,SRC_COLOR[t.source]||'#888').addTo(arrowLayer);
+      }
+    }
+
     listEl.innerHTML=html;
   } catch(e){ console.warn('tracks fetch err',e); }
 }

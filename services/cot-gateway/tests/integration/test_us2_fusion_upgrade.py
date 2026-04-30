@@ -86,12 +86,17 @@ async def test_us2_fusion_upgrade(echoshield_stub, sentrycs_stub, tak_stub):
         assert "ECHO-TRK-001" in uids_seq
         assert "FUSED-DRN-001" in uids_seq
 
-        # Source-switch: find first FUSED; the immediately preceding CoT for same entity
+        # Source-switch: find first FUSED; the CoTs right before must include stale
+        # entries for ECHO-TRK-001 and/or SENTRYCS-DRN-001 (order may vary).
         fused_idx = uids_seq.index("FUSED-DRN-001")
-        # The CoT right before fused_idx should be ECHO-TRK-001 with stale==time
-        prev = roots[fused_idx - 1]
-        assert prev.attrib["uid"] == "ECHO-TRK-001"
-        assert prev.attrib["time"] == prev.attrib["stale"]
+        pre_fused_roots = roots[:fused_idx]
+        # At least one of the CoTs before FUSED must be ECHO-TRK-001 with stale==time
+        stale_echo = [
+            r
+            for r in pre_fused_roots
+            if r.attrib["uid"] == "ECHO-TRK-001" and r.attrib["time"] == r.attrib["stale"]
+        ]
+        assert stale_echo, "Expected at least one stale ECHO-TRK-001 CoT before FUSED"
 
         # Fused type must be hostile red
         assert types_seq[fused_idx] == "a-h-A-M-F-Q-r"

@@ -65,42 +65,42 @@ def test_uid_prefixes():
 def test_first_emission_no_old_uid():
     prev = {}
     old, new = detect_source_switch(_echo(), prev)
-    assert old is None
+    assert old == []
     assert new == "ECHO-TRK-001"
 
 
 def test_echo_to_fused_switch():
     prev = {"radar:TRK-001": "ECHO-TRK-001"}
     old, new = detect_source_switch(_fused(), prev)
-    assert old == "ECHO-TRK-001"
+    assert old == ["ECHO-TRK-001"]
     assert new == "FUSED-DRN-001"
 
 
 def test_sentrycs_to_fused_switch():
     prev = {"rf:DRN-001": "SENTRYCS-DRN-001"}
     old, new = detect_source_switch(_fused(), prev)
-    assert old == "SENTRYCS-DRN-001"
+    assert old == ["SENTRYCS-DRN-001"]
     assert new == "FUSED-DRN-001"
 
 
 def test_fused_to_echo_switch():
     prev = {"radar:TRK-001": "FUSED-DRN-001"}
     old, new = detect_source_switch(_echo(), prev)
-    assert old == "FUSED-DRN-001"
+    assert old == ["FUSED-DRN-001"]
     assert new == "ECHO-TRK-001"
 
 
 def test_fused_to_sentrycs_switch():
     prev = {"rf:DRN-001": "FUSED-DRN-001"}
     old, new = detect_source_switch(_sentrycs(), prev)
-    assert old == "FUSED-DRN-001"
+    assert old == ["FUSED-DRN-001"]
     assert new == "SENTRYCS-DRN-001"
 
 
 def test_no_switch_when_uid_unchanged():
     prev = {"radar:TRK-001": "ECHO-TRK-001"}
     old, new = detect_source_switch(_echo(), prev)
-    assert old is None
+    assert old == []
     assert new == "ECHO-TRK-001"
 
 
@@ -108,3 +108,25 @@ def test_fused_has_two_entity_keys():
     keys = entity_keys_for(_fused())
     assert "radar:TRK-001" in keys
     assert "rf:DRN-001" in keys
+
+
+def test_dual_uid_both_keys_map_to_different_old_uids():
+    """FR-012-019: Both radar and rf keys map to distinct old uids → both returned."""
+    prev = {
+        "radar:TRK-001": "ECHO-TRK-001",
+        "rf:DRN-001": "SENTRYCS-DRN-001",
+    }
+    old, new = detect_source_switch(_fused(), prev)
+    assert set(old) == {"ECHO-TRK-001", "SENTRYCS-DRN-001"}
+    assert new == "FUSED-DRN-001"
+
+
+def test_dedup_two_entity_keys_same_old_uid():
+    """FR-012-020: Two entity keys map to the same old uid → list contains it exactly once."""
+    prev = {
+        "radar:TRK-001": "ECHO-TRK-001",
+        "rf:DRN-001": "ECHO-TRK-001",  # same old uid under different key
+    }
+    old, new = detect_source_switch(_fused(), prev)
+    assert old.count("ECHO-TRK-001") == 1
+    assert new == "FUSED-DRN-001"
