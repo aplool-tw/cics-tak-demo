@@ -14,7 +14,7 @@ SAMPLE = {
     "lon": 121.5654,
     "alt_m": 101.0,
     "model": "DJI Mavic 3",
-    "status": "DETECTED",
+    "detection_status": "DETECTED",
     "is_landed": False,
     "operator_lat": 25.0589,
     "operator_lon": 121.5661,

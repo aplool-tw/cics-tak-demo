@@ -36,7 +36,7 @@ def _detection_to_track(d: dict[str, Any]) -> UnifiedTrack:
         last_updated=now,
         track_status="Active",
         classification="DRONE",
-        detection_status=d["status"],
+        detection_status=d["detection_status"],
         drone_model=d.get("model"),
         operator_lat=d.get("operator_lat"),
         operator_lon=d.get("operator_lon"),
@@ -86,7 +86,9 @@ class SentrycsAdapter:
                                 self.track_queue.put_nowait(track)
                             except asyncio.QueueFull:
                                 self._log.warning(
-                                    "queue_full_drop", uid=track.track_id, source="sentrycs"
+                                    "queue_full_drop",
+                                    uid=track.track_id,
+                                    source="sentrycs",
                                 )
                     else:
                         self._log.debug("sentrycs_empty")
