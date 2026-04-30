@@ -92,6 +92,9 @@ _HTML_TEMPLATE = """\
     <div class="leg-row"><span class="leg-dot" style="background:rgba(33,150,243,0.15);border-color:#2196F3;border-radius:3px"></span>Holding point</div>
     <div class="leg-row"><span class="leg-line" style="border-color:#00BFFF"></span>Radar range</div>
     <div class="leg-row"><span class="leg-line" style="border-color:#FFD700"></span>RF range</div>
+    <div class="leg-row"><span class="leg-line" style="border-color:#80deea"></span>1 km defense ring</div>
+    <div class="leg-row"><span class="leg-line" style="border-color:#ffcc80"></span>2 km defense ring</div>
+    <div class="leg-row"><span class="leg-line" style="border-color:#ef9a9a"></span>3 km defense ring</div>
     <div class="leg-sep"></div>
     <!-- Sensor live status -->
     <div id="sensor-info"><em style="color:#546e7a">loading sensors…</em></div>
@@ -206,7 +209,8 @@ async function refreshSites() {
     siteLayer.clearLayers();
     sensorLayer.clearLayers();
 
-    const RING_COLORS = ['#00e676','#ffca28','#ef5350'];
+    const RING_COLORS = ['#80deea','#ffcc80','#ef9a9a'];
+    const RING_LABELS = ['1 km defense ring','2 km defense ring','3 km defense ring'];
 
     for (const s of (data.strategic||[])) {
       if (s.type==='strategic_point') {
@@ -214,7 +218,7 @@ async function refreshSites() {
           .bindTooltip(`<b>${s.name}</b><br>${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}`,{className:'leaflet-tooltip-gw'})
           .addTo(siteLayer);
         (s.ranges_m||[]).forEach((rm,i)=>{
-          circle(s.lat,s.lon,rm,RING_COLORS[i]||'#ef5350','6 5').addTo(siteLayer);
+          circle(s.lat,s.lon,rm,RING_COLORS[i]||'#ef9a9a','6 5').bindTooltip(RING_LABELS[i],{className:'leaflet-tooltip-gw',permanent:false}).addTo(siteLayer);
         });
       } else if (s.type==='holding_point') {
         L.marker([s.lat,s.lon],{icon:hpIcon(),zIndexOffset:1000})
@@ -295,9 +299,7 @@ setInterval(refreshTracks, 2000);
 
 
 def _build_html(sp_lat: float, sp_lon: float) -> str:
-    return _HTML_TEMPLATE.replace("__SP_LAT__", str(sp_lat)).replace(
-        "__SP_LON__", str(sp_lon)
-    )
+    return _HTML_TEMPLATE.replace("__SP_LAT__", str(sp_lat)).replace("__SP_LON__", str(sp_lon))
 
 
 async def _fetch_sensor(
