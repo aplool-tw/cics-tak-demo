@@ -1,23 +1,17 @@
 <!-- SPECKIT START -->
-Active feature plan: `specs/007-scenario/plan.md` (007-e2e-scenarios —
-End-to-end scenario validation with strategic coordinates for Taiwan
-anti-drone TAK PoC. Delivers two scenario YAML sets (single-drone
-invasion + three-drone multi-direction), EchoShield e2e config, and
-validation scripts).
-Related artifacts: `specs/007-scenario/spec.md`,
-`specs/007-scenario/research.md`,
-`specs/007-scenario/data-model.md`,
-`specs/007-scenario/quickstart.md`,
-`specs/007-scenario/contracts/scenario-yaml.md`,
-`specs/007-scenario/contracts/sentrycs-yaml.md`.
+Active feature plan: `specs/010-perimeter-defense/plan.md` (010-perimeter-defense —
+Perimeter defense for Taiwan anti-drone TAK PoC. Four items: (1) fix
+tactical map legend with 3 pastel defense ring entries + tooltips;
+(2) increase drone speed 20→35 m/s; (3) verify TrackSource enum matches
+JS SRC_COLOR + add entity_key to source_switch log; (4) add
+position-based perimeter takeover to sentrycs-sim via defense_radius_m).
+Related artifacts: `specs/010-perimeter-defense/spec.md`,
+`specs/010-perimeter-defense/research.md`,
+`specs/010-perimeter-defense/quickstart.md`.
 Key coords: SP=(24.725806, 121.033750), HP=(24.725806, 121.071889).
-Scenario 1: TRK-E01 (15m/s, N→S, 8.99km) milestones M3=460s, M4=525s.
-Scenario 2: TRK-E0A/B/C (12m/s) M4 at 666/489/684s.
-Critical finding: dev-launcher.sh echoshield sensor hardcoded at
-(24.0, 121.0) — 80.9km from SP → Phase F adds --echoshield-config
-param + `services/echoshield-sim/config/e2e_scenario.yaml`
-(sensor at SP, max_range_m=3200). Validation: validate_scenario.py
-(map-sim poll M1 + tak-client-sim log parse M2-M4) + validate_cot.py
-(CoT type/stale/uid compliance). No new Python deps; Haversine
-self-implemented (G7). G2: no frozen contract changes.
+Ring colors: 1km=#80deea, 2km=#ffcc80, 3km=#ef9a9a (pastel, no conflicts).
+Speed: 35 m/s → 105 m/refresh at zoom 13; defense_radius_m: 1000.0 m.
+At 35 m/s: EchoShield entry≈9s, 2km≈43s, 1km≈71s, detected_at_s=75s.
+haversine_m from sentrycs_sim.geo.wgs84 (G7 no new deps). G2: no
+wire/REST contract changes; defense_radius_m is YAML-only internal config.
 <!-- SPECKIT END -->

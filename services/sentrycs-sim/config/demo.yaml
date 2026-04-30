@@ -1,12 +1,16 @@
 # Sentrycs demo config — local dev (all URLs point to 127.0.0.1)
-# Drone starts 3.5km from SP at 20m/s (demo_single_drone.yaml).
-# t=15s  enters EchoShield 3.2km range
-# t=75s  enters 2km range → Sentrycs DETECTED
-# t=125s enters 1km range → Sentrycs MITIGATING (triggers takeover to HP)
-# t=165s NEUTRALIZED
+# Drone starts 3.5 km north of SP at 35 m/s (demo_single_drone.yaml).
+# t≈9s   enters EchoShield 3.2 km range
+# t≈43s  crosses 2 km ring → still undetected (Sentrycs detection_radius_m=8km)
+# t≈71s  crosses 1 km perimeter (defense_radius_m=1000.0) → immediate takeover
+# t=75s  Sentrycs DETECTED (detected_at_s)
+# t=75s+ perimeter already breached → _ensure_takeover_task fires immediately
+# t≈165s NEUTRALIZED
 sensor_lat: 24.725806
 sensor_lon: 121.033750
 poll_interval_s: 0.5
+detection_radius_m: 8000.0
+defense_radius_m: 1000.0  # trigger takeover when drone crosses 1 km ring
 map_sim_url: http://127.0.0.1:8090
 uds_url: http://127.0.0.1:18080     # demo uses port 18080
 api_host: 0.0.0.0

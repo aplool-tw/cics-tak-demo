@@ -106,7 +106,11 @@ class GatewayMain:
             if self._track_store is not None:
                 await self._track_store.remove(old_uid)
             self._log.info(
-                "source_switch", old_uid=old_uid, new_uid=new_uid, track_id=track.track_id
+                "source_switch",
+                old_uid=old_uid,
+                new_uid=new_uid,
+                track_id=track.track_id,
+                entity_keys=entity_keys_for(track),
             )
 
         # Emit current CoT for new uid

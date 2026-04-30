@@ -11,6 +11,7 @@ import aiohttp
 
 from .config import SentrycsConfig
 from .geo import destination_point
+from .geo.wgs84 import haversine_m
 from .logging import get_logger, get_throttled_logger
 from .mapsim import MapSimClient, MapSimObject, MapSimUnavailable
 from .models import (
@@ -142,17 +143,35 @@ class LoopRunner:
             )
             self.registry.remove(uid)
 
-        # 4. schedule takeovers for tracks at mitigating_at_s.
+        # 4. schedule takeovers — position-based (defense_radius_m) or time-based fallback.
         for track in list(self.registry):
-            if track.status is not DetectionStatus.DETECTED:
+            if track.status not in (DetectionStatus.DETECTED, DetectionStatus.MITIGATING):
                 continue
             if track.takeover_sent:
                 continue
             scenario = self.config.drone_by_uid(track.uid)
             if scenario is None:
                 continue
-            if elapsed < float(scenario.mitigating_at_s):
-                continue
+            if self.config.defense_radius_m is not None:
+                # Position-based: fire when drone enters the defense perimeter.
+                dist_m = haversine_m(
+                    self.config.sensor_lat,
+                    self.config.sensor_lon,
+                    track.lat,
+                    track.lon,
+                )
+                if dist_m >= self.config.defense_radius_m:
+                    continue
+                self._log.info(
+                    "perimeter_breach",
+                    uid=track.uid,
+                    dist_m=round(dist_m, 1),
+                    defense_radius_m=self.config.defense_radius_m,
+                )
+            else:
+                # Time-based fallback: fire at mitigating_at_s.
+                if elapsed < float(scenario.mitigating_at_s):
+                    continue
             self._ensure_takeover_task(track, now_utc)
 
     # -- track lifecycle ---------------------------------------------------
@@ -213,9 +232,7 @@ class LoopRunner:
             distance_m=operator.operator_distance_m,
         )
         # IDLE → DETECTED transition (scheduled)
-        self.sm.transition(
-            track, DetectionStatus.DETECTED, reason="scheduled", now=now_utc
-        )
+        self.sm.transition(track, DetectionStatus.DETECTED, reason="scheduled", now=now_utc)
         return track
 
     def _update_track_from_obj(
@@ -252,9 +269,7 @@ class LoopRunner:
         if track.status is DetectionStatus.MITIGATING:
             # LANDED or disappear-grace → NEUTRALIZED
             if latest is not None and latest.status == "LANDED":
-                self.sm.transition(
-                    track, DetectionStatus.NEUTRALIZED, reason="landed", now=now_utc
-                )
+                self.sm.transition(track, DetectionStatus.NEUTRALIZED, reason="landed", now=now_utc)
             elif not seen:
                 gap = (now_utc - track.last_seen_at).total_seconds()
                 if gap >= float(self.config.mitigating_disappear_grace_s):
@@ -277,15 +292,9 @@ class LoopRunner:
 
         # Capture target coords now (before the async closure runs)
         scenario = self.config.drone_by_uid(uid)
-        target_lat: float | None = (
-            scenario.takeover_target_lat if scenario is not None else None
-        )
-        target_lon: float | None = (
-            scenario.takeover_target_lon if scenario is not None else None
-        )
-        target_alt_m: float = (
-            scenario.takeover_target_alt_m if scenario is not None else 0.0
-        )
+        target_lat: float | None = scenario.takeover_target_lat if scenario is not None else None
+        target_lon: float | None = scenario.takeover_target_lon if scenario is not None else None
+        target_alt_m: float = scenario.takeover_target_alt_m if scenario is not None else 0.0
 
         async def _do_takeover() -> None:
             result = await self.uds.call_takeover(
@@ -346,9 +355,7 @@ async def run(config: SentrycsConfig) -> None:
     start_mono = time.monotonic()
 
     async with aiohttp.ClientSession() as session:
-        mapsim = MapSimClient(
-            session, config.map_sim_url, timeout_s=config.map_sim_timeout_s
-        )
+        mapsim = MapSimClient(session, config.map_sim_url, timeout_s=config.map_sim_timeout_s)
         uds = UdsClient(session, config.uds_url, timeout_s=config.uds_timeout_s)
         runner = LoopRunner(
             config,
