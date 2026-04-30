@@ -1,17 +1,19 @@
 <!-- SPECKIT START -->
-Active feature plan: `specs/010-perimeter-defense/plan.md` (010-perimeter-defense —
-Perimeter defense for Taiwan anti-drone TAK PoC. Four items: (1) fix
-tactical map legend with 3 pastel defense ring entries + tooltips;
-(2) increase drone speed 20→35 m/s; (3) verify TrackSource enum matches
-JS SRC_COLOR + add entity_key to source_switch log; (4) add
-position-based perimeter takeover to sentrycs-sim via defense_radius_m).
-Related artifacts: `specs/010-perimeter-defense/spec.md`,
-`specs/010-perimeter-defense/research.md`,
-`specs/010-perimeter-defense/quickstart.md`.
+Active feature plan: `specs/011-cot-gw-perimeter/plan.md` (011-cot-gw-perimeter —
+CoT Gateway Perimeter Guard for Taiwan anti-drone TAK PoC. Five RC fixes:
+RC1 Cache-Control no-store on /tracks+/sites; RC2 clearLayers() moved
+inside refreshSites() success branch; RC3 new PerimeterGuard module in
+cot_gateway/perimeter/ fires UDS POST /command/takeover when DETECTED or
+MITIGATING track crosses SP exclusion radius (haversine from
+cot_gateway.correlate.haversine); RC4 sentrycs detection_radius_m 8000→2000;
+RC5 takeover_issued flag in TrackStore + orange #FF9800 drone icon + [TAKEOVER]
+badge. sentrycs-sim defense_radius_m removed; time-based DETECTED→MITIGATING
+transition replaces UDS call in loop step 4. No new dependencies (aiohttp
+already present). G2: UDS wire unchanged {drone_id,target_lat,target_lon,
+target_alt_m}; takeover_issued additive in /tracks response.
 Key coords: SP=(24.725806, 121.033750), HP=(24.725806, 121.071889).
-Ring colors: 1km=#80deea, 2km=#ffcc80, 3km=#ef9a9a (pastel, no conflicts).
-Speed: 35 m/s → 105 m/refresh at zoom 13; defense_radius_m: 1000.0 m.
-At 35 m/s: EchoShield entry≈9s, 2km≈43s, 1km≈71s, detected_at_s=75s.
-haversine_m from sentrycs_sim.geo.wgs84 (G7 no new deps). G2: no
-wire/REST contract changes; defense_radius_m is YAML-only internal config.
+Timeline at 35 m/s from 3500m: EchoShield≈9s, Sentrycs≈43s, breach≈71s.
+Related artifacts: `specs/011-cot-gw-perimeter/spec.md`,
+`specs/011-cot-gw-perimeter/research.md`,
+`specs/011-cot-gw-perimeter/quickstart.md`.
 <!-- SPECKIT END -->
