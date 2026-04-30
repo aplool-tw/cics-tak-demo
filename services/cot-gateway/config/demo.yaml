@@ -43,3 +43,13 @@ web:
   sentrycs_sensor_url: "http://127.0.0.1:7070/sensor-info"
   sp_lat: 24.725806
   sp_lon: 121.033750
+
+perimeter:
+  enabled: true
+  uds_url: "http://127.0.0.1:18080"
+  radius_m: 1000.0
+  holding_lat: 24.725806
+  holding_lon: 121.071889
+  holding_alt_m: 50.0
+  descent_speed_ms: 15.0
+

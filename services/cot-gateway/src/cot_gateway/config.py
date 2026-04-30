@@ -6,7 +6,7 @@ import os
 import re
 import warnings
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -87,6 +87,18 @@ class WebConfig(BaseModel):
     sp_lon: float = Field(default=121.033750, ge=-180.0, le=180.0)
 
 
+class PerimeterGuardConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool = False
+    uds_url: str = "http://127.0.0.1:18080"
+    radius_m: float = Field(default=1000.0, gt=0.0)
+    holding_lat: float = Field(default=24.725806, ge=-90.0, le=90.0)
+    holding_lon: float = Field(default=121.071889, ge=-180.0, le=180.0)
+    holding_alt_m: float = Field(default=50.0, ge=0.0)
+    descent_speed_ms: float = Field(default=15.0, gt=0.0)
+    uds_timeout_s: float = Field(default=3.0, gt=0.0)
+
+
 class GatewayConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     echoshield: EchoshieldConfig = Field(default_factory=EchoshieldConfig)
@@ -95,6 +107,7 @@ class GatewayConfig(BaseModel):
     tak_server: TakServerConfig = Field(default_factory=TakServerConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     web: WebConfig = Field(default_factory=WebConfig)
+    perimeter: Optional[PerimeterGuardConfig] = None
 
     @model_validator(mode="after")
     def _check_cert_file(self) -> "GatewayConfig":

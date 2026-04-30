@@ -1,9 +1,10 @@
-"""T052 [US3]: per-drone isolation — slow UDS for one drone doesn't block others."""
+"""T052 [US3]: per-drone isolation — both drones transition DETECTED→MITIGATING in same tick.
+
+Feature-011: sentrycs-sim step 4 no longer uses async UDS tasks.
+The time-based DETECTED→MITIGATING transition is synchronous within run_one_tick().
+"""
 
 from __future__ import annotations
-
-import asyncio
-import time
 
 from tests.integration.helpers import driver
 from sentrycs_sim.models import DetectionStatus
@@ -25,14 +26,17 @@ def _obj(uid: str):
 async def test_slow_uds_for_one_drone_does_not_block_tick(
     map_sim_stub, uds_stub, scenario_yaml_factory
 ) -> None:
-    # make UDS for TRK-002 hang for 5s (> 3s tick)
-    uds_stub.set_delay("TRK-002", 5.0)
+    """Step 4 is now synchronous — both drones transition in the same tick.
+
+    Previously this test verified async UDS task isolation.
+    After Feature-011, step 4 transitions DETECTED→MITIGATING synchronously
+    without calling UDS, so both drones complete in a single tick.
+    """
     cfg = scenario_yaml_factory(
         {
             "map_sim_url": map_sim_stub.url,
             "uds_url": uds_stub.url,
             "poll_interval_s": 0.05,
-            "uds_timeout_s": 6.0,  # allow it to eventually succeed
             "drones": [
                 {
                     "uid": "TRK-001",
@@ -58,22 +62,20 @@ async def test_slow_uds_for_one_drone_does_not_block_tick(
     map_sim_stub.set_objects([_obj("TRK-001"), _obj("TRK-002")])
 
     async with driver(cfg) as d:
-        # use runner.run_one_tick directly without waiting for in-flight tasks.
+        # One tick is enough for both drones to transition synchronously
         await d.runner.run_one_tick()
 
-        # 1st tick should schedule 2 takeover tasks; TRK-001 should complete quickly.
-        t0 = time.monotonic()
-        # poll for TRK-001 to become MITIGATING within ~1s
-        while time.monotonic() - t0 < 1.0:
-            t1 = d.registry.get_track("TRK-001")
-            if t1 and t1.status is DetectionStatus.MITIGATING:
-                break
-            await asyncio.sleep(0.05)
+        # Both should be MITIGATING immediately (synchronous step 4)
         t1 = d.registry.get_track("TRK-001")
-        assert t1.status is DetectionStatus.MITIGATING
-        # TRK-002 still in flight (DETECTED still)
         t2 = d.registry.get_track("TRK-002")
-        assert t2.status is DetectionStatus.DETECTED
+        assert t1 is not None
+        assert t2 is not None
+        assert t1.status is DetectionStatus.MITIGATING
+        assert t2.status is DetectionStatus.MITIGATING
+
+        # No UDS calls (responsibility of CoT GW PerimeterGuard)
+        assert len(uds_stub.calls) == 0
+
         # snapshot should still complete fast
         snap = d.registry.snapshot()
         assert len(snap) == 2

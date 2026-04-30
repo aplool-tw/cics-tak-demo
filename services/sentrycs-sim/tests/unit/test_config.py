@@ -121,14 +121,9 @@ def test_empty_drones_rejected(tmp_path: Path) -> None:
         load_scenario(_write(tmp_path, d))
 
 
-def test_defense_radius_m_accepts_none_and_positive_float(tmp_path: Path) -> None:
-    """T010: defense_radius_m is Optional[float]; None (omitted) and positive float are both valid."""
-    # None (field omitted) → valid, yields None
-    cfg_none = load_scenario(_write(tmp_path, _BASE))
-    assert cfg_none.defense_radius_m is None
-
-    # Positive float → valid
+def test_defense_radius_m_raises_validation_error_when_specified(tmp_path: Path) -> None:
+    """T028: defense_radius_m field has been removed; specifying it raises ValidationError."""
     d = copy.deepcopy(_BASE)
     d["defense_radius_m"] = 1000.0
-    cfg_pos = load_scenario(_write(tmp_path, d))
-    assert cfg_pos.defense_radius_m == 1000.0
+    with pytest.raises(ValueError):
+        load_scenario(_write(tmp_path, d))

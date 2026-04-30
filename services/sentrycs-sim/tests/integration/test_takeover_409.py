@@ -1,4 +1,8 @@
-"""T051 [US3]: UDS 409 → MITIGATING; another drone unaffected."""
+"""T051 [US3]: multi-drone → both reach MITIGATING via time-based transition.
+
+Feature-011: sentrycs-sim step 4 no longer calls UDS.
+Both drones transition synchronously in the same run_one_tick() call.
+"""
 
 from __future__ import annotations
 
@@ -20,7 +24,7 @@ def _obj(uid: str):
 
 
 async def test_409_transitions_to_mitigating(map_sim_stub, uds_stub, scenario_yaml_factory) -> None:
-    uds_stub.set_status("TRK-001", 409)
+    """Both drones transition to MITIGATING via time-based step 4. No UDS calls."""
     cfg = scenario_yaml_factory(
         {
             "map_sim_url": map_sim_stub.url,
@@ -56,8 +60,7 @@ async def test_409_transitions_to_mitigating(map_sim_stub, uds_stub, scenario_ya
         t2 = d.registry.get_track("TRK-002")
         assert t1.status is DetectionStatus.MITIGATING
         assert t1.takeover_sent is True
-        # exactly one call per drone
-        n001 = sum(1 for c in uds_stub.calls if c.get("drone_id") == "TRK-001")
-        assert n001 == 1
-        # TRK-002 progresses normally
+        # No UDS calls from sentrycs-sim (CoT GW handles this)
+        assert len(uds_stub.calls) == 0
+        # TRK-002 also progresses normally
         assert t2.status is DetectionStatus.MITIGATING

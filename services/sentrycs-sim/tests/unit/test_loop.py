@@ -1,8 +1,9 @@
-"""T005-T009 [US4]: perimeter-defense takeover unit tests for LoopRunner step 4.
+"""T005-T009, T029-T030 [US4/Feature-011]: LoopRunner step 4 tests.
 
-TDD gate: tests T005-T009 were written before implementation (defense_radius_m
-field and haversine branch did not exist yet).  After implementation all 6 tests
-must pass.
+After Feature-011 cleanup (T031/T032):
+- defense_radius_m removed from SentrycsConfig
+- Step 4 changed from "schedule UDS takeovers" to "time-based DETECTED→MITIGATING transition"
+- Sentrycs-sim no longer calls UDS; that responsibility is now with CoT Gateway PerimeterGuard.
 """
 
 from __future__ import annotations
@@ -46,14 +47,12 @@ _LAT_1100, _LON_1100 = destination_point(SENSOR_LAT, SENSOR_LON, 0.0, 1100.0)
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 
-def _mk_config(defense_radius_m: float | None = None) -> SentrycsConfig:
+def _mk_config() -> SentrycsConfig:
     data: dict = {
         "sensor_lat": SENSOR_LAT,
         "sensor_lon": SENSOR_LON,
         "drones": [_BASE_DRONE_DICT],
     }
-    if defense_radius_m is not None:
-        data["defense_radius_m"] = defense_radius_m
     return SentrycsConfig.model_validate(data)
 
 
@@ -132,93 +131,94 @@ def _build_runner(
 # ── tests ────────────────────────────────────────────────────────────────────
 
 
-async def test_time_based_takeover_fires_when_defense_radius_none() -> None:
-    """T005: defense_radius_m=None, elapsed >= mitigating_at_s → takeover fires."""
-    config = _mk_config(defense_radius_m=None)
-    track = _mk_track(_LAT_900, _LON_900)
-    runner = _build_runner(config, track, [_mk_mapsim_obj(_LAT_900, _LON_900)], elapsed_s=15.0)
-
-    mock_takeover = MagicMock()
-    runner._ensure_takeover_task = mock_takeover  # type: ignore[method-assign]
-
-    await runner.run_one_tick()
-
-    mock_takeover.assert_called_once()
-
-
 async def test_time_based_takeover_skips_when_elapsed_lt_threshold() -> None:
-    """T006: defense_radius_m=None, elapsed < mitigating_at_s → no takeover."""
-    config = _mk_config(defense_radius_m=None)
+    """T006: elapsed < mitigating_at_s → no DETECTED→MITIGATING transition."""
+    config = _mk_config()
     track = _mk_track(_LAT_900, _LON_900)
     runner = _build_runner(config, track, [_mk_mapsim_obj(_LAT_900, _LON_900)], elapsed_s=5.0)
 
-    mock_takeover = MagicMock()
-    runner._ensure_takeover_task = mock_takeover  # type: ignore[method-assign]
-
     await runner.run_one_tick()
 
-    mock_takeover.assert_not_called()
-
-
-async def test_position_based_takeover_fires_when_within_radius() -> None:
-    """T006 (position): defense_radius_m=1000.0, drone 900 m from sensor → fires."""
-    config = _mk_config(defense_radius_m=1000.0)
-    track = _mk_track(_LAT_900, _LON_900)
-    runner = _build_runner(config, track, [_mk_mapsim_obj(_LAT_900, _LON_900)], elapsed_s=15.0)
-
-    mock_takeover = MagicMock()
-    runner._ensure_takeover_task = mock_takeover  # type: ignore[method-assign]
-
-    await runner.run_one_tick()
-
-    mock_takeover.assert_called_once()
-
-
-async def test_position_based_takeover_skips_when_outside_radius() -> None:
-    """T007: defense_radius_m=1000.0, drone 1100 m away, elapsed >= mitigating_at_s → no takeover.
-
-    MEDIUM C1: elapsed >= mitigating_at_s proves that the time-based path is
-    suppressed when defense_radius_m is configured — the drone is outside the
-    perimeter so no takeover should fire regardless of elapsed time.
-    """
-    config = _mk_config(defense_radius_m=1000.0)
-    track = _mk_track(_LAT_1100, _LON_1100)
-    # elapsed=15.0 >= mitigating_at_s=10.0 — time-based path would fire if active
-    runner = _build_runner(config, track, [_mk_mapsim_obj(_LAT_1100, _LON_1100)], elapsed_s=15.0)
-
-    mock_takeover = MagicMock()
-    runner._ensure_takeover_task = mock_takeover  # type: ignore[method-assign]
-
-    await runner.run_one_tick()
-
-    mock_takeover.assert_not_called()
+    # Track should remain DETECTED (not transitioned yet)
+    assert track.status is DetectionStatus.DETECTED
+    assert track.takeover_sent is False
 
 
 async def test_no_duplicate_takeover_when_already_sent() -> None:
-    """T009: takeover_sent=True, drone inside radius → no second takeover call."""
-    config = _mk_config(defense_radius_m=1000.0)
-    track = _mk_track(_LAT_500, _LON_500, takeover_sent=True)
+    """T009: takeover_sent=True → no second DETECTED→MITIGATING transition."""
+    config = _mk_config()
+    # Start in MITIGATING state with takeover already sent
+    track = _mk_track(_LAT_500, _LON_500, status=DetectionStatus.MITIGATING, takeover_sent=True)
     runner = _build_runner(config, track, [_mk_mapsim_obj(_LAT_500, _LON_500)], elapsed_s=15.0)
-
-    mock_takeover = MagicMock()
-    runner._ensure_takeover_task = mock_takeover  # type: ignore[method-assign]
 
     await runner.run_one_tick()
 
-    mock_takeover.assert_not_called()
+    # Should remain MITIGATING — not re-transitioned
+    assert track.status is DetectionStatus.MITIGATING
+    # UDS not called from step 4
+    runner.uds.call_takeover.assert_not_called()
 
 
 async def test_neutralized_drone_not_given_takeover() -> None:
-    """T008: NEUTRALIZED drone inside radius → no takeover (status guard)."""
-    config = _mk_config(defense_radius_m=1000.0)
-    # NEUTRALIZED drone at 500 m — well inside perimeter
+    """T008: NEUTRALIZED drone → step 4 does not transition (status guard)."""
+    config = _mk_config()
+    # NEUTRALIZED drone at 500 m — well inside any perimeter
     track = _mk_track(_LAT_500, _LON_500, status=DetectionStatus.NEUTRALIZED)
     # Empty Map Sim response — drone has already landed
     runner = _build_runner(config, track, [], elapsed_s=15.0)
 
-    mock_takeover = MagicMock()
-    runner._ensure_takeover_task = mock_takeover  # type: ignore[method-assign]
+    await runner.run_one_tick()
+
+    # NEUTRALIZED should not get stepped-to-MITIGATING
+    assert track.status is DetectionStatus.NEUTRALIZED
+    runner.uds.call_takeover.assert_not_called()
+
+
+# ── T029: DETECTED track does NOT invoke UDS ─────────────────────────────────
+
+
+async def test_detected_track_does_not_call_uds() -> None:
+    """T029: run_one_tick() with DETECTED track does NOT invoke UdsClient.call_takeover.
+
+    Takeover is now handled by CoT Gateway PerimeterGuard; sentrycs-sim step 4
+    only manages the time-based DETECTED→MITIGATING state transition.
+    """
+    config = _mk_config()
+    track = _mk_track(_LAT_900, _LON_900, status=DetectionStatus.DETECTED)
+    runner = _build_runner(config, track, [_mk_mapsim_obj(_LAT_900, _LON_900)], elapsed_s=15.0)
 
     await runner.run_one_tick()
 
-    mock_takeover.assert_not_called()
+    # UDS must NOT be called from step 4 (responsibility of CoT GW PerimeterGuard)
+    runner.uds.call_takeover.assert_not_called()
+    if hasattr(runner.uds, "post_takeover"):
+        runner.uds.post_takeover.assert_not_called()
+
+
+# ── T030: time-based DETECTED→MITIGATING transition ──────────────────────────
+
+
+async def test_time_based_detected_to_mitigating_fires_at_threshold() -> None:
+    """T030: DETECTED track, elapsed >= mitigating_at_s → MITIGATING + takeover_sent=True."""
+    config = _mk_config()
+    track = _mk_track(_LAT_900, _LON_900, status=DetectionStatus.DETECTED)
+    runner = _build_runner(config, track, [_mk_mapsim_obj(_LAT_900, _LON_900)], elapsed_s=15.0)
+
+    await runner.run_one_tick()
+
+    # Track should have been transitioned to MITIGATING by step 4
+    assert track.status is DetectionStatus.MITIGATING
+    assert track.takeover_sent is True
+
+
+async def test_time_based_transition_does_not_fire_when_takeover_already_sent() -> None:
+    """T030b: takeover_sent=True (DETECTED) → step 4 skips (idempotent)."""
+    config = _mk_config()
+    # Simulate a track that already went through one cycle
+    track = _mk_track(_LAT_900, _LON_900, status=DetectionStatus.DETECTED, takeover_sent=True)
+    runner = _build_runner(config, track, [_mk_mapsim_obj(_LAT_900, _LON_900)], elapsed_s=15.0)
+
+    await runner.run_one_tick()
+
+    # Should NOT transition again (already marked)
+    assert track.takeover_sent is True

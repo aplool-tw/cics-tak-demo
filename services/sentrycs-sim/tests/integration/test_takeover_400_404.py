@@ -1,4 +1,8 @@
-"""T033 [US1]: UDS 400 / 404 → stays DETECTED, latches, no retry."""
+"""T033 [US1]: time-based DETECTED→MITIGATING transition, no UDS calls from sentrycs-sim.
+
+Feature-011: sentrycs-sim step 4 no longer calls UDS.
+All drones transition DETECTED→MITIGATING via time-based mechanism at mitigating_at_s.
+"""
 
 from __future__ import annotations
 
@@ -20,7 +24,7 @@ def _obj(uid: str):
 
 
 async def test_uds_400_no_retry(map_sim_stub, uds_stub, scenario_yaml_factory) -> None:
-    uds_stub.default_status = 400
+    """Step 4 does NOT call UDS — both drones transition to MITIGATING via time-based path."""
     cfg = scenario_yaml_factory(
         {
             "map_sim_url": map_sim_stub.url,
@@ -47,11 +51,6 @@ async def test_uds_400_no_retry(map_sim_stub, uds_stub, scenario_yaml_factory) -
             ],
         }
     )
-    # 2nd drone fine (200), 1st gets 400 because default_status applies to both.
-    # Override per uid:
-    uds_stub.default_status = 200
-    uds_stub.set_status("TRK-001", 400)
-
     map_sim_stub.set_objects([_obj("TRK-001"), _obj("TRK-002")])
 
     async with driver(cfg) as d:
@@ -60,17 +59,16 @@ async def test_uds_400_no_retry(map_sim_stub, uds_stub, scenario_yaml_factory) -
             await d.tick(advance_s=1.0)
         t1 = d.registry.get_track("TRK-001")
         t2 = d.registry.get_track("TRK-002")
-        assert t1 is not None and t1.status is DetectionStatus.DETECTED
+        # Both transition to MITIGATING via time-based step 4 (no UDS)
+        assert t1 is not None and t1.status is DetectionStatus.MITIGATING
         assert t1.takeover_sent is True
-        # exactly one call for TRK-001
-        n001 = sum(1 for c in uds_stub.calls if c.get("drone_id") == "TRK-001")
-        assert n001 == 1
-        # TRK-002 unaffected → MITIGATING
         assert t2 is not None and t2.status is DetectionStatus.MITIGATING
+        # No UDS calls from sentrycs-sim
+        assert len(uds_stub.calls) == 0
 
 
 async def test_uds_404_no_retry(map_sim_stub, uds_stub, scenario_yaml_factory) -> None:
-    uds_stub.default_status = 404
+    """Step 4 does NOT call UDS — drone transitions to MITIGATING via time-based path."""
     cfg = scenario_yaml_factory(
         {
             "map_sim_url": map_sim_stub.url,
@@ -93,6 +91,7 @@ async def test_uds_404_no_retry(map_sim_stub, uds_stub, scenario_yaml_factory) -
         for _ in range(5):
             await d.tick(advance_s=1.0)
         t = d.registry.get_track("TRK-001")
-        assert t is not None and t.status is DetectionStatus.DETECTED
+        assert t is not None and t.status is DetectionStatus.MITIGATING
         assert t.takeover_sent is True
-        assert sum(1 for c in uds_stub.calls if c.get("drone_id") == "TRK-001") == 1
+        # No UDS calls from sentrycs-sim
+        assert len(uds_stub.calls) == 0

@@ -12,6 +12,8 @@ from cot_gateway.logging import get_logger
 from cot_gateway.web.sites import SitesConfig
 from cot_gateway.web.track_store import TrackStore
 
+_NO_CACHE = {"Cache-Control": "no-store, no-cache", "Pragma": "no-cache"}
+
 _HTML_TEMPLATE = """\
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -189,10 +191,18 @@ function rfIcon(c) {
     </svg>`, iconSize:[24,24], iconAnchor:[12,17] });
 }
 
-function droneIcon(src, lost) {
-  const c = lost ? '#777' : (SRC_COLOR[src]||'#888');
-  const b = lost ? '#444' : (SRC_BORDER[src]||'#555');
-  const sym = src==='FUSED'?'✈':(src==='ECHOSHIELD'?'◆':'⬡');
+// TEST: droneIcon – visual state matrix
+// | t.takeover_issued | lost | source   | fill        | border    |
+// |-------------------|------|----------|-------------|-----------|
+// | true              | any  | any      | #FF9800     | #CC6600   |
+// | false             | true | any      | #777        | #444      |
+// | false             | false| FUSED    | #FF4444     | #CC0000   |
+// | false             | false| SENTRYCS | #FFD700     | #CC9000   |
+// | false             | false| ECHO     | #00BFFF     | #0090CC   |
+function droneIcon(t, lost) {
+  const c = t.takeover_issued ? '#FF9800' : (lost ? '#777' : (SRC_COLOR[t.source]||'#888'));
+  const b = t.takeover_issued ? '#CC6600' : (lost ? '#444' : (SRC_BORDER[t.source]||'#555'));
+  const sym = t.source==='FUSED'?'✈':(t.source==='ECHOSHIELD'?'◆':'⬡');
   const op = lost ? 0.4 : 0.9;
   return L.divIcon({ className:'',
     html:`<div style="width:22px;height:22px;border-radius:50%;border:2px solid ${b};background:${c};opacity:${op};display:flex;align-items:center;justify-content:center;color:#000;font-size:11px;font-weight:bold">${sym}</div>`,
@@ -202,7 +212,7 @@ function droneIcon(src, lost) {
 // ── sites (strategic + holding points) ─────────────────────────────────────
 async function refreshSites() {
   try {
-    const r = await fetch('/sites');
+    const r = await fetch('/sites', {cache: 'no-store'});
     if (!r.ok) return;
     const data = await r.json();
 
@@ -255,7 +265,7 @@ async function refreshSites() {
 // ── live tracks ─────────────────────────────────────────────────────────────
 async function refreshTracks() {
   try {
-    const r = await fetch('/tracks');
+    const r = await fetch('/tracks', {cache: 'no-store'});
     if (!r.ok) return;
     const tracks = await r.json();
 
@@ -269,7 +279,7 @@ async function refreshTracks() {
     let html='';
     for (const t of tracks) {
       const lost=t.track_status==='Lost';
-      const m=L.marker([t.lat,t.lon],{icon:droneIcon(t.source,lost),zIndexOffset:500});
+      const m=L.marker([t.lat,t.lon],{icon:droneIcon(t,lost),zIndexOffset:500});
       const ds=t.detection_status?` [${t.detection_status}]`:'';
       const vel=t.velocity_ms?` ${t.velocity_ms.toFixed(1)}m/s`:'';
       m.bindTooltip(
@@ -281,7 +291,7 @@ async function refreshTracks() {
       if (!lost && t.velocity_ms>0.5) arrowLine(t.lat,t.lon,t.azimuth_deg,SRC_COLOR[t.source]||'#888').addTo(trackLayer);
 
       const cls='t-'+t.source.toLowerCase().replace('echoshield','echo').replace('sentrycs','sntr');
-      html+=`<div class="t-row"><span class="t-id ${cls}">${t.track_id}</span>${ds}`+
+      html+=`<div class="t-row"><span class="t-id ${cls}">${t.track_id}</span>${ds}${t.takeover_issued ? ' <b style="color:#FF9800">[TAKEOVER]</b>' : ''}`+
             `<span class="t-coord"> ${t.lat.toFixed(4)},${t.lon.toFixed(4)} ${t.alt_m.toFixed(0)}m${vel}</span></div>`;
     }
     listEl.innerHTML=html;
@@ -340,10 +350,10 @@ def build_web_app(
                 _fetch_sensor(session, sentrycs_sensor_url, "sentrycs"),
             )
         payload = {"strategic": strategic, "sensors": [echo_info, sntr_info]}
-        return web.json_response(payload)
+        return web.json_response(payload, headers=_NO_CACHE)
 
     async def _tracks(request: web.Request) -> web.Response:
-        return web.json_response(await track_store.get_all())
+        return web.json_response(await track_store.get_all(), headers=_NO_CACHE)
 
     async def _health(request: web.Request) -> web.Response:
         return web.json_response({"status": "ok", "service": "cot-gateway-web"})

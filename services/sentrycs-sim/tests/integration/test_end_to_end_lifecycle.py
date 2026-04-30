@@ -1,4 +1,8 @@
-"""T031 [US1]: end-to-end lifecycle IDLE → DETECTED → MITIGATING → NEUTRALIZED → removed."""
+"""T031 [US1]: end-to-end lifecycle IDLE → DETECTED → MITIGATING → NEUTRALIZED → removed.
+
+Feature-011: sentrycs-sim step 4 now handles time-based DETECTED→MITIGATING transition.
+UDS takeover is issued by CoT Gateway PerimeterGuard (not sentrycs-sim).
+"""
 
 from __future__ import annotations
 
@@ -52,10 +56,10 @@ async def test_full_lifecycle(map_sim_stub, uds_stub, scenario_yaml_factory) -> 
         assert track is not None
         assert track.status is DetectionStatus.DETECTED
 
-        # t=21: past mitigating_at_s → takeover → MITIGATING
+        # t=21: past mitigating_at_s → time-based step 4 → MITIGATING (no UDS call)
         await d.tick(advance_s=15.0)
-        assert len(uds_stub.calls) == 1
-        assert uds_stub.calls[0]["drone_id"] == "TRK-001"
+        # UDS is NOT called from sentrycs-sim (responsibility of CoT GW PerimeterGuard)
+        assert len(uds_stub.calls) == 0
         assert d.registry.get_track("TRK-001").status is DetectionStatus.MITIGATING
 
         # t=36: Map Sim reports LANDED → NEUTRALIZED
@@ -93,4 +97,10 @@ async def test_takeover_fires_exactly_once(map_sim_stub, uds_stub, scenario_yaml
         await d.tick()  # t=0: DETECTED
         for _ in range(5):
             await d.tick(advance_s=1.0)
-        assert len(uds_stub.calls) == 1
+        # Sentrycs-sim does NOT call UDS; UDS takeover is handled by CoT GW
+        assert len(uds_stub.calls) == 0
+        # Track should be MITIGATING after time-based transition
+        t = d.registry.get_track("TRK-001")
+        assert t is not None
+        assert t.status is DetectionStatus.MITIGATING
+        assert t.takeover_sent is True
