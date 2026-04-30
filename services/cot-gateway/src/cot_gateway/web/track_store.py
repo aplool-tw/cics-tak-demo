@@ -9,8 +9,9 @@ from typing import Any
 from cot_gateway.models.track import UnifiedTrack
 
 
-def _serialize(track: UnifiedTrack, takeover_issued: bool = False) -> dict[str, Any]:
+def _serialize(track: UnifiedTrack, uid: str, takeover_issued: bool = False) -> dict[str, Any]:
     return {
+        "uid": uid,
         "source": track.source.value,
         "track_id": track.track_id,
         "lat": track.lat,
@@ -56,4 +57,4 @@ class TrackStore:
 
     async def get_all(self) -> list[dict[str, Any]]:
         async with self._lock:
-            return [_serialize(t, uid in self._takeover_set) for uid, t in self._data.items()]
+            return [_serialize(t, uid, uid in self._takeover_set) for uid, t in self._data.items()]

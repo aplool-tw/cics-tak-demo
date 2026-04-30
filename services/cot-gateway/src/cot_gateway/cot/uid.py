@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from cot_gateway.models.track import TrackSource, UnifiedTrack
 
 
@@ -32,17 +30,18 @@ def entity_keys_for(track: UnifiedTrack) -> list[str]:
 
 def detect_source_switch(
     track: UnifiedTrack, prev_uid_by_entity_key: dict[str, str]
-) -> tuple[Optional[str], str]:
-    """Return (old_uid | None, new_uid).
+) -> tuple[list[str], str]:
+    """Return (old_uids, new_uid).
 
-    `old_uid` is set (!= None) iff any entity key of this track previously mapped to a uid that
-    differs from new_uid. Returns the first differing old uid found (typically only one).
+    `old_uids` is the list of all distinct previous uids that differ from new_uid, collected
+    across all entity keys of this track.  Returns an empty list when no source switch occurred.
     """
     new_uid = uid_for(track)
-    old_uid: Optional[str] = None
+    seen: set[str] = set()
+    old_uids: list[str] = []
     for key in entity_keys_for(track):
         prev = prev_uid_by_entity_key.get(key)
-        if prev is not None and prev != new_uid:
-            old_uid = prev
-            break
-    return old_uid, new_uid
+        if prev is not None and prev != new_uid and prev not in seen:
+            seen.add(prev)
+            old_uids.append(prev)
+    return old_uids, new_uid

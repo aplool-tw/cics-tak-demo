@@ -1,19 +1,21 @@
 <!-- SPECKIT START -->
-Active feature plan: `specs/011-cot-gw-perimeter/plan.md` (011-cot-gw-perimeter —
-CoT Gateway Perimeter Guard for Taiwan anti-drone TAK PoC. Five RC fixes:
-RC1 Cache-Control no-store on /tracks+/sites; RC2 clearLayers() moved
-inside refreshSites() success branch; RC3 new PerimeterGuard module in
-cot_gateway/perimeter/ fires UDS POST /command/takeover when DETECTED or
-MITIGATING track crosses SP exclusion radius (haversine from
-cot_gateway.correlate.haversine); RC4 sentrycs detection_radius_m 8000→2000;
-RC5 takeover_issued flag in TrackStore + orange #FF9800 drone icon + [TAKEOVER]
-badge. sentrycs-sim defense_radius_m removed; time-based DETECTED→MITIGATING
-transition replaces UDS call in loop step 4. No new dependencies (aiohttp
-already present). G2: UDS wire unchanged {drone_id,target_lat,target_lon,
-target_alt_m}; takeover_issued additive in /tracks response.
-Key coords: SP=(24.725806, 121.033750), HP=(24.725806, 121.071889).
-Timeline at 35 m/s from 3500m: EchoShield≈9s, Sentrycs≈43s, breach≈71s.
-Related artifacts: `specs/011-cot-gw-perimeter/spec.md`,
-`specs/011-cot-gw-perimeter/research.md`,
-`specs/011-cot-gw-perimeter/quickstart.md`.
+Active feature plan: `specs/012-track-update-fix/plan.md` (012-track-update-fix —
+CoT Gateway Track Update Fix. Four RC bug-fixes in services/cot-gateway:
+RC1 JS refreshTracks() → uid-keyed incremental droneMarkers (no clearLayers());
+RC2 detect_source_switch returns (list[str],str) — all distinct old uids — and
+_emit_for_track iterates full list emitting stale CoT + removing TrackStore entry
+for each; RC3 TrackStore._serialize accepts uid param, get_all() passes key,
+/tracks JSON gains "uid" field (additive, not G2 frozen); RC4 _within_match
+normalises naïve datetimes to UTC before subtraction (local vars only, no mutation).
+G2: EchoShield TCP JSON, Sentrycs /detections, TAK CoT XML, UDS /command/takeover
+unchanged; contract fixtures unmodified. G7: no new dependencies.
+Modified files: cot/uid.py, correlate/correlator.py, loop.py,
+web/track_store.py, web/server.py (JS section).
+New tests: test_uid_source_switch.py (updated), test_correlator_tz.py,
+test_track_store_uid.py, test_multi_uid_source_switch.py.
+Related artifacts: `specs/012-track-update-fix/spec.md`,
+`specs/012-track-update-fix/research.md`,
+`specs/012-track-update-fix/data-model.md`,
+`specs/012-track-update-fix/quickstart.md`,
+`specs/012-track-update-fix/contracts/tracks-api.md`.
 <!-- SPECKIT END -->
