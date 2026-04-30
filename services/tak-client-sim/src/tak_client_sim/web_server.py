@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
+from typing import Any
 
 import structlog
 from aiohttp import web
@@ -331,7 +332,7 @@ _MAP_HTML_TEMPLATE = """\
       const statusEl   = document.getElementById('status');
       const statusText = document.getElementById('status-text');
       try {
-        const res = await fetch('/events');
+        const res = await fetch('/events', {cache: 'no-store'});
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
 
@@ -445,6 +446,9 @@ def _build_map_html(sp_lat: float, sp_lon: float, hp_lat: float, hp_lon: float) 
     )
 
 
+_NO_CACHE: dict[str, str] = {"Cache-Control": "no-store, no-cache", "Pragma": "no-cache"}
+
+
 # ── DTO serialisation ─────────────────────────────────────────────────────
 
 
@@ -453,7 +457,7 @@ def _fmt_dt(dt: datetime) -> str:
     return dt.strftime("%Y-%m-%dT%H:%M:%S.") + f"{ms:03d}Z"
 
 
-def _event_to_dict(evt: CotEvent, now: datetime) -> dict[str, object]:
+def _event_to_dict(evt: CotEvent, now: datetime) -> dict[str, Any]:
     stale_in_s = round((evt.stale - now).total_seconds())
     is_stale = stale_in_s < 0
     return {
@@ -492,13 +496,13 @@ async def _handle_events(request: web.Request) -> web.Response:
         "count": len(events),
         "timestamp": _fmt_dt(now),
     }
-    return web.json_response(payload)
+    return web.json_response(payload, headers=_NO_CACHE)
 
 
 async def _handle_health(request: web.Request) -> web.Response:
     store: CotStore = request.app["store"]
     events = await store.get_all()
-    return web.json_response({"status": "ok", "tracked": len(events)})
+    return web.json_response({"status": "ok", "tracked": len(events)}, headers=_NO_CACHE)
 
 
 # ── app factory + lifecycle ───────────────────────────────────────────────
