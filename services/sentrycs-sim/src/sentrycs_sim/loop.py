@@ -339,6 +339,10 @@ async def run(config: SentrycsConfig) -> None:
             registry=registry,
             start_monotonic=start_mono,
             get_map_sim_reachable=lambda: runner.map_sim_reachable,
+            sensor_lat=config.sensor_lat,
+            sensor_lon=config.sensor_lon,
+            sensor_alt_m=config.sensor_alt_m,
+            detection_radius_m=config.detection_radius_m,
         )
         aio_runner = web.AppRunner(app)
         await aio_runner.setup()

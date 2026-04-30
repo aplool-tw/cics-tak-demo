@@ -20,6 +20,10 @@ def build_app(
     registry: DroneRegistry,
     start_monotonic: float,
     get_map_sim_reachable: Callable[[], bool],
+    sensor_lat: float = 0.0,
+    sensor_lon: float = 0.0,
+    sensor_alt_m: float = 0.0,
+    detection_radius_m: float = 8000.0,
 ) -> web.Application:
     log = get_logger("sentrycs_sim.api")
 
@@ -45,6 +49,17 @@ def build_app(
         }
         return web.json_response(payload)
 
+    async def _sensor_info(request: web.Request) -> web.Response:
+        return web.json_response(
+            {
+                "type": "sentrycs",
+                "sensor_lat": sensor_lat,
+                "sensor_lon": sensor_lon,
+                "sensor_alt_m": sensor_alt_m,
+                "detection_radius_m": detection_radius_m,
+            }
+        )
+
     @web.middleware
     async def _access_log(request: web.Request, handler: Any) -> web.StreamResponse:
         t0 = time.monotonic()
@@ -69,4 +84,5 @@ def build_app(
     app.router.add_get("/detections", _detections)
     app.router.add_get("/detection/{uid}", _detection_by_uid)
     app.router.add_get("/health", _health)
+    app.router.add_get("/sensor-info", _sensor_info)
     return app

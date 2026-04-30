@@ -39,6 +39,7 @@ class SentrycsConfig(BaseModel):
 
     sensor_lat: float = Field(..., ge=-90.0, le=90.0)
     sensor_lon: float = Field(..., ge=-180.0, le=180.0)
+    sensor_alt_m: float = Field(default=0.0)
     detection_radius_m: float = Field(default=8000.0, gt=0.0)
     poll_interval_s: float = Field(default=0.5, gt=0.0)
     map_sim_url: str = "http://localhost:8090"
