@@ -1,4 +1,7 @@
-"""T050 [US3]: two drones progress independently; 2 takeovers with different uids."""
+"""T051 [US3]: Multi-drone → two drones both reach MITIGATING via time-based transition.
+
+Feature-011: sentrycs-sim step 4 handles DETECTED→MITIGATING; no UDS calls.
+"""
 
 from __future__ import annotations
 
@@ -61,14 +64,13 @@ async def test_two_drones_independent_progress(
         await d.tick(advance_s=10.0)
         assert d.registry.get_track("TRK-002") is not None
 
-        # advance past both mitigating times
-        await d.tick(advance_s=10.0)  # t=21
-        # TRK-001 and TRK-002 should both be MITIGATING
+        # advance past both mitigating times (t=21)
+        await d.tick(advance_s=10.0)
+        # Both should be MITIGATING via time-based step 4 (no UDS)
         t1 = d.registry.get_track("TRK-001")
         t2 = d.registry.get_track("TRK-002")
         assert t1.status is DetectionStatus.MITIGATING
         assert t2.status is DetectionStatus.MITIGATING
 
-        # each UDS call has a distinct drone_id
-        drone_ids = [c.get("drone_id") for c in uds_stub.calls]
-        assert sorted(drone_ids) == ["TRK-001", "TRK-002"]
+        # No UDS calls from sentrycs-sim (responsibility of CoT GW PerimeterGuard)
+        assert len(uds_stub.calls) == 0

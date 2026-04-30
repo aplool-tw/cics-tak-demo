@@ -47,7 +47,6 @@ class SentrycsConfig(BaseModel):
     sensor_alt_m: float = Field(default=0.0)
     detection_radius_m: float = Field(default=8000.0, gt=0.0)
     poll_interval_s: float = Field(default=0.5, gt=0.0)
-    defense_radius_m: float | None = Field(default=None)
     map_sim_url: str = "http://localhost:8090"
     map_sim_timeout_s: float = Field(default=1.0, gt=0.0)
     uds_url: str = "http://localhost:8080"

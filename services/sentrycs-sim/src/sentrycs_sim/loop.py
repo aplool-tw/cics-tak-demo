@@ -11,7 +11,6 @@ import aiohttp
 
 from .config import SentrycsConfig
 from .geo import destination_point
-from .geo.wgs84 import haversine_m
 from .logging import get_logger, get_throttled_logger
 from .mapsim import MapSimClient, MapSimObject, MapSimUnavailable
 from .models import (
@@ -143,36 +142,19 @@ class LoopRunner:
             )
             self.registry.remove(uid)
 
-        # 4. schedule takeovers — position-based (defense_radius_m) or time-based fallback.
+        # 4. time-based DETECTED → MITIGATING transition (takeover issued by CoT Gateway)
         for track in list(self.registry):
-            if track.status not in (DetectionStatus.DETECTED, DetectionStatus.MITIGATING):
+            if track.status is not DetectionStatus.DETECTED:
                 continue
             if track.takeover_sent:
                 continue
             scenario = self.config.drone_by_uid(track.uid)
             if scenario is None:
                 continue
-            if self.config.defense_radius_m is not None:
-                # Position-based: fire when drone enters the defense perimeter.
-                dist_m = haversine_m(
-                    self.config.sensor_lat,
-                    self.config.sensor_lon,
-                    track.lat,
-                    track.lon,
-                )
-                if dist_m >= self.config.defense_radius_m:
-                    continue
-                self._log.info(
-                    "perimeter_breach",
-                    uid=track.uid,
-                    dist_m=round(dist_m, 1),
-                    defense_radius_m=self.config.defense_radius_m,
-                )
-            else:
-                # Time-based fallback: fire at mitigating_at_s.
-                if elapsed < float(scenario.mitigating_at_s):
-                    continue
-            self._ensure_takeover_task(track, now_utc)
+            if elapsed < float(scenario.mitigating_at_s):
+                continue
+            self.sm.transition(track, DetectionStatus.MITIGATING, reason="time_based", now=now_utc)
+            track.takeover_sent = True
 
     # -- track lifecycle ---------------------------------------------------
 

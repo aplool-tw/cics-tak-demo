@@ -9,7 +9,7 @@ from typing import Any
 from cot_gateway.models.track import UnifiedTrack
 
 
-def _serialize(track: UnifiedTrack) -> dict[str, Any]:
+def _serialize(track: UnifiedTrack, takeover_issued: bool = False) -> dict[str, Any]:
     return {
         "source": track.source.value,
         "track_id": track.track_id,
@@ -29,6 +29,7 @@ def _serialize(track: UnifiedTrack) -> dict[str, Any]:
         "operator_lon": track.operator_lon,
         "timestamp": track.timestamp.astimezone(timezone.utc).isoformat(),
         "last_updated": track.last_updated.astimezone(timezone.utc).isoformat(),
+        "takeover_issued": takeover_issued,
     }
 
 
@@ -38,6 +39,7 @@ class TrackStore:
     def __init__(self) -> None:
         self._lock = asyncio.Lock()
         self._data: dict[str, UnifiedTrack] = {}
+        self._takeover_set: set[str] = set()
 
     async def upsert(self, uid: str, track: UnifiedTrack) -> None:
         async with self._lock:
@@ -46,7 +48,12 @@ class TrackStore:
     async def remove(self, uid: str) -> None:
         async with self._lock:
             self._data.pop(uid, None)
+            self._takeover_set.discard(uid)
+
+    async def mark_takeover(self, uid: str) -> None:
+        async with self._lock:
+            self._takeover_set.add(uid)
 
     async def get_all(self) -> list[dict[str, Any]]:
         async with self._lock:
-            return [_serialize(t) for t in self._data.values()]
+            return [_serialize(t, uid in self._takeover_set) for uid, t in self._data.items()]

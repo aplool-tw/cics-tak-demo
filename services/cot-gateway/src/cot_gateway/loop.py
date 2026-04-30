@@ -81,6 +81,23 @@ class GatewayMain:
             stop_event=self._stop,
         )
 
+        self._perimeter_guard = None
+        if config.perimeter is not None and config.perimeter.enabled:
+            from cot_gateway.perimeter.guard import PerimeterGuard
+
+            cfg = config.perimeter
+            self._perimeter_guard = PerimeterGuard(
+                sp_lat=config.web.sp_lat,
+                sp_lon=config.web.sp_lon,
+                uds_url=cfg.uds_url,
+                radius_m=cfg.radius_m,
+                holding_lat=cfg.holding_lat,
+                holding_lon=cfg.holding_lon,
+                holding_alt_m=cfg.holding_alt_m,
+                descent_speed_ms=cfg.descent_speed_ms,
+                uds_timeout_s=cfg.uds_timeout_s,
+            )
+
     # ------------------------------------------------------------------
     # Coroutines
     # ------------------------------------------------------------------
@@ -118,6 +135,13 @@ class GatewayMain:
         self.transmitter.enqueue(xml)
         if self._track_store is not None:
             await self._track_store.upsert(new_uid, track)
+
+        if self._perimeter_guard is not None and self._track_store is not None:
+            await self._perimeter_guard.check(
+                track,
+                uid=new_uid,
+                mark_takeover=self._track_store.mark_takeover,
+            )
 
         if new_uid not in self.seen_uids:
             self.seen_uids.add(new_uid)
