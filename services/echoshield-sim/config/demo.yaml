@@ -1,0 +1,17 @@
+# EchoShield demo config — local dev (all URLs point to 127.0.0.1)
+# For the CoT Gateway web map demo scenario (single drone, N→S, 15m/s).
+sensor_lat: 24.725806
+sensor_lon: 121.033750
+sensor_alt_m: 10.0
+max_range_m: 3200        # 3km + 200m buffer
+update_rate_hz: 10
+lost_grace_sec: 2.0
+position_noise_m: 5.0
+velocity_noise_ms: 0.5
+noise_seed: null
+
+map_sim_url: http://127.0.0.1:8090
+feed_host: 127.0.0.1
+feed_port: 9000
+info_host: 0.0.0.0
+info_port: 9001

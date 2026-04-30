@@ -1,0 +1,24 @@
+# Sentrycs demo config — local dev (all URLs point to 127.0.0.1)
+# Drone starts 3.5km from SP at 20m/s (demo_single_drone.yaml).
+# t=15s  enters EchoShield 3.2km range
+# t=75s  enters 2km range → Sentrycs DETECTED
+# t=125s enters 1km range → Sentrycs MITIGATING (triggers takeover to HP)
+# t=165s NEUTRALIZED
+sensor_lat: 24.725806
+sensor_lon: 121.033750
+poll_interval_s: 0.5
+map_sim_url: http://127.0.0.1:8090
+uds_url: http://127.0.0.1:18080     # demo uses port 18080
+api_host: 0.0.0.0
+api_port: 7070
+neutralized_hold_s: 30.0
+mitigating_disappear_grace_s: 10.0
+
+drones:
+  - uid: TRK-E01
+    model: "DJI Mavic 3"
+    detected_at_s: 75       # drone ≈2km from SP
+    mitigating_at_s: 125    # drone ≈1km from SP (triggers takeover to HP)
+    neutralized_at_s: 165   # mitigating + 40s
+    operator_bearing_deg: 225
+    operator_distance_m: 300

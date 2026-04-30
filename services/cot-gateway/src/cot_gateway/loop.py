@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -15,6 +16,7 @@ from cot_gateway.logging import get_logger
 from cot_gateway.models.track import TrackSource, UnifiedTrack
 from cot_gateway.sentrycs.adapter import SentrycsAdapter
 from cot_gateway.tak.transmitter import TakTransmitter
+from cot_gateway.web.track_store import TrackStore
 
 
 class GatewayMain:
@@ -30,10 +32,12 @@ class GatewayMain:
         echoshield_host_override: Optional[str] = None,
         echoshield_port_override: Optional[int] = None,
         sentrycs_base_url_override: Optional[str] = None,
+        track_store: Optional[TrackStore] = None,
     ) -> None:
         self.config = config
         self._log = get_logger("cot_gateway.loop")
         self._stop = asyncio.Event()
+        self._track_store = track_store
 
         self.track_queue: asyncio.Queue[UnifiedTrack] = asyncio.Queue(maxsize=1000)
         self.cot_queue: asyncio.Queue[str] = asyncio.Queue(maxsize=config.tak_server.queue_maxsize)
@@ -99,6 +103,8 @@ class GatewayMain:
             final_xml = generate_cot(track, now=now, force_stale_eq_time=True, override_uid=old_uid)
             self.transmitter.enqueue(final_xml)
             self.seen_uids.discard(old_uid)
+            if self._track_store is not None:
+                await self._track_store.remove(old_uid)
             self._log.info(
                 "source_switch", old_uid=old_uid, new_uid=new_uid, track_id=track.track_id
             )
@@ -106,6 +112,8 @@ class GatewayMain:
         # Emit current CoT for new uid
         xml = generate_cot(track, now=now)
         self.transmitter.enqueue(xml)
+        if self._track_store is not None:
+            await self._track_store.upsert(new_uid, track)
 
         if new_uid not in self.seen_uids:
             self.seen_uids.add(new_uid)
@@ -138,6 +146,8 @@ class GatewayMain:
                 xml = generate_cot(lost_track, now=now, force_stale_eq_time=True)
                 self.transmitter.enqueue(xml)
                 self.seen_uids.discard(uid)
+                if self._track_store is not None:
+                    await self._track_store.remove(uid)
                 for key in entity_keys_for(lost_track):
                     self.prev_uid_by_entity_key.pop(key, None)
                 self._log.info("ttl_expired", uid=uid, track_id=lost_track.track_id)
@@ -156,6 +166,33 @@ class GatewayMain:
         ]
         if self.sentrycs is not None:
             coroutines.append(self.sentrycs.run())
+
+        # Start optional web server
+        web_task: asyncio.Task | None = None
+        if self.config.web.enabled and self._track_store is not None:
+            from cot_gateway.web.server import run_web_server
+            from cot_gateway.web.sites import load_sites
+
+            sites_cfg = load_sites(self.config.web.sites_file)
+            sp_lat = self.config.web.sp_lat
+            sp_lon = self.config.web.sp_lon
+            for s in sites_cfg.sites:
+                if s.type == "strategic_point":
+                    sp_lat, sp_lon = s.lat, s.lon
+                    break
+            web_task = asyncio.create_task(
+                run_web_server(
+                    host=self.config.web.host,
+                    port=self.config.web.port,
+                    sites_config=sites_cfg,
+                    track_store=self._track_store,
+                    echoshield_info_url=self.config.web.echoshield_info_url,
+                    sentrycs_sensor_url=self.config.web.sentrycs_sensor_url,
+                    sp_lat=sp_lat,
+                    sp_lon=sp_lon,
+                    stop=self._stop,
+                )
+            )
 
         tasks = [asyncio.create_task(c) for c in coroutines]
         exit_code = 0
@@ -177,6 +214,9 @@ class GatewayMain:
         for t in pending:
             t.cancel()
         await asyncio.gather(*pending, return_exceptions=True)
+        if web_task is not None:
+            with contextlib.suppress(Exception):
+                await web_task
         return exit_code
 
     def request_stop(self) -> None:

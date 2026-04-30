@@ -1,0 +1,20 @@
+# Strategic sites for the Taiwan anti-drone TAK PoC E2E scenario
+# SP = Strategic Point (location of both EchoShield + Sentrycs radar systems)
+# HP = Holding/landing Point (designated drone landing zone after takeover)
+
+sites:
+  - id: SP
+    name: Strategic Point (Radar Site)
+    lat: 24.725806
+    lon: 121.033750
+    alt_m: 50.0
+    type: strategic_point
+    ranges_m: [1000, 2000, 3000]
+
+  - id: HP
+    name: Holding Point (Landing Zone)
+    lat: 24.725806
+    lon: 121.071889
+    alt_m: 0.0
+    type: holding_point
+    ranges_m: null

@@ -73,6 +73,20 @@ class LoggingConfig(BaseModel):
     # Silence "json shadows BaseModel" warning without changing the public field name.
 
 
+class WebConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool = False
+    host: str = "0.0.0.0"
+    port: int = Field(default=8092, gt=0, le=65535)
+    sites_file: str = ""
+    # URLs used to query live sensor positions for the /sites overlay
+    echoshield_info_url: str = "http://echoshield-sim:9001/info"
+    sentrycs_sensor_url: str = "http://sentrycs-sim:7070/sensor-info"
+    # Default SP coords used to centre the map (overrideable via sites_file)
+    sp_lat: float = Field(default=24.725806, ge=-90.0, le=90.0)
+    sp_lon: float = Field(default=121.033750, ge=-180.0, le=180.0)
+
+
 class GatewayConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     echoshield: EchoshieldConfig = Field(default_factory=EchoshieldConfig)
@@ -80,6 +94,7 @@ class GatewayConfig(BaseModel):
     correlator: CorrelatorConfig = Field(default_factory=CorrelatorConfig)
     tak_server: TakServerConfig = Field(default_factory=TakServerConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    web: WebConfig = Field(default_factory=WebConfig)
 
     @model_validator(mode="after")
     def _check_cert_file(self) -> "GatewayConfig":

@@ -1,8 +1,10 @@
-# 008-map-viewer — Leaflet.js Browser Map Viewer for Map Sim
+# 008-map-viewer — Leaflet.js Browser Map Viewers (Map Sim + CoT Gateway)
 
 ## 概述
 
-為 Map Simulator 新增 `GET /map` 端點，提供瀏覽器可直接開啟的 Leaflet.js 即時地圖。地圖每 3 秒輪詢 `/objects/all`，自動顯示所有無人機位置、狀態、完整資訊，並附示範啟動腳本。
+本 feature 分兩階段：
+1. **Map Sim** — 為 Map Simulator 新增 `GET /map` 端點，顯示即時無人機位置。
+2. **CoT Gateway** — 為 CoT Gateway 新增 web module，顯示 EchoShield + Sentrycs 融合後的 TAK 軌跡、感測器位置、戰略目標（SP/HP）及 1/2/3km 範圍圈。
 
 ## 功能清單
 
@@ -98,12 +100,101 @@ black: clean
 ## 使用方式
 
 ```bash
-# 啟動 demo
+# Map Sim Demo
 bash scripts/demo-map-viewer.sh
 
-# 停止 demo
+# 停止
 bash scripts/demo-map-viewer.sh --stop
 
-# 直接開發測試（需先啟動 map-sim）
+# 直接開發測試
 open http://127.0.0.1:8090/map
 ```
+
+---
+
+## Part 2 — CoT Gateway Leaflet Map
+
+### 概述
+
+CoT Gateway 新增 `web/` module，整合即時 TAK 軌跡（EchoShield + Sentrycs/融合）、感測器位置、戰略目標（SP = 雷達站位、HP = 停機點）及範圍圈顯示。
+
+### 功能清單
+
+| 功能 | 說明 |
+|------|------|
+| 即時軌跡 | 每 3 秒 poll `/tracks`，依來源著色：ECHOSHIELD=藍、SENTRYCS=紫、FUSED=紅 |
+| 感測器位置 | GET /info (EchoShield :9001) + GET /sensor-info (Sentrycs :7070) 顯示感測器 marker |
+| SP（雷達站） | 綠色 marker，附 1km/2km/3km 範圍圈 |
+| HP（停機點） | 橘色 H 標記 marker |
+| 軌跡卡片 | 右側面板顯示所有 active 軌跡，含 UID/座標/狀態 |
+| 右鍵 popup | 顯示軌跡詳情 |
+
+### 新增 / 修改檔案
+
+```
+services/cot-gateway/
+  src/cot_gateway/web/__init__.py      NEW  module init
+  src/cot_gateway/web/track_store.py  NEW  asyncio-safe UID→UnifiedTrack store
+  src/cot_gateway/web/sites.py        NEW  SiteEntry+SitesConfig pydantic models
+  src/cot_gateway/web/server.py       NEW  aiohttp: GET /map, /tracks, /sites, /health
+  config/sites.yaml                   NEW  SP(24.725806,121.033750) + HP(24.725806,121.071889)
+  config/demo.yaml                    NEW  web enabled, use_ssl=false, max_retries=9999
+  src/cot_gateway/config.py           MOD  WebConfig + GatewayConfig.web 欄位
+  src/cot_gateway/loop.py             MOD  track_store param; upsert/remove; web server task
+  src/cot_gateway/cli.py              MOD  --web/--no-web/--web-host/--web-port/--sites-file
+
+services/echoshield-sim/
+  src/echoshield_sim/config.py        MOD  info_host, info_port: 9001
+  src/echoshield_sim/loop.py          MOD  aiohttp GET /info + /health HTTP server
+  config/demo.yaml                    NEW  local dev config
+
+services/sentrycs-sim/
+  src/sentrycs_sim/config.py          MOD  sensor_alt_m: float = 0.0
+  src/sentrycs_sim/api/server.py      MOD  build_app() sensor params; GET /sensor-info
+  src/sentrycs_sim/loop.py            MOD  passes sensor coords to build_app()
+  config/demo.yaml                    NEW  local dev config
+
+services/uds/
+  scenarios/demo_single_drone.yaml    NEW  3.5km start (24.757306N), 20m/s
+
+scripts/
+  demo-cot-gateway-map.sh             NEW  5 服務 demo 啟動腳本（含健康檢查、--stop）
+```
+
+### 關鍵 Bug 修正：EchoShield wire field names
+
+**問題**：`echoshield/adapter.py` 的 `REQUIRED_FIELDS` 使用 `"lat"`/`"lon"`，但 `RadarTrack.model_dump()` 輸出 `"latitude"`/`"longitude"`（符合 AGENTS.md wire 契約）。每筆 EchoShield 軌跡皆以 `invalid_wire_fields` 錯誤被靜默丟棄，地圖完全無軌跡。
+
+**修正**：
+- `adapter.py` 改讀 `msg["latitude"]` / `msg["longitude"]`
+- 7 個測試檔案的 echo mock 資料同步更新（sentrycs RF mock 保留 `lat`/`lon`）
+
+### 技術決策
+
+1. **aiohttp AppRunner + TCPSite**：CoT Gateway 在 asyncio 內啟動 web server 必須用此模式，不可用 `web.run_app()`（會佔用 event loop）。
+2. **`stop` Event 協調**：`GatewayMain._stop` asyncio.Event 傳入 web server，實現乾淨關閉。
+3. **TrackStore 由 CoT UID 索引**（如 `ECHO-TRK-E01`），TTL 移除軌跡時同步從 store 刪除。
+4. **OSM tiles**：改用 OpenStreetMap tile server，不依賴 CartoDB dark CDN（PoC 環境網路不穩定）。
+5. **sites.yaml 相對路徑**：demo 腳本在 `services/cot-gateway/` 目錄執行，`config/sites.yaml` 正確解析。
+
+### 測試
+
+```
+94 passed in 15.51s  (cot-gateway)
+ruff: clean
+black: clean
+```
+
+### 使用方式
+
+```bash
+# CoT Gateway + EchoShield + Sentrycs + UDS demo
+bash scripts/demo-cot-gateway-map.sh
+
+# 停止
+bash scripts/demo-cot-gateway-map.sh --stop
+
+# 開啟地圖
+open http://127.0.0.1:8091/map
+```
+

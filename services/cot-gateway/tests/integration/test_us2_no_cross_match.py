@@ -56,7 +56,9 @@ async def test_no_fusion_when_far(echoshield_stub, sentrycs_stub, tak_stub):
     try:
         await echoshield_stub.wait_connected(3.0)
         # radar 300m away from rf
-        radar = dict(ECHO_TEMPLATE, track_id="TRK-001", lat=25.0598 + 0.003, lon=121.5654)
+        radar = dict(
+            ECHO_TEMPLATE, track_id="TRK-001", latitude=25.0598 + 0.003, longitude=121.5654
+        )
         await asyncio.sleep(1.2)  # let sentrycs poll once
         for _ in range(3):
             await echoshield_stub.send_json(radar)
@@ -89,8 +91,10 @@ async def test_nearest_wins_multi_radar(echoshield_stub, sentrycs_stub, tak_stub
         await echoshield_stub.wait_connected(3.0)
         await asyncio.sleep(1.2)  # let sentrycs have rf
         # TRK-A: 11m from rf; TRK-B: 5m from rf
-        trk_a = dict(ECHO_TEMPLATE, track_id="TRK-A", lat=25.0598 + 0.0001, lon=121.5654)
-        trk_b = dict(ECHO_TEMPLATE, track_id="TRK-B", lat=25.0598 + 0.00004, lon=121.5654)
+        trk_a = dict(ECHO_TEMPLATE, track_id="TRK-A", latitude=25.0598 + 0.0001, longitude=121.5654)
+        trk_b = dict(
+            ECHO_TEMPLATE, track_id="TRK-B", latitude=25.0598 + 0.00004, longitude=121.5654
+        )
         # First send A (pairs with rf), then B (cannot steal)
         await echoshield_stub.send_json(trk_a)
         await asyncio.sleep(0.1)

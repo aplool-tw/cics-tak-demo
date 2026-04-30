@@ -186,12 +186,13 @@ class LoopRunner:
 
 
 async def run(config: RadarConfig) -> None:
-    """Top-level entry: wires FeedServer + MapSimClient + loop runner."""
+    """Top-level entry: wires FeedServer + MapSimClient + loop runner + HTTP info server."""
     log = get_logger("echoshield_sim")
     log.info(
         "startup",
         map_sim_url=config.map_sim_url,
         feed=f"{config.feed_host}:{config.feed_port}",
+        info=f"{config.info_host}:{config.info_port}",
         seed=config.noise_seed,
     )
     feed = FeedServer(config.feed_host, config.feed_port, logger=log)
@@ -199,6 +200,33 @@ async def run(config: RadarConfig) -> None:
     registry = TrackRegistry(config.lost_grace_sec)
     noise = make_noise(config)
     stop_event = asyncio.Event()
+
+    # HTTP info server: exposes GET /info so CoT Gateway can discover sensor position
+    from aiohttp import web as aio_web
+
+    async def _info_handler(request: aio_web.Request) -> aio_web.Response:
+        return aio_web.json_response(
+            {
+                "type": "echoshield",
+                "sensor_lat": config.sensor_lat,
+                "sensor_lon": config.sensor_lon,
+                "sensor_alt_m": config.sensor_alt_m,
+                "max_range_m": config.max_range_m,
+                "feed_port": config.feed_port,
+            }
+        )
+
+    async def _health_handler(request: aio_web.Request) -> aio_web.Response:
+        return aio_web.json_response({"status": "ok", "type": "echoshield"})
+
+    info_app = aio_web.Application()
+    info_app.router.add_get("/info", _info_handler)
+    info_app.router.add_get("/health", _health_handler)
+    info_runner = aio_web.AppRunner(info_app)
+    await info_runner.setup()
+    info_site = aio_web.TCPSite(info_runner, config.info_host, config.info_port)
+    await info_site.start()
+    log.info("info_server_started", host=config.info_host, port=config.info_port)
 
     async with aiohttp.ClientSession() as session:
         mapsim = MapSimClient(session, config.map_sim_url, timeout_s=1.0)
@@ -230,3 +258,4 @@ async def run(config: RadarConfig) -> None:
             except (asyncio.CancelledError, Exception):
                 pass
             await feed.stop()
+            await info_runner.cleanup()

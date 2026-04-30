@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import signal
 import sys
@@ -10,9 +11,11 @@ import structlog
 
 from tak_client_sim.config import ClientConfig
 from tak_client_sim.connection import close_connection, connect_with_retry
+from tak_client_sim.cot_store import CotStore
 from tak_client_sim.formatter import print_event
 from tak_client_sim.models import ConnectionStats
 from tak_client_sim.parser import parse_cot_xml
+from tak_client_sim.web_server import run_web_server
 
 
 def configure_logging(log_file: Optional[str] = None) -> None:
@@ -72,6 +75,7 @@ async def receive_loop(
     config: ClientConfig,
     stats: ConnectionStats,
     stop: asyncio.Event,
+    store: CotStore | None = None,
 ) -> None:
     """Read newline-delimited CoT XML from TAK Server and process each event."""
     while not stop.is_set():
@@ -116,6 +120,9 @@ async def receive_loop(
             filtered=filtered,
         )
 
+        if store is not None:
+            await store.upsert(event)
+
         if not filtered:
             print_event(event)
 
@@ -124,6 +131,7 @@ async def main(config: ClientConfig) -> None:
     """Main coroutine: connect, receive loop, reconnect on failure, graceful shutdown."""
     stats = ConnectionStats()
     stop = asyncio.Event()
+    store = CotStore()
 
     loop = asyncio.get_running_loop()
 
@@ -137,6 +145,23 @@ async def main(config: ClientConfig) -> None:
         except (NotImplementedError, ValueError):
             pass
 
+    # Start optional web map server
+    web_task: asyncio.Task[None] | None = None
+    if config.web_enabled:
+        web_task = asyncio.create_task(
+            run_web_server(
+                config.web_host,
+                config.web_port,
+                config.sp_lat,
+                config.sp_lon,
+                config.hp_lat,
+                config.hp_lon,
+                store,
+                stop,
+            ),
+            name="tak_client_sim.web_server",
+        )
+
     writer: asyncio.StreamWriter | None = None
     try:
         while not stop.is_set():
@@ -146,7 +171,7 @@ async def main(config: ClientConfig) -> None:
                 break
 
             try:
-                await receive_loop(reader, config, stats, stop)
+                await receive_loop(reader, config, stats, stop, store)
             except (asyncio.IncompleteReadError, ConnectionResetError, OSError):
                 _log.info("tak_disconnected_reconnecting")
                 if writer is not None:
@@ -158,5 +183,9 @@ async def main(config: ClientConfig) -> None:
     finally:
         if writer is not None:
             await close_connection(writer)
+        if web_task is not None and not web_task.done():
+            web_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await web_task
         _print_summary(stats, config)
         _log.info("session_summary", **stats.to_dict())
