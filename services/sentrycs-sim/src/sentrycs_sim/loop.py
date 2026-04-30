@@ -213,7 +213,9 @@ class LoopRunner:
             distance_m=operator.operator_distance_m,
         )
         # IDLE → DETECTED transition (scheduled)
-        self.sm.transition(track, DetectionStatus.DETECTED, reason="scheduled", now=now_utc)
+        self.sm.transition(
+            track, DetectionStatus.DETECTED, reason="scheduled", now=now_utc
+        )
         return track
 
     def _update_track_from_obj(
@@ -240,14 +242,19 @@ class LoopRunner:
             if not seen:
                 # disappear during DETECTED → rollback to IDLE (remove).
                 self.sm.transition(
-                    track, DetectionStatus.IDLE, reason="disappear_detected", now=now_utc
+                    track,
+                    DetectionStatus.IDLE,
+                    reason="disappear_detected",
+                    now=now_utc,
                 )
                 self.registry.remove(track.uid)
             return
         if track.status is DetectionStatus.MITIGATING:
             # LANDED or disappear-grace → NEUTRALIZED
             if latest is not None and latest.status == "LANDED":
-                self.sm.transition(track, DetectionStatus.NEUTRALIZED, reason="landed", now=now_utc)
+                self.sm.transition(
+                    track, DetectionStatus.NEUTRALIZED, reason="landed", now=now_utc
+                )
             elif not seen:
                 gap = (now_utc - track.last_seen_at).total_seconds()
                 if gap >= float(self.config.mitigating_disappear_grace_s):
@@ -268,8 +275,25 @@ class LoopRunner:
         if existing is not None and not existing.done():
             return  # already in-flight for this drone
 
+        # Capture target coords now (before the async closure runs)
+        scenario = self.config.drone_by_uid(uid)
+        target_lat: float | None = (
+            scenario.takeover_target_lat if scenario is not None else None
+        )
+        target_lon: float | None = (
+            scenario.takeover_target_lon if scenario is not None else None
+        )
+        target_alt_m: float = (
+            scenario.takeover_target_alt_m if scenario is not None else 0.0
+        )
+
         async def _do_takeover() -> None:
-            result = await self.uds.call_takeover(track)
+            result = await self.uds.call_takeover(
+                track,
+                target_lat=target_lat,
+                target_lon=target_lon,
+                target_alt_m=target_alt_m,
+            )
             # apply result on the main loop via state machine
             self.sm.apply_takeover_result(track, result, now=self._clock())
             if result is TakeoverResult.FAILED_TRANSPORT:
@@ -322,7 +346,9 @@ async def run(config: SentrycsConfig) -> None:
     start_mono = time.monotonic()
 
     async with aiohttp.ClientSession() as session:
-        mapsim = MapSimClient(session, config.map_sim_url, timeout_s=config.map_sim_timeout_s)
+        mapsim = MapSimClient(
+            session, config.map_sim_url, timeout_s=config.map_sim_timeout_s
+        )
         uds = UdsClient(session, config.uds_url, timeout_s=config.uds_timeout_s)
         runner = LoopRunner(
             config,

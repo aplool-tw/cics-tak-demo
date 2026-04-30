@@ -22,3 +22,6 @@ drones:
     neutralized_at_s: 165   # mitigating + 40s
     operator_bearing_deg: 225
     operator_distance_m: 300
+    takeover_target_lat: 24.725806   # HP — ~3850m due east of SP
+    takeover_target_lon: 121.071889  # HP — outside EchoShield 3200m range
+    takeover_target_alt_m: 50.0      # HP holding altitude

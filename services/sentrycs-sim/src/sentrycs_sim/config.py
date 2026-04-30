@@ -18,6 +18,11 @@ class DroneScenario(BaseModel):
     neutralized_at_s: float = Field(..., ge=0.0)
     operator_bearing_deg: float = Field(..., ge=0.0, lt=360.0)
     operator_distance_m: float = Field(..., ge=200.0, le=500.0)
+    # Optional takeover target (HP).  When None, the caller falls back to
+    # the drone's current position — preserving backward compatibility.
+    takeover_target_lat: float | None = None
+    takeover_target_lon: float | None = None
+    takeover_target_alt_m: float = Field(default=0.0, ge=0.0)
 
     @model_validator(mode="after")
     def _check_timeline(self) -> "DroneScenario":

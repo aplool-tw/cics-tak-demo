@@ -30,7 +30,7 @@ RF = {
     "lon": 121.5654,
     "alt_m": 101.0,
     "model": "DJI Mavic 3",
-    "status": "DETECTED",
+    "detection_status": "DETECTED",
     "is_landed": False,
     "operator_lat": 25.0589,
     "operator_lon": 121.5661,
@@ -97,7 +97,7 @@ async def test_us2_fusion_upgrade(echoshield_stub, sentrycs_stub, tak_stub):
         assert types_seq[fused_idx] == "a-h-A-M-F-Q-r"
 
         # Now upgrade to NEUTRALIZED
-        sentrycs_stub.detections = [dict(RF, status="NEUTRALIZED")]
+        sentrycs_stub.detections = [dict(RF, detection_status="NEUTRALIZED")]
         await asyncio.sleep(1.2)
         await echoshield_stub.send_json(ECHO)
         await asyncio.sleep(0.4)

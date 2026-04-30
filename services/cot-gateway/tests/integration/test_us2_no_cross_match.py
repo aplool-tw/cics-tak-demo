@@ -24,7 +24,7 @@ RF = {
     "uid": "DRN-001",
     "alt_m": 101.0,
     "model": "DJI Mavic 3",
-    "status": "DETECTED",
+    "detection_status": "DETECTED",
     "is_landed": False,
     "operator_lat": 25.0589,
     "operator_lon": 121.5661,
@@ -42,7 +42,9 @@ def _cfg():
 
 @pytest.mark.asyncio
 async def test_no_fusion_when_far(echoshield_stub, sentrycs_stub, tak_stub):
-    sentrycs_stub.detections = [dict(RF, uid="DRN-001", lat=25.0598, lon=121.5654)]  # at baseline
+    sentrycs_stub.detections = [
+        dict(RF, uid="DRN-001", lat=25.0598, lon=121.5654)
+    ]  # at baseline
     cfg = _cfg()
     gw = GatewayMain(
         cfg,
@@ -57,7 +59,10 @@ async def test_no_fusion_when_far(echoshield_stub, sentrycs_stub, tak_stub):
         await echoshield_stub.wait_connected(3.0)
         # radar 300m away from rf
         radar = dict(
-            ECHO_TEMPLATE, track_id="TRK-001", latitude=25.0598 + 0.003, longitude=121.5654
+            ECHO_TEMPLATE,
+            track_id="TRK-001",
+            latitude=25.0598 + 0.003,
+            longitude=121.5654,
         )
         await asyncio.sleep(1.2)  # let sentrycs poll once
         for _ in range(3):
@@ -91,9 +96,17 @@ async def test_nearest_wins_multi_radar(echoshield_stub, sentrycs_stub, tak_stub
         await echoshield_stub.wait_connected(3.0)
         await asyncio.sleep(1.2)  # let sentrycs have rf
         # TRK-A: 11m from rf; TRK-B: 5m from rf
-        trk_a = dict(ECHO_TEMPLATE, track_id="TRK-A", latitude=25.0598 + 0.0001, longitude=121.5654)
+        trk_a = dict(
+            ECHO_TEMPLATE,
+            track_id="TRK-A",
+            latitude=25.0598 + 0.0001,
+            longitude=121.5654,
+        )
         trk_b = dict(
-            ECHO_TEMPLATE, track_id="TRK-B", latitude=25.0598 + 0.00004, longitude=121.5654
+            ECHO_TEMPLATE,
+            track_id="TRK-B",
+            latitude=25.0598 + 0.00004,
+            longitude=121.5654,
         )
         # First send A (pairs with rf), then B (cannot steal)
         await echoshield_stub.send_json(trk_a)

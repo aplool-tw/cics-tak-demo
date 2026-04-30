@@ -44,7 +44,13 @@ _HTML_TEMPLATE = """\
     .t-row{padding:2px 0;border-bottom:1px solid #0d1b2a;line-height:1.5}
     .t-id{font-weight:bold} .t-echo{color:#00BFFF} .t-sntr{color:#FFD700} .t-fused{color:#FF4444}
     .t-coord{color:#6e7681;font-size:10px}
-    /* Leaflet custom */
+    /* map display control */
+    #map-ctrl{position:absolute;bottom:34px;left:10px;z-index:1000;width:170px;background:rgba(13,27,42,0.92);border:1px solid #1e3a5f;border-radius:5px;padding:8px 11px;font-size:11px;font-family:monospace;color:#90caf9}
+    #map-ctrl-head{font-size:10px;color:#64b5f6;margin-bottom:6px;letter-spacing:.5px}
+    .ctrl-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+    .ctrl-lbl{flex-shrink:0;width:68px}
+    .ctrl-val{width:32px;text-align:right;color:#00d4ff;flex-shrink:0}
+    .ctrl-row input[type=range]{flex:1;margin:0 5px;accent-color:#00d4ff;height:4px;cursor:pointer}
     .leaflet-tooltip-gw{background:rgba(13,27,42,0.9);border:1px solid #2196F3;color:#90caf9;font-family:monospace;font-size:10px;padding:2px 6px;border-radius:3px;white-space:nowrap;box-shadow:none}
     .leaflet-popup-content-wrapper{background:#0d1b2a;border:1px solid #2196F3;border-radius:5px;color:#e0e0e0;font-family:monospace;font-size:12px}
     .leaflet-popup-tip{background:#0d1b2a}
@@ -62,6 +68,19 @@ _HTML_TEMPLATE = """\
   </div>
 </div>
 <div id="map"></div>
+<div id="map-ctrl">
+  <div id="map-ctrl-head">&#9788; Map Display</div>
+  <div class="ctrl-row">
+    <span class="ctrl-lbl">Brightness</span>
+    <input id="bri" type="range" min="20" max="150" step="5" value="100">
+    <span class="ctrl-val" id="bri-val">100%</span>
+  </div>
+  <div class="ctrl-row">
+    <span class="ctrl-lbl">Opacity</span>
+    <input id="opa" type="range" min="20" max="100" step="5" value="100">
+    <span class="ctrl-val" id="opa-val">100%</span>
+  </div>
+</div>
 <div id="panel">
   <div id="panel-head">&#128225; Legend &amp; Live Tracks</div>
   <div id="panel-body">
@@ -91,10 +110,25 @@ const SRC_BORDER = { ECHOSHIELD:'#0090CC', SENTRYCS:'#CC9000', FUSED:'#CC0000' }
 
 // ── map (OpenStreetMap tiles — reliable, no dark CDN dependency) ────────────
 const map = L.map('map').setView([SP_LAT, SP_LON], 13);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   maxZoom: 19
 }).addTo(map);
+
+// ── map display controls (brightness / opacity) ──────────────────────────────
+function applyTileStyle() {
+  const bri = parseInt(document.getElementById('bri').value, 10);
+  const opa = parseInt(document.getElementById('opa').value, 10);
+  document.getElementById('bri-val').textContent = bri + '%';
+  document.getElementById('opa-val').textContent = opa + '%';
+  const c = tileLayer.getContainer();
+  if (c) {
+    c.style.filter  = `brightness(${bri / 100})`;
+    c.style.opacity = String(opa / 100);
+  }
+}
+document.getElementById('bri').addEventListener('input', applyTileStyle);
+document.getElementById('opa').addEventListener('input', applyTileStyle);
 
 // ── layer groups ────────────────────────────────────────────────────────────
 const siteLayer   = L.layerGroup().addTo(map);
@@ -261,7 +295,9 @@ setInterval(refreshTracks, 2000);
 
 
 def _build_html(sp_lat: float, sp_lon: float) -> str:
-    return _HTML_TEMPLATE.replace("__SP_LAT__", str(sp_lat)).replace("__SP_LON__", str(sp_lon))
+    return _HTML_TEMPLATE.replace("__SP_LAT__", str(sp_lat)).replace(
+        "__SP_LON__", str(sp_lon)
+    )
 
 
 async def _fetch_sensor(

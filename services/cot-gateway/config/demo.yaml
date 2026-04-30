@@ -17,7 +17,7 @@ sentrycs:
 correlator:
   distance_threshold_m: 50.0
   time_window_s: 3.0
-  ttl_s: 10.0
+  ttl_s: 30.0
 
 tak_server:
   host: 127.0.0.1
