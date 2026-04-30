@@ -1,0 +1,29 @@
+scenario:
+  name: "demo_single_drone"
+  description: "單架無人機從正北 3.5km 處向戰略要點 SP(24.725806N,121.033750E) 逼近（示範用，快速啟動）"
+  update_hz: 10
+  servers:
+    command_api_port: 8080
+  drones:
+    - drone_id: "TRK-E01"
+      model: "DJI Mavic 3"
+      start_lat: 24.757306   # 正北 ~3.5km (SP + 3500/111111°)
+      start_lon: 121.033750
+      start_alt_m: 150.0
+      speed_ms: 20.0
+      heading_deg: 180.0     # 向正南飛（往 SP 方向）
+      operator_bearing_deg: 225
+      operator_distance_m: 300
+      waypoints:
+        - lat: 24.725806     # SP 戰略要點
+          lon: 121.033750
+          alt_m: 150.0
+      landing_point:
+        lat: 24.725806       # HP 管制停留地點（SP 正東方 ~3.86km）
+        lon: 121.071889
+        alt_m: 0.0
+        descent_speed_ms: 3.0
+  timeline:
+    - at_s: 0
+      action: start_flying
+      drone_id: "TRK-E01"

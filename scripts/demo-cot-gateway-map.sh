@@ -27,7 +27,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # ── paths ──────────────────────────────────────────────────────────────────────
-UDS_SCENARIO="${ROOT_DIR}/services/uds/scenarios/e2e_single_drone.yaml"
+UDS_SCENARIO="${ROOT_DIR}/services/uds/scenarios/demo_single_drone.yaml"
 ECHO_CONFIG="${ROOT_DIR}/services/echoshield-sim/config/demo.yaml"
 SNTR_SCENARIO="${ROOT_DIR}/services/sentrycs-sim/config/demo.yaml"
 GW_CONFIG="${ROOT_DIR}/services/cot-gateway/config/demo.yaml"
@@ -128,12 +128,13 @@ mkdir -p "${LOG_DIR}" "${PID_DIR}"
 
 # ── scenario summary ───────────────────────────────────────────────────────────
 echo
-log "Single-drone invasion scenario:"
+log "Single-drone invasion scenario (3.5km start, 20m/s):"
 echo "  Drone  : TRK-E01 (DJI Mavic 3)"
-echo "  Route  : 24.806556N,121.033750E  →  SP(24.725806N,121.033750E)  [N→S, 15m/s]"
-echo "  M3     : t≈460s  drone ≈2km from SP  (EchoShield detects, Sentrycs detects)"
-echo "  M4     : t≈525s  drone ≈1km from SP  (Sentrycs MITIGATING, takeover to HP)"
-echo "  HP     : 24.725806N,121.071889E  (≈3.86km east of SP)"
+echo "  Route  : 24.757306N,121.033750E  →  SP(24.725806N,121.033750E)  [N→S, 20m/s]"
+echo "  t= 15s : enters EchoShield 3.2km range — first track emitted to CoT Gateway"
+echo "  t= 75s : 2km from SP — Sentrycs DETECTED"
+echo "  t=125s : 1km from SP — Sentrycs MITIGATING, takeover to HP"
+echo "  t=165s : NEUTRALIZED — redirected to HP(24.725806N,121.071889E)"
 echo
 
 # ── launch map-sim ─────────────────────────────────────────────────────────────
@@ -231,10 +232,10 @@ done
 # ── timeline reminder ──────────────────────────────────────────────────────────
 echo
 log "Drone timeline (from scenario start):"
-echo "    t=  0s  TRK-E01 departs 24.806556N (North → South at 15m/s)"
-echo "    t=460s  Enters ≈2km range — EchoShield + Sentrycs detect (M3)"
-echo "    t=525s  Reaches ≈1km range — Sentrycs MITIGATING, takeover to HP (M4)"
-echo "    t=565s  NEUTRALIZED — drone redirected to HP (24.725806N,121.071889E)"
+echo "    t= 15s  TRK-E01 enters EchoShield 3.2km range — track appears on map"
+echo "    t= 75s  Enters 2km range — Sentrycs DETECTED (fused track turns red)"
+echo "    t=125s  Enters 1km range — Sentrycs MITIGATING, UDS takeover → HP"
+echo "    t=165s  NEUTRALIZED — drone redirected to HP (24.725806N,121.071889E)"
 echo
 
 # ── open browser ───────────────────────────────────────────────────────────────
