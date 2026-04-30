@@ -11,8 +11,8 @@ from cot_gateway.echoshield.adapter import EchodyneAdapter
 
 VALID = {
     "track_id": "TRK-001",
-    "lat": 25.0598,
-    "lon": 121.5654,
+    "latitude": 25.0598,
+    "longitude": 121.5654,
     "altitude_m": 101.0,
     "velocity_ms": 12.5,
     "azimuth_deg": 45.0,
@@ -63,7 +63,7 @@ async def test_uppercase_status_rejected():
 
 @pytest.mark.asyncio
 async def test_lat_out_of_range_skipped():
-    m = dict(VALID, lat=999.0)
+    m = dict(VALID, latitude=999.0)
     m2 = dict(VALID, track_id="TRK-002")  # normal after
     tracks, _ = await _feed_lines([json.dumps(m), json.dumps(m2)])
     assert len(tracks) == 1

@@ -12,8 +12,8 @@ from cot_gateway.loop import GatewayMain
 
 VALID = {
     "track_id": "TRK-001",
-    "lat": 25.0598,
-    "lon": 121.5654,
+    "latitude": 25.0598,
+    "longitude": 121.5654,
     "altitude_m": 101.0,
     "velocity_ms": 10.0,
     "azimuth_deg": 45.0,
@@ -45,7 +45,7 @@ async def test_robustness_interleaved_malformed(echoshield_stub, tak_stub):
             await echoshield_stub.send_line("not-json")
             await echoshield_stub.send_line('{"track_id":"X"}')  # missing fields
             await echoshield_stub.send_line(
-                '{"track_id":"X","lat":999,"lon":0,"altitude_m":0,"velocity_ms":0,"azimuth_deg":0,"elevation_deg":0,"timestamp":"2026-04-24T12:34:56.789Z","track_status":"Active","classification":"DRONE"}'
+                '{"track_id":"X","latitude":999,"longitude":0,"altitude_m":0,"velocity_ms":0,"azimuth_deg":0,"elevation_deg":0,"timestamp":"2026-04-24T12:34:56.789Z","track_status":"Active","classification":"DRONE"}'
             )  # out of range
             if i % 10 == 0:
                 await echoshield_stub.send_line(json.dumps({**VALID, "track_id": f"TRK-{i:03d}"}))

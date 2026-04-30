@@ -12,8 +12,8 @@ from cot_gateway.loop import GatewayMain
 
 ECHO_SAMPLE = {
     "track_id": "TRK-001",
-    "lat": 25.0598,
-    "lon": 121.5654,
+    "latitude": 25.0598,
+    "longitude": 121.5654,
     "altitude_m": 101.0,
     "velocity_ms": 12.5,
     "azimuth_deg": 45.0,

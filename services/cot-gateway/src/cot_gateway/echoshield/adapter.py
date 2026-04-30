@@ -11,8 +11,8 @@ from cot_gateway.models.track import TrackSource, UnifiedTrack
 
 REQUIRED_FIELDS = (
     "track_id",
-    "lat",
-    "lon",
+    "latitude",
+    "longitude",
     "altitude_m",
     "velocity_ms",
     "azimuth_deg",
@@ -35,8 +35,8 @@ def _validate_and_build(msg: dict) -> UnifiedTrack | None:
     for f in REQUIRED_FIELDS:
         if f not in msg:
             raise KeyError(f"missing required field: {f}")
-    lat = float(msg["lat"])
-    lon = float(msg["lon"])
+    lat = float(msg["latitude"])
+    lon = float(msg["longitude"])
     if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lon <= 180.0):
         raise ValueError(f"lat/lon out of range: {lat},{lon}")
     status = msg["track_status"]
