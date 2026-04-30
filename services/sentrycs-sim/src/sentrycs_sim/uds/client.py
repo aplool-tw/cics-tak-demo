@@ -83,9 +83,7 @@ class UdsClient:
                 try:
                     await resp.read()
                 except Exception:
-                    self._log.warning(
-                        "takeover_response_body_unreadable", uid=track.uid
-                    )
+                    self._log.warning("takeover_response_body_unreadable", uid=track.uid)
                 result = classify_http_status(resp.status)
         except (asyncio.TimeoutError, TimeoutError) as exc:
             result = TakeoverResult.FAILED_TRANSPORT

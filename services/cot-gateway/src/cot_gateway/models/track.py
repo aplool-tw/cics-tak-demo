@@ -8,6 +8,9 @@ from enum import Enum
 from typing import Literal, Optional
 
 
+# NOTE: These string values are referenced by the JS SRC_COLOR map in server.py.
+# String values are the canonical source identifiers used by the JS SRC_COLOR map
+# in web/server.py. Do NOT rename without updating both sides.
 class TrackSource(str, Enum):
     ECHOSHIELD = "ECHOSHIELD"
     SENTRYCS = "SENTRYCS"

@@ -42,9 +42,7 @@ def _cfg():
 
 @pytest.mark.asyncio
 async def test_no_fusion_when_far(echoshield_stub, sentrycs_stub, tak_stub):
-    sentrycs_stub.detections = [
-        dict(RF, uid="DRN-001", lat=25.0598, lon=121.5654)
-    ]  # at baseline
+    sentrycs_stub.detections = [dict(RF, uid="DRN-001", lat=25.0598, lon=121.5654)]  # at baseline
     cfg = _cfg()
     gw = GatewayMain(
         cfg,
