@@ -20,7 +20,7 @@ _HTML_TEMPLATE = """\
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>CoT Gateway — TAK Tactical Map (z14 r1s)</title>
+  <title>CoT Gateway — TAK Tactical Map (z14 r0.5s)</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
@@ -265,7 +265,10 @@ async function refreshSites() {
 }
 
 // ── live tracks ─────────────────────────────────────────────────────────────
+let _refreshInFlight = false;
 async function refreshTracks() {
+  if (_refreshInFlight) return;
+  _refreshInFlight = true;
   try {
     const r = await fetch('/tracks', {cache: 'no-store'});
     if (!r.ok) return;
@@ -296,8 +299,10 @@ async function refreshTracks() {
         droneMarkers[t.uid]=m;
       }
       const cls='t-'+t.source.toLowerCase().replace('echoshield','echo').replace('sentrycs','sntr');
+      const luAgo = t.last_updated ? ((Date.now()-new Date(t.last_updated).getTime())/1000).toFixed(1) : '?';
       html+=`<div class="t-row"><span class="t-id ${cls}">${t.track_id}</span>${ds}${t.takeover_issued ? ' <b style="color:#FF9800">[TAKEOVER]</b>' : ''}`+
-            `<span class="t-coord"> ${t.lat.toFixed(4)},${t.lon.toFixed(4)} ${t.alt_m.toFixed(0)}m${vel}</span></div>`;
+            `<span class="t-coord"> ${t.lat.toFixed(4)},${t.lon.toFixed(4)} ${t.alt_m.toFixed(0)}m${vel}</span>`+
+            `<span style="color:#546e7a;font-size:9px"> ↺${luAgo}s</span></div>`;
     }
 
     // Remove stale markers by uid
@@ -319,13 +324,14 @@ async function refreshTracks() {
 
     listEl.innerHTML=html;
   } catch(e){ console.warn('tracks fetch err',e); }
+  finally { _refreshInFlight = false; }
 }
 
 applyTileStyle();
 refreshSites();
 refreshTracks();
 setInterval(refreshSites, 30000);
-setInterval(refreshTracks, 1000);
+setInterval(refreshTracks, 500);
 </script>
 </body>
 </html>
