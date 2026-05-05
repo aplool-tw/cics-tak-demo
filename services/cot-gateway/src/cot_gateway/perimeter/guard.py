@@ -87,8 +87,10 @@ class PerimeterGuard:
         On HTTP 200 or 409: set idempotency latch + call mark_takeover.
         On transport error: log warning, do NOT set latch (retry next tick).
         """
+        # Use rf_track_id (the raw UDS drone_id) rather than the prefixed
+        # track_id ("FUSED-TRK-E01", "SENTRYCS-TRK-E01") that UDS never registered.
         payload = {
-            "drone_id": track.track_id,
+            "drone_id": track.rf_track_id,
             "target_lat": self._holding_lat,
             "target_lon": self._holding_lon,
             "target_alt_m": self._holding_alt_m,

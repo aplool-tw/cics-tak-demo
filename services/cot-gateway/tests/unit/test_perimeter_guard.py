@@ -205,6 +205,55 @@ async def test_fused_mitigating_inside_radius_fires():
     mark_takeover.assert_awaited_once_with("uid-1")
 
 
+# ── T018b: FUSED track sends rf_track_id (not FUSED-prefixed track_id) ──────
+
+@pytest.mark.asyncio
+async def test_fused_takeover_payload_uses_rf_track_id():
+    """T018b: FUSED takeover payload drone_id uses rf_track_id, not prefixed track_id.
+
+    Real bug regression: guard was sending 'FUSED-TRK-E01' but UDS only knows 'TRK-E01'.
+    """
+    guard = _make_guard()
+    mark_takeover = AsyncMock()
+    # Realistic FUSED track: track_id has FUSED- prefix, rf_track_id is the raw UDS drone_id
+    track = UnifiedTrack(
+        source=TrackSource.FUSED,
+        track_id="FUSED-TRK-E01",
+        radar_track_id="TRK-E01",
+        rf_track_id="TRK-E01",
+        correlation_id="FUSED-TRK-E01",
+        lat=INSIDE_LAT,
+        lon=INSIDE_LON,
+        alt_m=100.0,
+        timestamp=NOW,
+        received_at=NOW,
+        last_updated=NOW,
+        track_status="Active",
+        classification="DRONE",
+        detection_status="MITIGATING",
+    )
+
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
+    mock_resp.__aexit__ = AsyncMock(return_value=False)
+
+    mock_session = MagicMock()
+    mock_session.post = MagicMock(return_value=mock_resp)
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock(return_value=False)
+
+    with patch("cot_gateway.perimeter.guard.aiohttp.ClientSession", return_value=mock_session):
+        await guard.check(track, uid="FUSED-TRK-E01", mark_takeover=mark_takeover)
+
+    mock_session.post.assert_called_once()
+    payload = mock_session.post.call_args[1]["json"]
+    assert payload["drone_id"] == "TRK-E01", (
+        f"Expected UDS drone_id 'TRK-E01', got '{payload['drone_id']}'"
+    )
+    mark_takeover.assert_awaited_once_with("FUSED-TRK-E01")
+
+
 # ── T019: same track_id twice → fires only once ──────────────────────────────
 
 
