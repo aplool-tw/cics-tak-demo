@@ -109,9 +109,17 @@ class GatewayMain:
                 track = await asyncio.wait_for(self.track_queue.get(), timeout=0.25)
             except asyncio.TimeoutError:
                 continue
-            final_track = self.correlator.correlate(track)
-            now = datetime.now(timezone.utc)
-            await self._emit_for_track(final_track, now)
+            try:
+                final_track = self.correlator.correlate(track)
+                now = datetime.now(timezone.utc)
+                await self._emit_for_track(final_track, now)
+            except Exception as exc:  # pragma: no cover
+                self._log.error(
+                    "process_loop_error",
+                    error=repr(exc),
+                    track_id=getattr(track, "track_id", "?"),
+                    source=getattr(track, "source", "?"),
+                )
 
     async def _emit_for_track(self, track: UnifiedTrack, now: datetime) -> None:
         old_uids, new_uid = detect_source_switch(track, self.prev_uid_by_entity_key)
@@ -167,18 +175,21 @@ class GatewayMain:
                 return
             except asyncio.TimeoutError:
                 pass
-            now = datetime.now(timezone.utc)
-            lost = self.correlator.update_ttl(now)
-            for lost_track in lost:
-                uid = uid_for(lost_track)
-                xml = generate_cot(lost_track, now=now, force_stale_eq_time=True)
-                self.transmitter.enqueue(xml)
-                self.seen_uids.discard(uid)
-                if self._track_store is not None:
-                    await self._track_store.remove(uid)
-                for key in entity_keys_for(lost_track):
-                    self.prev_uid_by_entity_key.pop(key, None)
-                self._log.info("ttl_expired", uid=uid, track_id=lost_track.track_id)
+            try:
+                now = datetime.now(timezone.utc)
+                lost = self.correlator.update_ttl(now)
+                for lost_track in lost:
+                    uid = uid_for(lost_track)
+                    xml = generate_cot(lost_track, now=now, force_stale_eq_time=True)
+                    self.transmitter.enqueue(xml)
+                    self.seen_uids.discard(uid)
+                    if self._track_store is not None:
+                        await self._track_store.remove(uid)
+                    for key in entity_keys_for(lost_track):
+                        self.prev_uid_by_entity_key.pop(key, None)
+                    self._log.info("ttl_expired", uid=uid, track_id=lost_track.track_id)
+            except Exception as exc:  # pragma: no cover
+                self._log.error("ttl_loop_error", error=repr(exc))
 
     # ------------------------------------------------------------------
     # Orchestration
