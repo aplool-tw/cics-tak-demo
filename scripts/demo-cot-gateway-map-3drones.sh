@@ -85,10 +85,10 @@ trap cleanup INT TERM EXIT
 
 # ── banner ─────────────────────────────────────────────────────────────────────
 echo -e "${BOLD}"
-echo "  +==============================================================+"
-echo "  |  CoT Gateway — Tactical Map Demo (three-drone convergence)  |"
-echo "  |  TRK-E01(N) + TRK-E02(NW) + TRK-E03(NE) converge on SP   |"
-echo "  +==============================================================+"
+echo "  +===============================================================+"
+echo "  |  CoT Gateway — Tactical Map Demo (3-drone staggered)       |"
+echo "  |  TRK-E01(N/35ms) TRK-E02(NW/25ms) TRK-E03(NE/22ms)       |"
+echo "  +===============================================================+"
 echo -e "${RESET}"
 
 # ── --stop mode ────────────────────────────────────────────────────────────────
@@ -129,17 +129,26 @@ mkdir -p "${LOG_DIR}" "${PID_DIR}"
 
 # ── scenario summary ───────────────────────────────────────────────────────────
 echo
-log "Three-drone convergence scenario (3.5km start, 35m/s):"
-echo "  TRK-E01 (N)  : 24.757306N, 121.033750E  heading 180°  (south)"
-echo "  TRK-E02 (NW) : 24.748061N, 121.009242E  heading 135°  (southeast)"
-echo "  TRK-E03 (NE) : 24.748061N, 121.058258E  heading 225°  (southwest)"
+log "Three-drone staggered scenario (different distances & speeds):"
+echo "  TRK-E01 (N)  : 24.757282N, 121.033750E  3.5km  35m/s  heading 180°"
+echo "  TRK-E02 (NW) : 24.754419N, 121.002238E  4.5km  25m/s  heading 135°"
+echo "  TRK-E03 (NE) : 24.749968N, 121.060359E  3.8km  22m/s  heading 225°"
 echo "  SP (target)  : 24.725806N, 121.033750E"
 echo "  HP (holding) : 24.735344N, 121.044252E  (NE 45°, 1.5km from SP)"
 echo
-echo "  t=  9s : All 3 enter EchoShield 3.2km range → ECHO tracks appear on map"
-echo "  t= 43s : All 3 cross 2km Sentrycs ring → DETECTED (fused tracks turn red)"
-echo "  t= 71s : All 3 cross 1km perimeter → MITIGATING, all redirected to HP"
-echo "  t=110s : NEUTRALIZED → all 3 drones at HP"
+echo "  Timeline (staggered by speed/distance):"
+echo "    t=  9s : TRK-E01 enters EchoShield 3.2km range"
+echo "    t= 27s : TRK-E03 enters EchoShield 3.2km range"
+echo "    t= 43s : TRK-E01 DETECTED (Sentrycs 2km ring)"
+echo "    t= 52s : TRK-E02 enters EchoShield 3.2km range"
+echo "    t= 71s : TRK-E01 perimeter breach → MITIGATING → redirected to HP"
+echo "    t= 82s : TRK-E03 DETECTED"
+echo "    t=100s : TRK-E02 DETECTED"
+echo "    t=120s : TRK-E01 NEUTRALIZED"
+echo "    t=127s : TRK-E03 perimeter breach → MITIGATING → redirected to HP"
+echo "    t=140s : TRK-E02 perimeter breach → MITIGATING → redirected to HP"
+echo "    t=200s : TRK-E03 NEUTRALIZED"
+echo "    t=210s : TRK-E02 NEUTRALIZED"
 echo
 
 # ── launch map-sim ─────────────────────────────────────────────────────────────
@@ -235,11 +244,19 @@ done
 
 # ── timeline reminder ──────────────────────────────────────────────────────────
 echo
-log "Timeline (from scenario start, all 3 drones simultaneously):"
-echo "    t=  9s  All 3 enter EchoShield 3.2km range — ECHO tracks appear"
-echo "    t= 43s  All 3 cross 2km Sentrycs ring — DETECTED (fused tracks go red)"
-echo "    t= 71s  All 3 cross 1km perimeter — takeover → all redirect to HP"
-echo "    t=110s  NEUTRALIZED — all 3 at HP (24.735344N, 121.044252E)"
+log "Timeline (staggered by speed/distance):"
+echo "    t=  9s  TRK-E01 enters EchoShield 3.2km — first ECHO track on map"
+echo "    t= 27s  TRK-E03 enters EchoShield 3.2km range"
+echo "    t= 43s  TRK-E01 crosses 2km Sentrycs ring — DETECTED (fused → red)"
+echo "    t= 52s  TRK-E02 enters EchoShield 3.2km range"
+echo "    t= 71s  TRK-E01 perimeter breach → MITIGATING → takeover → HP"
+echo "    t= 82s  TRK-E03 DETECTED"
+echo "    t=100s  TRK-E02 DETECTED"
+echo "    t=120s  TRK-E01 NEUTRALIZED"
+echo "    t=127s  TRK-E03 perimeter breach → MITIGATING → takeover → HP"
+echo "    t=140s  TRK-E02 perimeter breach → MITIGATING → takeover → HP"
+echo "    t=200s  TRK-E03 NEUTRALIZED"
+echo "    t=210s  TRK-E02 NEUTRALIZED"
 echo
 
 # ── open browser ───────────────────────────────────────────────────────────────

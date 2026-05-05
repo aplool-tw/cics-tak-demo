@@ -1,16 +1,16 @@
 scenario:
   name: "demo_three_drones"
-  description: "三架無人機分別從北（N）、西北（NW）、東北（NE）3.5km 處同時向 SP(24.725806N,121.033750E) 逼近（示範用，35m/s 快速啟動）"
+  description: "三架無人機從不同方向、不同距離與速度向 SP(24.725806N,121.033750E) 逼近，依序進入偵測圈與防禦半徑（示範用）"
   update_hz: 10
   servers:
     command_api_port: 8080
   drones:
     - drone_id: "TRK-E01"
       model: "DJI Mavic 3"
-      start_lat: 24.757306    # 正北 ~3.5km
+      start_lat: 24.757282    # 正北 3.5km
       start_lon: 121.033750
       start_alt_m: 150.0
-      speed_ms: 35.0
+      speed_ms: 35.0          # 最快，最先進入各圈
       heading_deg: 180.0      # 向正南（往 SP）
       operator_bearing_deg: 0
       operator_distance_m: 300
@@ -25,18 +25,18 @@ scenario:
         descent_speed_ms: 3.0
 
     - drone_id: "TRK-E02"
-      model: "DJI Mavic 3"
-      start_lat: 24.748061    # 西北方 ~3.5km（bearing 315° from SP）
-      start_lon: 121.009242
-      start_alt_m: 150.0
-      speed_ms: 35.0
+      model: "DJI Matrice 30T"
+      start_lat: 24.754419    # 西北方 4.5km（bearing 315° from SP）
+      start_lon: 121.002238
+      start_alt_m: 120.0
+      speed_ms: 25.0          # 最慢，最後進入各圈
       heading_deg: 135.0      # 向東南（往 SP）
       operator_bearing_deg: 315
-      operator_distance_m: 300
+      operator_distance_m: 400
       waypoints:
         - lat: 24.725806      # SP
           lon: 121.033750
-          alt_m: 150.0
+          alt_m: 120.0
       landing_point:
         lat: 24.735344        # HP（同 TRK-E01）
         lon: 121.044252
@@ -44,18 +44,18 @@ scenario:
         descent_speed_ms: 3.0
 
     - drone_id: "TRK-E03"
-      model: "DJI Mavic 3"
-      start_lat: 24.748061    # 東北方 ~3.5km（bearing 45° from SP）
-      start_lon: 121.058258
-      start_alt_m: 150.0
-      speed_ms: 35.0
+      model: "Autel EVO II"
+      start_lat: 24.749968    # 東北方 3.8km（bearing 45° from SP）
+      start_lon: 121.060359
+      start_alt_m: 100.0
+      speed_ms: 22.0          # 中等速度
       heading_deg: 225.0      # 向西南（往 SP）
       operator_bearing_deg: 45
-      operator_distance_m: 300
+      operator_distance_m: 250
       waypoints:
         - lat: 24.725806      # SP
           lon: 121.033750
-          alt_m: 150.0
+          alt_m: 100.0
       landing_point:
         lat: 24.735344        # HP（同 TRK-E01）
         lon: 121.044252
