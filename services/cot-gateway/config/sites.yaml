@@ -13,8 +13,8 @@ sites:
 
   - id: HP
     name: Holding Point (Landing Zone)
-    lat: 24.725806
-    lon: 121.071889
+    lat: 24.735344
+    lon: 121.044252
     alt_m: 0.0
     type: holding_point
     ranges_m: null

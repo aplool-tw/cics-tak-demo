@@ -19,8 +19,8 @@ scenario:
           lon: 121.033750
           alt_m: 150.0
       landing_point:
-        lat: 24.725806       # HP 管制停留地點（SP 正東方 ~3.86km）
-        lon: 121.071889
+        lat: 24.735344       # HP 管制停留地點（SP 東北方 45° ~1.5km）
+        lon: 121.044252
         alt_m: 0.0
         descent_speed_ms: 3.0
   timeline:

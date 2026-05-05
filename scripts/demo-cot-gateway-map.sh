@@ -128,13 +128,13 @@ mkdir -p "${LOG_DIR}" "${PID_DIR}"
 
 # ── scenario summary ───────────────────────────────────────────────────────────
 echo
-log "Single-drone invasion scenario (3.5km start, 20m/s):"
+log "Single-drone invasion scenario (3.5km start, 35m/s):"
 echo "  Drone  : TRK-E01 (DJI Mavic 3)"
-echo "  Route  : 24.757306N,121.033750E  →  SP(24.725806N,121.033750E)  [N→S, 20m/s]"
-echo "  t= 15s : enters EchoShield 3.2km range — first track emitted to CoT Gateway"
-echo "  t= 75s : 2km from SP — Sentrycs DETECTED"
-echo "  t=125s : 1km from SP — Sentrycs MITIGATING, takeover to HP"
-echo "  t=165s : NEUTRALIZED — redirected to HP(24.725806N,121.071889E)"
+echo "  Route  : 24.757306N,121.033750E  →  SP(24.725806N,121.033750E)  [N→S, 35m/s]"
+echo "  t=  9s : enters EchoShield 3.2km range — first track emitted to CoT Gateway"
+echo "  t= 43s : 2km from SP — Sentrycs DETECTED (fused track turns red)"
+echo "  t= 71s : 1km from SP — Sentrycs MITIGATING, takeover to HP"
+echo "  t=110s : NEUTRALIZED — redirected to HP(24.735344N,121.044252E)"
 echo
 
 # ── launch map-sim ─────────────────────────────────────────────────────────────
@@ -232,10 +232,10 @@ done
 # ── timeline reminder ──────────────────────────────────────────────────────────
 echo
 log "Drone timeline (from scenario start):"
-echo "    t= 15s  TRK-E01 enters EchoShield 3.2km range — track appears on map"
-echo "    t= 75s  Enters 2km range — Sentrycs DETECTED (fused track turns red)"
-echo "    t=125s  Enters 1km range — Sentrycs MITIGATING, UDS takeover → HP"
-echo "    t=165s  NEUTRALIZED — drone redirected to HP (24.725806N,121.071889E)"
+echo "    t=  9s  TRK-E01 enters EchoShield 3.2km range — track appears on map"
+echo "    t= 43s  Enters 2km range — Sentrycs DETECTED (fused track turns red)"
+echo "    t= 71s  Enters 1km range — Sentrycs MITIGATING, UDS takeover → HP"
+echo "    t=110s  NEUTRALIZED — drone redirected to HP (24.735344N,121.044252E)"
 echo
 
 # ── open browser ───────────────────────────────────────────────────────────────

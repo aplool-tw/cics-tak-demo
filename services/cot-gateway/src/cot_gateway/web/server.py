@@ -74,8 +74,8 @@ _HTML_TEMPLATE = """\
   <div id="map-ctrl-head">&#9788; Map Display</div>
   <div class="ctrl-row">
     <span class="ctrl-lbl">Brightness</span>
-    <input id="bri" type="range" min="20" max="150" step="5" value="100">
-    <span class="ctrl-val" id="bri-val">100%</span>
+    <input id="bri" type="range" min="20" max="150" step="5" value="40">
+    <span class="ctrl-val" id="bri-val">40%</span>
   </div>
   <div class="ctrl-row">
     <span class="ctrl-lbl">Opacity</span>
@@ -114,7 +114,7 @@ const SRC_COLOR = { ECHOSHIELD:'#00BFFF', SENTRYCS:'#FFD700', FUSED:'#FF4444' };
 const SRC_BORDER = { ECHOSHIELD:'#0090CC', SENTRYCS:'#CC9000', FUSED:'#CC0000' };
 
 // ── map (OpenStreetMap tiles — reliable, no dark CDN dependency) ────────────
-const map = L.map('map').setView([SP_LAT, SP_LON], 13);
+const map = L.map('map').setView([SP_LAT, SP_LON], 14);
 const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   maxZoom: 19
@@ -321,10 +321,11 @@ async function refreshTracks() {
   } catch(e){ console.warn('tracks fetch err',e); }
 }
 
+applyTileStyle();
 refreshSites();
 refreshTracks();
 setInterval(refreshSites, 30000);
-setInterval(refreshTracks, 2000);
+setInterval(refreshTracks, 1000);
 </script>
 </body>
 </html>

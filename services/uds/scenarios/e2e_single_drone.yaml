@@ -1,6 +1,6 @@
 scenario:
   name: "e2e_single_drone_invasion"
-  description: "單架無人機從正北 8.99km 處向戰略要點 SP(24.725806N,121.033750E) 逼近，EchoShield 偵測後 Sentrycs 接管，改飛至 HP(+3.86km 東)"
+  description: "單架無人機從正北 8.99km 處向戰略要點 SP(24.725806N,121.033750E) 逼近，EchoShield 偵測後 Sentrycs 接管，改飛至 HP(SP 東北方 45° ~1.5km)"
   update_hz: 10
   servers:
     command_api_port: 8080
@@ -19,8 +19,8 @@ scenario:
           lon: 121.033750
           alt_m: 150.0
       landing_point:
-        lat: 24.725806       # HP 管制停留地點（SP 正東方 ~3.86km）
-        lon: 121.071889
+        lat: 24.735344       # HP 管制停留地點（SP 東北方 45° ~1.5km）
+        lon: 121.044252
         alt_m: 0.0
         descent_speed_ms: 3.0
   timeline:

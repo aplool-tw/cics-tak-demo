@@ -20,5 +20,5 @@ web_port: 8093                # separate from cot-gateway (:8092) to avoid confl
 # Scenario coordinates (must match cot-gateway + sentrycs-sim)
 sp_lat: 24.725806
 sp_lon: 121.033750
-hp_lat: 24.725806
-hp_lon: 121.071889
+hp_lat: 24.735344
+hp_lon: 121.044252

@@ -23,7 +23,7 @@ drones:
     neutralized_at_s: 110
     operator_bearing_deg: 225
     operator_distance_m: 300
-    takeover_target_lat: 24.725806
-    takeover_target_lon: 121.071889
+    takeover_target_lat: 24.735344
+    takeover_target_lon: 121.044252
     takeover_target_alt_m: 50.0
 

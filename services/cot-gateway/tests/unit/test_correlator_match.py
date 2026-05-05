@@ -94,13 +94,21 @@ def test_one_to_many_forbidden():
 
 
 def test_radar_nearest_wins_when_multiple_radars_then_rf():
-    """Multi-radar + rf: when rf arrives, only the then-matching radar gets paired on next radar update."""
+    """Multi-radar + rf: rf arrival should immediately pair with nearest matching radar."""
     c = TrackCorrelator()
     # Two radars 25m apart
     c.correlate(_echo(track_id="TRK-A", lat=25.0598))
     c.correlate(_echo(track_id="TRK-B", lat=25.0598 + 0.0001))  # ~11m
     # RF near TRK-A
-    c.correlate(_rf(lat=25.05981))
-    # Re-emit TRK-A (it's nearest to rf) → should fuse
-    out = c.correlate(_echo(track_id="TRK-A", lat=25.0598))
+    out = c.correlate(_rf(lat=25.05981))
     assert out.source == TrackSource.FUSED
+
+
+def test_when_no_match_both_single_source_tracks_remain_active():
+    c = TrackCorrelator()
+    echo = c.correlate(_echo(track_id="TRK-001", lat=25.0598, lon=121.5654))
+    sntr = c.correlate(_rf(rf_id="DRN-001", lat=25.0700, lon=121.5654))
+    assert echo.source == TrackSource.ECHOSHIELD
+    assert sntr.source == TrackSource.SENTRYCS
+    active_sources = {t.source for t in c.get_all_active_tracks()}
+    assert active_sources == {TrackSource.ECHOSHIELD, TrackSource.SENTRYCS}

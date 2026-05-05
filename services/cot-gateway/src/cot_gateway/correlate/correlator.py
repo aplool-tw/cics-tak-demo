@@ -158,6 +158,31 @@ class TrackCorrelator:
             self._rf_to_radar.pop(rf.rf_track_id, None)
             self._radar_to_rf.pop(paired_radar_id, None)
             self.fused_tracks.pop(rf.rf_track_id, None)
+
+        # Find best new match among unpaired radar tracks.
+        best: Optional[UnifiedTrack] = None
+        best_dist = float("inf")
+        for radar in self.radar_tracks.values():
+            assert radar.radar_track_id is not None
+            if (
+                radar.radar_track_id in self._radar_to_rf
+                and self._radar_to_rf[radar.radar_track_id] != rf.rf_track_id
+            ):
+                continue  # already paired to another rf
+            if radar.track_status != "Active":
+                continue
+            if not self._within_match(radar, rf):
+                continue
+            d = haversine_m(radar.lat, radar.lon, rf.lat, rf.lon)
+            if d < best_dist:
+                best_dist = d
+                best = radar
+        if best is not None and best.radar_track_id is not None:
+            fused = self.build_fused(best, rf)
+            self._rf_to_radar[rf.rf_track_id] = best.radar_track_id
+            self._radar_to_rf[best.radar_track_id] = rf.rf_track_id
+            self.fused_tracks[rf.rf_track_id] = fused
+            return fused
         return rf
 
     def _within_match(self, radar: UnifiedTrack, rf: UnifiedTrack) -> bool:
