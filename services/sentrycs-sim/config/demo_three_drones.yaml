@@ -1,0 +1,49 @@
+# Sentrycs demo config — 3-drone scenario
+# All 3 drones start 3.5km from SP at 35m/s, same timing:
+#   t≈43s  crosses 2km detection ring → DETECTED
+#   t≈71s  crosses 1km defense perimeter → CoT GW issues takeover → MITIGATING
+#   t=110s NEUTRALIZED
+sensor_lat: 24.725806
+sensor_lon: 121.033750
+poll_interval_s: 0.5
+detection_radius_m: 2000.0
+map_sim_url: http://127.0.0.1:8090
+uds_url: http://127.0.0.1:18080
+api_host: 0.0.0.0
+api_port: 7070
+neutralized_hold_s: 30.0
+mitigating_disappear_grace_s: 10.0
+
+drones:
+  - uid: TRK-E01
+    model: "DJI Mavic 3"
+    detected_at_s: 43
+    mitigating_at_s: 71
+    neutralized_at_s: 110
+    operator_bearing_deg: 0
+    operator_distance_m: 300
+    takeover_target_lat: 24.735344
+    takeover_target_lon: 121.044252
+    takeover_target_alt_m: 50.0
+
+  - uid: TRK-E02
+    model: "DJI Mavic 3"
+    detected_at_s: 43
+    mitigating_at_s: 71
+    neutralized_at_s: 110
+    operator_bearing_deg: 315
+    operator_distance_m: 300
+    takeover_target_lat: 24.735344
+    takeover_target_lon: 121.044252
+    takeover_target_alt_m: 50.0
+
+  - uid: TRK-E03
+    model: "DJI Mavic 3"
+    detected_at_s: 43
+    mitigating_at_s: 71
+    neutralized_at_s: 110
+    operator_bearing_deg: 45
+    operator_distance_m: 300
+    takeover_target_lat: 24.735344
+    takeover_target_lon: 121.044252
+    takeover_target_alt_m: 50.0
