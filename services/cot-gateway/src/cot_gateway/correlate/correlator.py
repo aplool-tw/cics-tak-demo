@@ -101,12 +101,14 @@ class TrackCorrelator:
         assert radar.radar_track_id is not None
         self.radar_tracks[radar.radar_track_id] = radar
 
-        # If this radar was already paired to an rf, check if rf is still live
+        # If this radar was already paired to an rf, maintain the pairing while
+        # the RF track is still active.  Use a 3× distance budget for the
+        # maintenance check so that polling lag (up to 1.5 s at demo speeds)
+        # does not spuriously break a valid pairing.
         prev_rf = self._radar_to_rf.get(radar.radar_track_id)
         if prev_rf and prev_rf in self.rf_tracks:
-            # Refresh fused with latest radar position + latest rf metadata
             rf = self.rf_tracks[prev_rf]
-            if self._within_match(radar, rf):
+            if self._within_match(radar, rf, dist_scale=3.0):
                 fused = self.build_fused(radar, rf)
                 self.fused_tracks[prev_rf] = fused
                 return fused
@@ -146,11 +148,12 @@ class TrackCorrelator:
         assert rf.rf_track_id is not None
         self.rf_tracks[rf.rf_track_id] = rf
 
-        # If already paired, refresh fused using the latest radar for this pairing
+        # If already paired, refresh fused using the latest radar for this pairing.
+        # Use 3× distance scale for the maintenance check (same reasoning as _on_radar).
         paired_radar_id = self._rf_to_radar.get(rf.rf_track_id)
         if paired_radar_id and paired_radar_id in self.radar_tracks:
             radar = self.radar_tracks[paired_radar_id]
-            if self._within_match(radar, rf):
+            if self._within_match(radar, rf, dist_scale=3.0):
                 fused = self.build_fused(radar, rf)
                 self.fused_tracks[rf.rf_track_id] = fused
                 return fused
@@ -185,8 +188,11 @@ class TrackCorrelator:
             return fused
         return rf
 
-    def _within_match(self, radar: UnifiedTrack, rf: UnifiedTrack) -> bool:
-        if haversine_m(radar.lat, radar.lon, rf.lat, rf.lon) > self.distance_threshold_m:
+    def _within_match(self, radar: UnifiedTrack, rf: UnifiedTrack, dist_scale: float = 1.0) -> bool:
+        if (
+            haversine_m(radar.lat, radar.lon, rf.lat, rf.lon)
+            > self.distance_threshold_m * dist_scale
+        ):
             return False
         ts_radar = (
             radar.timestamp

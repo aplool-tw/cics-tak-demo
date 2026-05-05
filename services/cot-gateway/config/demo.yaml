@@ -15,7 +15,9 @@ sentrycs:
   timeout_s: 2.0
 
 correlator:
-  distance_threshold_m: 50.0
+  # distance_threshold_m must be > (drone_speed × max_polling_lag + sensor_noise)
+  # Demo: 35m/s × 1.5s + 5m noise = 57.5m → use 150m for a safe margin.
+  distance_threshold_m: 150.0
   time_window_s: 3.0
   ttl_s: 30.0
 
