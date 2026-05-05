@@ -90,19 +90,28 @@ class LoopRunner:
         period = 1.0 / float(self.config.update_rate_hz)
         loop = asyncio.get_running_loop()
         next_deadline = loop.time()
-        while not self._stop.is_set():
-            now = loop.time()
-            if next_deadline > now:
-                try:
-                    await asyncio.wait_for(self._stop.wait(), timeout=next_deadline - now)
-                    break
-                except asyncio.TimeoutError:
-                    pass
-            await self.run_one_tick()
-            next_deadline += period
-            # catch up if we fell very far behind
-            if next_deadline < loop.time() - period:
-                next_deadline = loop.time() + period
+        try:
+            while not self._stop.is_set():
+                now = loop.time()
+                if next_deadline > now:
+                    try:
+                        await asyncio.wait_for(self._stop.wait(), timeout=next_deadline - now)
+                        break
+                    except asyncio.TimeoutError:
+                        pass
+                await self.run_one_tick()
+                next_deadline += period
+                # catch up if we fell very far behind
+                if next_deadline < loop.time() - period:
+                    next_deadline = loop.time() + period
+        except asyncio.CancelledError:
+            self._log.error("run_forever_cancelled", tick_id=self._tick_id)
+            raise
+        except Exception as exc:
+            self._log.error("run_forever_exception", tick_id=self._tick_id, error=repr(exc))
+            raise
+        finally:
+            self._log.info("run_forever_exit", tick_id=self._tick_id)
 
     async def run_one_tick(self) -> None:
         tick_id = self._tick_id
@@ -138,6 +147,10 @@ class LoopRunner:
             now_mono = self._mono()
             active, lost = self.registry.update_from_tick(objects, now_mono)
             await self._broadcast(active, lost)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            self._log.error("tick_error", tick_id=tick_id, error=repr(exc))
         finally:
             self._in_flight = False
 

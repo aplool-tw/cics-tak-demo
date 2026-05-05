@@ -27,10 +27,11 @@ def azimuth_deg(
     y = math.sin(dl) * math.cos(p2)
     x = math.cos(p1) * math.sin(p2) - math.sin(p1) * math.cos(p2) * math.cos(dl)
     brg = math.degrees(math.atan2(y, x)) % 360.0
-    # guard: exact 360 → 0 (lt=360 invariant)
+    brg = round(brg, 2)
+    # guard: rounding can push 359.99x → 360.0 (pydantic lt=360 invariant)
     if brg >= 360.0:
         brg = 0.0
-    return round(brg, 2)
+    return brg
 
 
 def elevation_deg(

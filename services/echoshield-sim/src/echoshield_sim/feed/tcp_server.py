@@ -93,7 +93,12 @@ class FeedServer:
     async def broadcast(self, lines: list[bytes]) -> None:
         """Write each line to every connected client; dead clients are pruned.
 
-        Quiet mode: if ``lines`` is empty, write zero bytes (contracts §2.1).
+        Quiet mode: if ``lines`` is empty, do nothing (contracts §2.1).
+        No await inside: the coroutine runs synchronously from entry to return,
+        preventing any CancelledError from being injected mid-broadcast.
+        The asyncio transport buffers the write; the OS flushes it the next
+        time the event loop polls for I/O (i.e. on the next tick's await).
+        Dead clients are detected by the _handle EOF path, not by drain errors.
         """
         if not lines:
             return
@@ -107,15 +112,5 @@ class FeedServer:
                 w.write(payload)
             except Exception:
                 dead.append(w)
-        # drain concurrently; gather exceptions
-        drain_tasks = [asyncio.create_task(self._safe_drain(w)) for w in snapshot if w not in dead]
-        if drain_tasks:
-            results = await asyncio.gather(*drain_tasks, return_exceptions=True)
-            for w, res in zip([w for w in snapshot if w not in dead], results, strict=False):
-                if isinstance(res, BaseException):
-                    dead.append(w)
         for w in dead:
             self._discard(w, reason="write_failed")
-
-    async def _safe_drain(self, writer: asyncio.StreamWriter) -> None:
-        await writer.drain()
