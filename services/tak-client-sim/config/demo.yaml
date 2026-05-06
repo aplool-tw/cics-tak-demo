@@ -18,8 +18,5 @@ web_enabled: true
 web_host: 0.0.0.0
 web_port: 8093                # separate from cot-gateway (:8092) to avoid conflict
 
-# Scenario coordinates (must match cot-gateway + sentrycs-sim)
-sp_lat: 24.725806
-sp_lon: 121.033750
-hp_lat: 24.735344
-hp_lon: 121.044252
+# SP and HP coordinates are received dynamically from the TAK Server as CoT messages
+# broadcast by cot-gateway (feature 014). No static coordinates needed here.

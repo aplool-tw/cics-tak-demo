@@ -30,12 +30,6 @@ class ClientConfig(BaseModel):
     web_host: str = "127.0.0.1"
     web_port: int = Field(default=8091, ge=1, le=65535)
 
-    # Scenario coordinates: Strategic Point (two radar systems) and Holding Point
-    sp_lat: float = 24.725806
-    sp_lon: float = 121.033750
-    hp_lat: float = 24.725806
-    hp_lon: float = 121.071889
-
     @field_validator("filter_prefix", mode="before")
     @classmethod
     def _empty_str_to_none(cls, v: object) -> object:

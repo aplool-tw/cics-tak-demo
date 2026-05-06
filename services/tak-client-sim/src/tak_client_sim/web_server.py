@@ -140,13 +140,17 @@ _MAP_HTML_TEMPLATE = """\
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    /* ── scenario coordinates (injected from server config) ── */
-    const SP = { lat: __SP_LAT__, lon: __SP_LON__ };
-    const HP = { lat: __HP_LAT__, lon: __HP_LON__ };
+    /* ── site CoT UIDs broadcast by cot-gateway (feature 014) ── */
+    const SITE_SP_UID   = 'CICS-014-SP';
+    const SITE_HP_UID   = 'CICS-014-HP';
+    const SITE_RING_PFX = 'CICS-014-SP-RING-';
+    function isSiteUid(uid) {
+      return uid === SITE_SP_UID || uid === SITE_HP_UID || uid.startsWith(SITE_RING_PFX);
+    }
     const REFRESH_MS = 2000;
 
     /* ── map ────────────────────────────────────────────────── */
-    const map = L.map('map').setView([SP.lat, SP.lon], 13);
+    const map = L.map('map').setView([24.5, 121.0], 11);
     const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
     }).addTo(map);
@@ -167,21 +171,11 @@ _MAP_HTML_TEMPLATE = """\
     document.getElementById('opa').addEventListener('input', applyTileStyle);
     map.whenReady(applyTileStyle);
 
-    /* ── range rings around SP ──────────────────────────────── */
-    const RINGS = [
-      { r: 1000, color: '#00e676', label: '1 km' },
-      { r: 2000, color: '#ffca28', label: '2 km' },
-      { r: 3000, color: '#ef5350', label: '3 km' },
-    ];
-    RINGS.forEach(ring => {
-      L.circle([SP.lat, SP.lon], {
-        radius: ring.r, color: ring.color, weight: 1.5, opacity: 0.55,
-        fillOpacity: 0.025, dashArray: '6 5'
-      }).bindTooltip(ring.label, { direction: 'right', className: 'leaflet-tooltip-sp' })
-        .addTo(map);
-    });
+    /* ── site layer: SP / HP / rings received as CoT from TAK ── */
+    const siteLayer = L.layerGroup().addTo(map);
+    let spCoord = null;   // {lat, lon} once CICS-014-SP CoT arrives
+    let hpCoord = null;   // {lat, lon} once CICS-014-HP CoT arrives
 
-    /* ── SP marker (Strategic Point / radar systems) ─────────── */
     const spIcon = L.divIcon({
       className: '',
       html: `<svg viewBox="-16 -16 32 32" width="34" height="34">
@@ -193,21 +187,7 @@ _MAP_HTML_TEMPLATE = """\
       </svg>`,
       iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -20]
     });
-    L.marker([SP.lat, SP.lon], { icon: spIcon })
-      .bindTooltip('SP 戰略要點 (雷達陣地)', {
-        permanent: true, direction: 'right', offset: [12, 0],
-        className: 'leaflet-tooltip-sp'
-      })
-      .bindPopup(
-        '<div class="popup-title">&#127961; SP 戰略要點</div>' +
-        prow('說明', 'EchoShield + Sentrycs 雷達陣地') +
-        prow('座標', SP.lat.toFixed(6) + ', ' + SP.lon.toFixed(6)) +
-        prow('範圍圈', '1 km / 2 km / 3 km'),
-        { maxWidth: 280 }
-      )
-      .addTo(map);
 
-    /* ── HP marker (Holding / Landing Point) ──────────────────── */
     const hpIcon = L.divIcon({
       className: '',
       html: `<svg viewBox="-15 -15 30 30" width="30" height="30">
@@ -217,19 +197,61 @@ _MAP_HTML_TEMPLATE = """\
       </svg>`,
       iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -18]
     });
-    L.marker([HP.lat, HP.lon], { icon: hpIcon })
-      .bindTooltip('HP 指定停機點', {
-        permanent: true, direction: 'right', offset: [12, 0],
-        className: 'leaflet-tooltip-hp'
-      })
-      .bindPopup(
-        '<div class="popup-title">&#128641; HP 指定停機點</div>' +
-        prow('說明', '無人機接管後降落目標') +
-        prow('座標', HP.lat.toFixed(6) + ', ' + HP.lon.toFixed(6)) +
-        prow('與 SP 距離', dist(SP.lat, SP.lon, HP.lat, HP.lon).toFixed(0) + ' m'),
-        { maxWidth: 260 }
-      )
-      .addTo(map);
+
+    function updateSites(events) {
+      siteLayer.clearLayers();
+      const spEvt    = events.find(e => e.uid === SITE_SP_UID);
+      const hpEvt    = events.find(e => e.uid === SITE_HP_UID);
+      const ringEvts = events.filter(e => e.uid.startsWith(SITE_RING_PFX));
+
+      if (spEvt) {
+        spCoord = { lat: spEvt.lat, lon: spEvt.lon };
+        ringEvts.forEach(r => {
+          const rm = parseInt(r.uid.slice(SITE_RING_PFX.length), 10);
+          const color = rm <= 1000 ? '#00e676' : rm <= 2000 ? '#ffca28' : '#ef5350';
+          L.circle([spEvt.lat, spEvt.lon], {
+            radius: rm, color, weight: 1.5, opacity: 0.55,
+            fillOpacity: 0.025, dashArray: '6 5'
+          }).bindTooltip((rm / 1000).toFixed(0) + ' km', {
+            direction: 'right', className: 'leaflet-tooltip-sp'
+          }).addTo(siteLayer);
+        });
+        const ringLabel = ringEvts.length
+          ? ringEvts.map(r => (parseInt(r.uid.slice(SITE_RING_PFX.length)) / 1000) + ' km').join(' / ')
+          : '–';
+        L.marker([spEvt.lat, spEvt.lon], { icon: spIcon })
+          .bindTooltip('SP 戰略要點 (雷達陣地)', {
+            permanent: true, direction: 'right', offset: [12, 0],
+            className: 'leaflet-tooltip-sp'
+          })
+          .bindPopup(
+            '<div class="popup-title">&#127961; SP 戰略要點</div>' +
+            prow('說明', spEvt.remarks || 'EchoShield + Sentrycs 雷達陣地') +
+            prow('座標', spEvt.lat.toFixed(6) + ', ' + spEvt.lon.toFixed(6)) +
+            prow('防禦圈', ringLabel),
+            { maxWidth: 280 }
+          ).addTo(siteLayer);
+      }
+
+      if (hpEvt) {
+        hpCoord = { lat: hpEvt.lat, lon: hpEvt.lon };
+        const distLabel = spCoord
+          ? dist(spCoord.lat, spCoord.lon, hpEvt.lat, hpEvt.lon).toFixed(0) + ' m'
+          : '–';
+        L.marker([hpEvt.lat, hpEvt.lon], { icon: hpIcon })
+          .bindTooltip('HP 指定停機點', {
+            permanent: true, direction: 'right', offset: [12, 0],
+            className: 'leaflet-tooltip-hp'
+          })
+          .bindPopup(
+            '<div class="popup-title">&#128641; HP 指定停機點</div>' +
+            prow('說明', hpEvt.remarks || '無人機接管後降落目標') +
+            prow('座標', hpEvt.lat.toFixed(6) + ', ' + hpEvt.lon.toFixed(6)) +
+            prow('與 SP 距離', distLabel),
+            { maxWidth: 260 }
+          ).addTo(siteLayer);
+      }
+    }
 
     /* ── legend ─────────────────────────────────────────────── */
     const legend = L.control({ position: 'bottomleft' });
@@ -237,9 +259,7 @@ _MAP_HTML_TEMPLATE = """\
       const d = L.DomUtil.create('div', 'legend');
       d.innerHTML =
         '<b>圖例 Legend</b>' +
-        '<div class="legend-item"><span class="legend-ring" style="border-color:#00e676"></span>1 km 範圍</div>' +
-        '<div class="legend-item"><span class="legend-ring" style="border-color:#ffca28"></span>2 km 範圍</div>' +
-        '<div class="legend-item"><span class="legend-ring" style="border-color:#ef5350"></span>3 km 範圍</div>' +
+        '<div class="legend-item"><span class="legend-ring" style="border-color:#00e676"></span>防禦圈 (SP CoT 廣播)</div>' +
         '<div class="legend-sep"></div>' +
         '<div class="legend-item"><svg viewBox="-12 -12 24 24" width="16" height="16"><circle r="10" fill="#90a4ae" stroke="#546e7a" stroke-width="2"/><line x1="-5" y1="-5" x2="5" y2="5" stroke="#546e7a" stroke-width="1.5" stroke-linecap="round"/><line x1="5" y1="-5" x2="-5" y2="5" stroke="#546e7a" stroke-width="1.5" stroke-linecap="round"/></svg>\u00a0未知目標 Unknown (a-u-*)</div>' +
         '<div class="legend-item"><svg viewBox="-12 -12 24 24" width="16" height="16"><rect x="-8" y="-8" width="16" height="16" fill="#ef5350" stroke="#b71c1c" stroke-width="2" transform="rotate(45)"/></svg>\u00a0敵對目標 Hostile (a-h-*)</div>' +
@@ -330,7 +350,7 @@ _MAP_HTML_TEMPLATE = """\
         (evt.remarks ? prow('備註', evt.remarks) : '') +
         prow('時間', timeStr) +
         prow('Stale in',      evt.stale_in_s + ' s') +
-        prow('與 SP 距離',    dist(SP.lat, SP.lon, evt.lat, evt.lon).toFixed(0) + ' m');
+        (spCoord ? prow('與 SP 距離', dist(spCoord.lat, spCoord.lon, evt.lat, evt.lon).toFixed(0) + ' m') : '');
     }
 
     function cardHtml(evt) {
@@ -338,7 +358,7 @@ _MAP_HTML_TEMPLATE = """\
       const staleTag   = evt.is_stale ? '<span class="stale-tag">⚠ STALE</span>' : '';
       const colorDot   = cotColor(evt.cot_type, evt.is_stale);
       const timeStr    = evt.time.replace('T', ' ').substr(0, 19).replace('T', ' ').substr(11, 8);
-      const distM      = dist(SP.lat, SP.lon, evt.lat, evt.lon).toFixed(0);
+      const distM      = spCoord ? dist(spCoord.lat, spCoord.lon, evt.lat, evt.lon).toFixed(0) : '–';
       return '<div class="event-card' + (evt.is_stale ? ' stale' : '') +
              (evt.uid === selectedUid ? ' selected' : '') +
              '" id="card-' + evt.uid + '" data-uid="' + evt.uid + '">' +
@@ -392,15 +412,18 @@ _MAP_HTML_TEMPLATE = """\
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
 
-        statusEl.className = 'ok';
-        statusText.textContent =
-          data.count + ' CoT 目標  |  ' + new Date().toLocaleTimeString('zh-TW');
-
         const seen      = new Set();
         const positions = [];
         let   panelHtml = '';
 
-        for (const evt of data.events) {
+        updateSites(data.events);
+        const droneEvents = data.events.filter(e => !isSiteUid(e.uid));
+
+        statusEl.className = 'ok';
+        statusText.textContent =
+          droneEvents.length + ' CoT 目標  |  ' + new Date().toLocaleTimeString('zh-TW');
+
+        for (const evt of droneEvents) {
           seen.add(evt.uid);
           positions.push([evt.lat, evt.lon]);
           panelHtml += cardHtml(evt);
@@ -440,7 +463,10 @@ _MAP_HTML_TEMPLATE = """\
         const panelBody = document.getElementById('panel-body');
         if (data.events.length === 0) {
           panelBody.innerHTML =
-            '<div id="panel-empty" style="color:#546e7a;font-size:11px;padding:8px">尚無 CoT 資料</div>';
+            '<div id="panel-empty" style="color:#546e7a;font-size:11px;padding:8px">等待 TAK Server CoT 資料...</div>';
+        } else if (droneEvents.length === 0) {
+          panelBody.innerHTML =
+            '<div id="panel-empty" style="color:#546e7a;font-size:11px;padding:8px">SP/HP 已收到，等待無人機追蹤...</div>';
         } else {
           panelBody.innerHTML = panelHtml;
           panelBody.querySelectorAll('.event-card').forEach(card => {
@@ -448,7 +474,6 @@ _MAP_HTML_TEMPLATE = """\
           });
         }
 
-        // auto-fit first load
         if (firstFit && positions.length > 0) {
           firstFit = false;
           if (positions.length === 1) map.setView(positions[0], 14);
@@ -474,7 +499,7 @@ _MAP_HTML_TEMPLATE = """\
     });
 
     document.getElementById('btn-center').addEventListener('click', function () {
-      map.setView([SP.lat, SP.lon], 13);
+      if (spCoord) map.setView([spCoord.lat, spCoord.lon], 13);
     });
 
     document.getElementById('btn-panel').addEventListener('click', function () {
@@ -493,13 +518,8 @@ _MAP_HTML_TEMPLATE = """\
 """
 
 
-def _build_map_html(sp_lat: float, sp_lon: float, hp_lat: float, hp_lon: float) -> str:
-    return (
-        _MAP_HTML_TEMPLATE.replace("__SP_LAT__", str(sp_lat))
-        .replace("__SP_LON__", str(sp_lon))
-        .replace("__HP_LAT__", str(hp_lat))
-        .replace("__HP_LON__", str(hp_lon))
-    )
+def _build_map_html() -> str:
+    return _MAP_HTML_TEMPLATE
 
 
 _NO_CACHE: dict[str, str] = {"Cache-Control": "no-store, no-cache", "Pragma": "no-cache"}
@@ -577,15 +597,11 @@ def _build_app(map_html: str, store: CotStore) -> web.Application:
 async def run_web_server(
     host: str,
     port: int,
-    sp_lat: float,
-    sp_lon: float,
-    hp_lat: float,
-    hp_lon: float,
     store: CotStore,
     stop: asyncio.Event,
 ) -> None:
     """Run the aiohttp map server until *stop* is set."""
-    map_html = _build_map_html(sp_lat, sp_lon, hp_lat, hp_lon)
+    map_html = _build_map_html()
     app = _build_app(map_html, store)
     runner = web.AppRunner(app)
     await runner.setup()

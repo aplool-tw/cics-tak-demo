@@ -53,7 +53,7 @@ def _make_event(
 def _make_client() -> tuple[CotStore, TestClient]:
     """Create a test client backed by a fresh CotStore."""
     store = CotStore()
-    html = _build_map_html(24.725806, 121.033750, 24.725806, 121.071889)
+    html = _build_map_html()
     app = _build_app(html, store)
     return store, TestClient(TestServer(app))  # type: ignore[arg-type]
 
@@ -61,37 +61,42 @@ def _make_client() -> tuple[CotStore, TestClient]:
 # ── _build_map_html ────────────────────────────────────────────────────────
 
 
-def test_build_map_html_injects_sp_lat() -> None:
-    html = _build_map_html(24.725806, 121.033750, 24.725806, 121.071889)
-    assert "24.725806" in html
+def test_build_map_html_has_site_uid_constants() -> None:
+    html = _build_map_html()
+    assert "CICS-014-SP" in html
+    assert "CICS-014-HP" in html
+    assert "CICS-014-SP-RING-" in html
 
 
-def test_build_map_html_injects_sp_lon() -> None:
-    html = _build_map_html(24.725806, 121.033750, 24.725806, 121.071889)
-    # Python strips trailing zeros: str(121.033750) → '121.03375'
-    assert "121.03375" in html
+def test_build_map_html_has_update_sites_function() -> None:
+    html = _build_map_html()
+    assert "updateSites" in html
+    assert "isSiteUid" in html
 
 
-def test_build_map_html_injects_hp_lon() -> None:
-    html = _build_map_html(24.725806, 121.033750, 24.725806, 121.071889)
-    assert "121.071889" in html
+def test_build_map_html_no_static_sp_coords() -> None:
+    html = _build_map_html()
+    # No hardcoded SP/HP coordinates from config
+    assert "24.725806" not in html
+    assert "121.033750" not in html
+    assert "121.071889" not in html
 
 
 def test_build_map_html_no_placeholders() -> None:
-    html = _build_map_html(1.0, 2.0, 3.0, 4.0)
+    html = _build_map_html()
     assert "__SP_LAT__" not in html
     assert "__SP_LON__" not in html
     assert "__HP_LAT__" not in html
     assert "__HP_LON__" not in html
 
 
-def test_build_map_html_contains_sp_hp_markers() -> None:
-    html = _build_map_html(24.725806, 121.033750, 24.725806, 121.071889)
-    assert "SP" in html
-    assert "HP" in html
-    assert "1 km" in html
-    assert "2 km" in html
-    assert "3 km" in html
+def test_build_map_html_has_dynamic_sp_hp_rendering() -> None:
+    html = _build_map_html()
+    assert "SITE_SP_UID" in html
+    assert "SITE_HP_UID" in html
+    assert "siteLayer" in html
+    assert "spCoord" in html
+    assert "hpCoord" in html
 
 
 # ── _fmt_dt ───────────────────────────────────────────────────────────────

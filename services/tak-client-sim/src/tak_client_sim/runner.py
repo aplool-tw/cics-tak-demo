@@ -152,10 +152,6 @@ async def main(config: ClientConfig) -> None:
             run_web_server(
                 config.web_host,
                 config.web_port,
-                config.sp_lat,
-                config.sp_lon,
-                config.hp_lat,
-                config.hp_lon,
                 store,
                 stop,
             ),
