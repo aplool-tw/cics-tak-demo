@@ -98,6 +98,12 @@ class GatewayMain:
                 uds_timeout_s=cfg.uds_timeout_s,
             )
 
+        self._broadcaster: Optional["SitesBroadcaster"] = None
+        if config.broadcast.enabled:
+            from cot_gateway.cot.site_broadcaster import SitesBroadcaster
+
+            self._broadcaster = SitesBroadcaster(config.broadcast, self.cot_queue, self._stop)
+
     # ------------------------------------------------------------------
     # Coroutines
     # ------------------------------------------------------------------
@@ -205,6 +211,9 @@ class GatewayMain:
         ]
         if self.sentrycs is not None:
             coroutines.append(self.sentrycs.run())
+
+        if self._broadcaster is not None:
+            coroutines.append(self._broadcaster.run())
 
         # Start optional web server
         web_task: asyncio.Task | None = None
