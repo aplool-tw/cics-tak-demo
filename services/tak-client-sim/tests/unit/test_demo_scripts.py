@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).parents[4]
 
 
@@ -26,3 +25,16 @@ def test_demo_3drone_scenario_paths() -> None:
     content = script_path.read_text()
 
     assert "demo_three_drones.yaml" in content
+
+
+def test_production_modules_avoid_print_statements() -> None:
+    module_paths = [
+        REPO_ROOT / "services" / "tak-client-sim" / "src" / "tak_client_sim" / "web_server.py",
+        REPO_ROOT / "services" / "tak-client-sim" / "src" / "tak_client_sim" / "config.py",
+        REPO_ROOT / "services" / "tak-client-sim" / "src" / "tak_client_sim" / "cot_store.py",
+        REPO_ROOT / "services" / "tak-client-sim" / "src" / "tak_client_sim" / "models.py",
+        REPO_ROOT / "services" / "tak-client-sim" / "src" / "tak_client_sim" / "parser.py",
+    ]
+
+    for module_path in module_paths:
+        assert "print(" not in module_path.read_text(), f"print() found in {module_path.name}"

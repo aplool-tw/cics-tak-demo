@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import yaml
 from pydantic import ValidationError
 
 from tak_client_sim.__main__ import _build_parser
@@ -101,3 +102,13 @@ async def test_connect_with_retry_uses_ssl_context_when_use_ssl_true() -> None:
         await connect_with_retry(ClientConfig(use_ssl=True), stats, stop)
 
     assert isinstance(open_connection.await_args.kwargs["ssl"], ssl.SSLContext)
+
+
+def test_demo_yaml_smoke_loads_client_config() -> None:
+    config_path = Path(__file__).parents[2] / "config" / "demo.yaml"
+    with config_path.open() as fh:
+        loaded = yaml.safe_load(fh)
+
+    cfg = ClientConfig(**loaded)
+
+    assert cfg.use_ssl is False

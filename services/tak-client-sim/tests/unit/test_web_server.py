@@ -213,6 +213,35 @@ async def test_events_endpoint_with_event() -> None:
 
 
 @pytest.mark.asyncio
+async def test_events_endpoint_contract_keys() -> None:
+    store, client = _make_client()
+    await store.upsert(_make_event())
+    expected_keys = [
+        "uid",
+        "source",
+        "color",
+        "cot_type",
+        "lat",
+        "lon",
+        "hae",
+        "speed",
+        "course",
+        "remarks",
+        "time",
+        "stale",
+        "delta_s",
+        "is_stale",
+        "stale_in_s",
+    ]
+
+    async with client:
+        resp = await client.get("/events")
+        data = await resp.json()
+
+    assert list(data["events"][0].keys()) == expected_keys
+
+
+@pytest.mark.asyncio
 async def test_events_endpoint_multiple_sources() -> None:
     store, client = _make_client()
     await store.upsert(_make_event(uid="ECHO-TRK-E01", source="ECHO"))

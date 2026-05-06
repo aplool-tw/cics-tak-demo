@@ -133,11 +133,11 @@ description: "Task list for feature 013-tak-client-sim-webmap"
 
 ## Final Phase: Polish & Cross-Cutting
 
-- [ ] T032 [P] Run full pytest suite for tak-client-sim (`pytest services/tak-client-sim/tests/ -v`) and confirm zero failures and zero errors — includes all pre-existing tests plus T002–T004 and T009–T013b
-- [ ] T032b [P] Wire-contract regression (SC-008 / M4): in `test_web_server.py` or standalone, load a known `CotEvent` fixture into `CotStore`, GET `/events`, assert response JSON contains exactly these keys: `uid, source, color, cot_type, lat, lon, hae, speed, course, remarks, time, stale, delta_s, is_stale, stale_in_s` — no extra, no missing fields
-- [ ] T033 [P] Load `services/tak-client-sim/config/demo.yaml` through `ClientConfig` in a smoke-test assertion: `ClientConfig(**yaml.safe_load(open("services/tak-client-sim/config/demo.yaml")))` must not raise `ValidationError` — confirms T005 + T008 are consistent
-- [ ] T033b [P] Run `grep -rn 'print(' services/tak-client-sim/src/tak_client_sim/` — assert zero matches in production modules (`web_server.py`, `config.py`, `cot_store.py`, `models.py`, `parser.py`) (FR-012/G3) — allowed only in `formatter.py` and `connection.py` per AGENTS.md exception
-- [ ] T034 Run `shellcheck -S warning scripts/demo-1drone.sh scripts/demo-3drone.sh` as a final gate; confirm zero warnings and both files have executable bit set (`ls -la scripts/demo-*.sh`)
+- [X] T032 [P] Run full pytest suite for tak-client-sim (`pytest services/tak-client-sim/tests/ -v`) and confirm zero failures and zero errors — includes all pre-existing tests plus T002–T004 and T009–T013b
+- [X] T032b [P] Wire-contract regression (SC-008 / M4): in `test_web_server.py` or standalone, load a known `CotEvent` fixture into `CotStore`, GET `/events`, assert response JSON contains exactly these keys: `uid, source, color, cot_type, lat, lon, hae, speed, course, remarks, time, stale, delta_s, is_stale, stale_in_s` — no extra, no missing fields
+- [X] T033 [P] Load `services/tak-client-sim/config/demo.yaml` through `ClientConfig` in a smoke-test assertion: `ClientConfig(**yaml.safe_load(open("services/tak-client-sim/config/demo.yaml")))` must not raise `ValidationError` — confirms T005 + T008 are consistent
+- [X] T033b [P] Run `grep -rn 'print(' services/tak-client-sim/src/tak_client_sim/` — assert zero matches in production modules (`web_server.py`, `config.py`, `cot_store.py`, `models.py`, `parser.py`) (FR-012/G3) — allowed only in `formatter.py` and `connection.py` per AGENTS.md exception
+- [X] T034 Run `shellcheck -S warning scripts/demo-1drone.sh scripts/demo-3drone.sh` as a final gate; confirm zero warnings and both files have executable bit set (`ls -la scripts/demo-*.sh`)
 
 ---
 
