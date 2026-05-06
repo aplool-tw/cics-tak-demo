@@ -71,6 +71,7 @@ description: "Task list for feature 013-tak-client-sim-webmap"
 - [ ] T011 [P] [US1] Write failing unit test for stale dimming: assert HTML contains `opacity:0.45` at SVG root level and grey fill `#546e7a` when `is_stale=true` for both Unknown and Hostile types in `services/tak-client-sim/tests/unit/test_web_icon_logic.py`
 - [ ] T012 [P] [US1] Write failing unit tests for course arrow: assert `<polygon` is present in SVG output when `speed=1.0` (and rotated to `course` value), and absent when `speed=0.2` in `services/tak-client-sim/tests/unit/test_web_icon_logic.py`
 - [ ] T013 [P] [US1] Write failing unit test for unknown `cot_type` fallback: assert `cot_type="a-f-A-M-F-Q-r"` (non-`a-u`, non-`a-h`) renders the same Unknown grey circle+cross SVG without throwing a JS error (verify via HTML string inspection) in `services/tak-client-sim/tests/unit/test_web_icon_logic.py`
+- [ ] T013b [P] [US1] Write failing unit test for legend update (G1 / FR-005): call `_build_map_html()`, extract the `legend.onAdd` block, assert it contains `未知目標 Unknown (a-u-*)`, `敵對目標 Hostile (a-h-*)`, `過期 Stale`, and that old string `灰色目標 (GREY)` is absent in `services/tak-client-sim/tests/unit/test_web_icon_logic.py`
 
 ### Implementation for US-001
 
@@ -81,7 +82,7 @@ description: "Task list for feature 013-tak-client-sim-webmap"
 - [ ] T018 [US1] Preserve course-arrow `<polygon points="0,-7 -3,-1 3,-1">` inside icon body: render when `speed > 0.3`, rotate via `<g transform="rotate(${course})">`, keep `fill="white" opacity="0.85"` for both Unknown and Hostile shapes in `services/tak-client-sim/src/tak_client_sim/web_server.py`
 - [ ] T019 [US1] Update `legend.onAdd()`: replace old grey/red circle-dot entries with inline SVG samples for Unknown (grey circle+cross), Hostile (red diamond), and Stale (dimmed Unknown); update label text to `未知目標 Unknown (a-u-*)`, `敵對目標 Hostile (a-h-*)`, `過期 Stale` in `services/tak-client-sim/src/tak_client_sim/web_server.py`
 
-**Checkpoint**: Run `pytest services/tak-client-sim/tests/unit/test_web_icon_logic.py` — all T009–T013 tests must now be GREEN.
+**Checkpoint**: Run `pytest services/tak-client-sim/tests/unit/test_web_icon_logic.py` — all T009–T013b tests must now be GREEN.
 
 ---
 
@@ -101,7 +102,7 @@ description: "Task list for feature 013-tak-client-sim-webmap"
 ### Implementation for US-002
 
 - [ ] T022 [US2] Create `scripts/demo-1drone.sh`: add `#!/usr/bin/env bash`, `set -euo pipefail`, `SCRIPT_DIR`, `die()` helper, `.dev-runtime/` directory setup, PID-file directory creation, and all config variable declarations (`UDS_SCENARIO`, `ECHO_CONFIG`, `SNTR_CONFIG`, `GW_CONFIG`, `TAK_CONFIG`) with their correct relative paths in `scripts/demo-1drone.sh`
-- [ ] T023 [US2] Add pre-flight checks to `scripts/demo-1drone.sh`: (1) `command -v python3`, (2) existence of all 5 config files, (3) Python module importability for `map_sim`, `uds`, `echoshield_sim`, `sentrycs_sim`, `cot_gateway`, `tak_client_sim` using `python3 -c "import <module>"`, (4) `[[ -f scripts/tak_relay.py ]]` file-existence check in `scripts/demo-1drone.sh`
+- [ ] T023 [US2] Add pre-flight checks to `scripts/demo-1drone.sh`: (1) `command -v python3`, (2) `command -v curl` (required for health-check loop), (3) existence of all 5 config files, (4) Python module importability for `map_sim`, `uds`, `echoshield_sim`, `sentrycs_sim`, `cot_gateway`, `tak_client_sim` using `python3 -c "import <module>"`, (5) `[[ -f scripts/tak_relay.py ]]` file-existence check in `scripts/demo-1drone.sh`
 - [ ] T024 [US2] Add `check_port_free()` helper (using `/dev/tcp` bash built-in) and pre-flight port conflict detection for ports 8089, 8090, 8092, 8093, 18080, 7070 — all checked before first service launch in `scripts/demo-1drone.sh`
 - [ ] T025 [US2] Add 7-service launch block in correct startup order (map-sim → uds → echoshield-sim → sentrycs-sim → cot-gateway → tak-relay → tak-client-sim): each launched via `python3 -m <module>` (or `python3 scripts/tak_relay.py`) with `&`, PID captured to `<SVC>_PID`, and PID written to `.dev-runtime/pids/<svc-name>.pid` in `scripts/demo-1drone.sh`
 - [ ] T026 [US2] Add health-check loop (30 s timeout, 1 s poll): HTTP checks via `curl -sf` for `:8090/health`, `:9001/info`, `:7070/health`, `:8092/health`, `:8093/health`; TCP checks via `/dev/tcp` for `:18080` and `:8089`; progress ticker `map:· uds:· echo:· sntr:· gw:· relay:· tak:·`; dead-process detection (PID no longer running triggers `die()`) in `scripts/demo-1drone.sh`
@@ -132,8 +133,10 @@ description: "Task list for feature 013-tak-client-sim-webmap"
 
 ## Final Phase: Polish & Cross-Cutting
 
-- [ ] T032 [P] Run full pytest suite for tak-client-sim (`pytest services/tak-client-sim/tests/ -v`) and confirm zero failures and zero errors — includes all pre-existing tests plus T002–T004 and T009–T013
+- [ ] T032 [P] Run full pytest suite for tak-client-sim (`pytest services/tak-client-sim/tests/ -v`) and confirm zero failures and zero errors — includes all pre-existing tests plus T002–T004 and T009–T013b
+- [ ] T032b [P] Wire-contract regression (SC-008 / M4): in `test_web_server.py` or standalone, load a known `CotEvent` fixture into `CotStore`, GET `/events`, assert response JSON contains exactly these keys: `uid, source, color, cot_type, lat, lon, hae, speed, course, remarks, time, stale, delta_s, is_stale, stale_in_s` — no extra, no missing fields
 - [ ] T033 [P] Load `services/tak-client-sim/config/demo.yaml` through `ClientConfig` in a smoke-test assertion: `ClientConfig(**yaml.safe_load(open("services/tak-client-sim/config/demo.yaml")))` must not raise `ValidationError` — confirms T005 + T008 are consistent
+- [ ] T033b [P] Run `grep -rn 'print(' services/tak-client-sim/src/tak_client_sim/` — assert zero matches in production modules (`web_server.py`, `config.py`, `cot_store.py`, `models.py`, `parser.py`) (FR-012/G3) — allowed only in `formatter.py` and `connection.py` per AGENTS.md exception
 - [ ] T034 Run `shellcheck -S warning scripts/demo-1drone.sh scripts/demo-3drone.sh` as a final gate; confirm zero warnings and both files have executable bit set (`ls -la scripts/demo-*.sh`)
 
 ---

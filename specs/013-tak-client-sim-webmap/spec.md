@@ -173,7 +173,7 @@ appear on all maps and the script stops cleanly.
   (`max_retries: 9999`); the demo script must wait for the stub to be healthy
   before starting `tak-client-sim` to avoid a misleading connection-refused
   burst in the logs.
-- **Port already in use**: If `:8089`, `:8090`, `:8092`, or `:8093`
+- **Port already in use**: If any of `:8089`, `:8090`, `:8092`, `:8093`, `:18080`, or `:7070`
   is already bound when the script starts, the script must detect the conflict
   and exit with a clear error message before spawning services.
 - **Unknown `cot_type` prefix**: A CoT event whose type does not start with

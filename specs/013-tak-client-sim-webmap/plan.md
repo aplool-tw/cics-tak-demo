@@ -57,7 +57,7 @@ Upgrade the `tak-client-sim` Leaflet web map with MIL-STD-2525C-compliant SVG ic
 2. **`makeDroneIcon(evt)`** — Replace circle `<circle>` SVG with shape-switching logic:
    - Reads `evt.cot_type` (already present in `/events` JSON payload via `CotEvent.cot_type`)
    - Renders Unknown: `<circle r="10" fill="#90a4ae" stroke="#546e7a" stroke-width="2"/>` + cross lines `<line x1="-5" y1="-5" x2="5" y2="5"/>` + `<line x1="5" y1="-5" x2="-5" y2="5"/>`
-   - Renders Hostile: `<rect x="-9" y="-9" width="18" height="18" fill="#ef5350" stroke="#b71c1c" stroke-width="2" transform="rotate(45)"/>`
+   - Renders Hostile: `<rect x="-8" y="-8" width="16" height="16" fill="#ef5350" stroke="#b71c1c" stroke-width="2" transform="rotate(45)"/>`
    - Stale overlay: apply `opacity="0.45"` at `<svg>` level and grey fill override
    - Arrow (speed > 0.3 m/s): existing `<polygon points="0,-7 -3,-1 3,-1">` rotated to `course`; preserved inside shape boundary
 
@@ -80,7 +80,7 @@ Upgrade the `tak-client-sim` Leaflet web map with MIL-STD-2525C-compliant SVG ic
 ```python
 use_ssl: bool = True
 ```
-Placed immediately after `use_ssl_verify` (line ~19). Default `True` preserves backward compatibility for all existing configs that omit the field.
+Placed after `port`, before `use_ssl_verify`. Default `True` preserves backward compatibility for all existing configs that omit the field.
 
 **`load_config()` update**: Add CLI override block:
 ```python
