@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Literal, Optional
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 # Silence "json shadows BaseModel attribute" benign warning (we use `logging.json` YAML key).
 warnings.filterwarnings(
@@ -99,6 +99,29 @@ class PerimeterGuardConfig(BaseModel):
     uds_timeout_s: float = Field(default=3.0, gt=0.0)
 
 
+class BroadcastConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool = False
+    sp_lat: float = Field(default=24.725806, ge=-90.0, le=90.0)
+    sp_lon: float = Field(default=121.033750, ge=-180.0, le=180.0)
+    sp_alt_m: float = Field(default=50.0, ge=0.0)
+    sp_name: str = "Strategic Point"
+    hp_lat: float = Field(default=24.735344, ge=-90.0, le=90.0)
+    hp_lon: float = Field(default=121.044252, ge=-180.0, le=180.0)
+    hp_alt_m: float = Field(default=0.0, ge=0.0)
+    hp_name: str = "Holding Point"
+    defense_rings_m: list[int] = Field(default_factory=lambda: [1000, 2000, 3000])
+    interval_s: float = Field(default=30.0, gt=0.0)
+
+    @field_validator("defense_rings_m", mode="before")
+    @classmethod
+    def _check_rings(cls, v: list[int]) -> list[int]:
+        for r in v:
+            if r <= 0:
+                raise ValueError(f"defense_rings_m entries must be > 0, got {r}")
+        return v
+
+
 class GatewayConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     echoshield: EchoshieldConfig = Field(default_factory=EchoshieldConfig)
@@ -108,6 +131,7 @@ class GatewayConfig(BaseModel):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     web: WebConfig = Field(default_factory=WebConfig)
     perimeter: Optional[PerimeterGuardConfig] = None
+    broadcast: BroadcastConfig = Field(default_factory=BroadcastConfig)
 
     @model_validator(mode="after")
     def _check_cert_file(self) -> "GatewayConfig":

@@ -30,3 +30,17 @@ tak_server:
 logging:
   level: INFO
   json: true
+
+broadcast:
+  enabled: false
+  # SP and HP coordinates (defaults match Taiwan PoC site)
+  sp_lat: 24.725806
+  sp_lon: 121.033750
+  sp_alt_m: 50.0
+  sp_name: "Strategic Point"
+  hp_lat: 24.735344
+  hp_lon: 121.044252
+  hp_alt_m: 0.0
+  hp_name: "Holding Point"
+  defense_rings_m: [1000, 2000, 3000]
+  interval_s: 30.0

@@ -207,6 +207,7 @@ async def test_fused_mitigating_inside_radius_fires():
 
 # ── T018b: FUSED track sends rf_track_id (not FUSED-prefixed track_id) ──────
 
+
 @pytest.mark.asyncio
 async def test_fused_takeover_payload_uses_rf_track_id():
     """T018b: FUSED takeover payload drone_id uses rf_track_id, not prefixed track_id.
@@ -248,9 +249,9 @@ async def test_fused_takeover_payload_uses_rf_track_id():
 
     mock_session.post.assert_called_once()
     payload = mock_session.post.call_args[1]["json"]
-    assert payload["drone_id"] == "TRK-E01", (
-        f"Expected UDS drone_id 'TRK-E01', got '{payload['drone_id']}'"
-    )
+    assert (
+        payload["drone_id"] == "TRK-E01"
+    ), f"Expected UDS drone_id 'TRK-E01', got '{payload['drone_id']}'"
     mark_takeover.assert_awaited_once_with("FUSED-TRK-E01")
 
 
