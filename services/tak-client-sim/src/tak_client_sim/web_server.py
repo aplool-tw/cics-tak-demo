@@ -203,9 +203,9 @@ _MAP_HTML_TEMPLATE = """\
         '<div class="legend-item"><span class="legend-ring" style="border-color:#ffca28"></span>2 km 範圍</div>' +
         '<div class="legend-item"><span class="legend-ring" style="border-color:#ef5350"></span>3 km 範圍</div>' +
         '<div class="legend-sep"></div>' +
-        '<div class="legend-item"><span class="legend-dot" style="background:#64b5f6;border:2px solid #0d47a1"></span>灰色目標 (GREY)</div>' +
-        '<div class="legend-item"><span class="legend-dot" style="background:#ef5350;border:2px solid #b71c1c"></span>敵對目標 (RED)</div>' +
-        '<div class="legend-item"><span class="legend-dot" style="background:#546e7a;border:2px solid #37474f;opacity:0.6"></span>過期目標 (Stale)</div>';
+        '<div class="legend-item"><svg viewBox="-12 -12 24 24" width="16" height="16"><circle r="10" fill="#90a4ae" stroke="#546e7a" stroke-width="2"/><line x1="-5" y1="-5" x2="5" y2="5" stroke="#546e7a" stroke-width="1.5" stroke-linecap="round"/><line x1="5" y1="-5" x2="-5" y2="5" stroke="#546e7a" stroke-width="1.5" stroke-linecap="round"/></svg>\u00a0未知目標 Unknown (a-u-*)</div>' +
+        '<div class="legend-item"><svg viewBox="-12 -12 24 24" width="16" height="16"><rect x="-8" y="-8" width="16" height="16" fill="#ef5350" stroke="#b71c1c" stroke-width="2" transform="rotate(45)"/></svg>\u00a0敵對目標 Hostile (a-h-*)</div>' +
+        '<div class="legend-item" style="opacity:0.45"><svg viewBox="-12 -12 24 24" width="16" height="16"><circle r="10" fill="#546e7a" stroke="#37474f" stroke-width="2"/><line x1="-5" y1="-5" x2="5" y2="5" stroke="#37474f" stroke-width="1.5" stroke-linecap="round"/><line x1="5" y1="-5" x2="-5" y2="5" stroke="#37474f" stroke-width="1.5" stroke-linecap="round"/></svg>\u00a0過期 Stale</div>';
       return d;
     };
     legend.addTo(map);
@@ -230,32 +230,50 @@ _MAP_HTML_TEMPLATE = """\
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    function evtColors(color, isStale) {
-      if (isStale) return { fill:'#546e7a', stroke:'#37474f', glow:'#546e7a' };
-      if (color === 'RED')  return { fill:'#ef5350', stroke:'#b71c1c', glow:'#ef5350' };
-      if (color === 'GREY') return { fill:'#64b5f6', stroke:'#0d47a1', glow:'#64b5f6' };
-      return { fill:'#90a4ae', stroke:'#546e7a', glow:'#90a4ae' };
+    function makeIconHtml(cotType, isStale, speed, course) {
+      const staleStyle = isStale ? 'opacity:0.45' : '';
+      const arrow = (speed > 0.3)
+        ? `<g transform="rotate(${course})"><polygon points="0,-7 -3,-1 3,-1" fill="white" opacity="0.85"/></g>`
+        : '';
+
+      if (cotType.startsWith('a-h')) {
+        const fill = isStale ? '#546e7a' : '#ef5350';
+        const stroke = isStale ? '#37474f' : '#b71c1c';
+        return `<svg viewBox="-12 -12 24 24" width="24" height="24" style="${staleStyle}">
+          <rect x="-8" y="-8" width="16" height="16" fill="${fill}" stroke="${stroke}" stroke-width="2" transform="rotate(45)"/>
+          ${arrow}
+        </svg>`;
+      } else {
+        const fill = isStale ? '#546e7a' : '#90a4ae';
+        const stroke = isStale ? '#37474f' : '#546e7a';
+        return `<svg viewBox="-12 -12 24 24" width="24" height="24" style="${staleStyle}">
+          <circle r="10" fill="${fill}" stroke="${stroke}" stroke-width="2"/>
+          <line x1="-5" y1="-5" x2="5" y2="5" stroke="${stroke}" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="5" y1="-5" x2="-5" y2="5" stroke="${stroke}" stroke-width="1.5" stroke-linecap="round"/>
+          ${arrow}
+        </svg>`;
+      }
     }
 
     function makeDroneIcon(evt) {
-      const c = evtColors(evt.color, evt.is_stale);
-      const showArrow = evt.speed > 0.3;
+      const html = makeIconHtml(evt.cot_type, evt.is_stale, evt.speed, evt.course);
       return L.divIcon({
         className: '',
-        html: `<svg viewBox="-12 -12 24 24" width="24" height="24">
-          <circle r="10" fill="${c.fill}" stroke="${c.stroke}" stroke-width="2"
-                  style="filter:drop-shadow(0 0 4px ${c.glow})"/>
-          ${showArrow ? `<g transform="rotate(${evt.course})">
-            <polygon points="0,-7 -3,-1 3,-1" fill="white" opacity="0.85"/>
-          </g>` : ''}
-        </svg>`,
+        html: html,
         iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -16]
       });
     }
 
+    function cotColor(cotType, isStale) {
+      if (isStale) return '#b0bec5';
+      if (cotType.startsWith('a-h')) return '#ef5350';
+      if (cotType.startsWith('a-u')) return '#90a4ae';
+      return '#b0bec5';
+    }
+
     function tooltipClass(evt) {
       if (evt.is_stale) return 'leaflet-tooltip-cot stale-label';
-      if (evt.color === 'RED') return 'leaflet-tooltip-cot red-label';
+      if (evt.cot_type && evt.cot_type.startsWith('a-h')) return 'leaflet-tooltip-cot red-label';
       return 'leaflet-tooltip-cot';
     }
 
@@ -280,7 +298,7 @@ _MAP_HTML_TEMPLATE = """\
     function cardHtml(evt) {
       const badgeClass = 'source-badge badge-' + evt.source;
       const staleTag   = evt.is_stale ? '<span class="stale-tag">⚠ STALE</span>' : '';
-      const colorDot   = evtColors(evt.color, evt.is_stale).fill;
+      const colorDot   = cotColor(evt.cot_type, evt.is_stale);
       const timeStr    = evt.time.replace('T', ' ').substr(0, 19).replace('T', ' ').substr(11, 8);
       const distM      = dist(SP.lat, SP.lon, evt.lat, evt.lon).toFixed(0);
       return '<div class="event-card' + (evt.is_stale ? ' stale' : '') +

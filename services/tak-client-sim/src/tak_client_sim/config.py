@@ -16,6 +16,7 @@ class ClientConfig(BaseModel):
 
     host: str = "tak-server"
     port: int = Field(default=8089, ge=1, le=65535)
+    use_ssl: bool = True
     use_ssl_verify: bool = False
     ca_bundle: Optional[str] = None
     max_retries: int = Field(default=0, ge=0)
@@ -64,11 +65,11 @@ def load_config(args: argparse.Namespace) -> ClientConfig:
             with open(config_path) as f:
                 loaded = yaml.safe_load(f) or {}
             if not isinstance(loaded, dict):
-                print(f"Config file {config_path!r} must contain a YAML mapping", file=sys.stderr)
+                log.error("config_file_not_mapping", config_path=config_path)
                 sys.exit(2)
             base.update(loaded)
         except OSError as exc:
-            print(f"Cannot read config file {config_path!r}: {exc}", file=sys.stderr)
+            log.error("config_file_read_failed", config_path=config_path, error=str(exc))
             sys.exit(2)
 
     # CLI overrides
@@ -76,6 +77,10 @@ def load_config(args: argparse.Namespace) -> ClientConfig:
         base["host"] = args.host
     if getattr(args, "port", None) is not None:
         base["port"] = args.port
+    if getattr(args, "ssl", False):
+        base["use_ssl"] = True
+    if getattr(args, "no_ssl", False):
+        base["use_ssl"] = False
     if getattr(args, "no_ssl_verify", False):
         base["use_ssl_verify"] = False
     if getattr(args, "filter", None) is not None:
@@ -96,7 +101,7 @@ def load_config(args: argparse.Namespace) -> ClientConfig:
     try:
         return ClientConfig(**base)
     except Exception as exc:
-        print(f"Configuration error: {exc}", file=sys.stderr)
+        log.error("configuration_error", error=str(exc))
         sys.exit(2)
 
 
@@ -106,5 +111,5 @@ def validate_log_file_writable(path: str) -> None:
         with open(path, "a"):
             pass
     except OSError as exc:
-        print(f"Cannot write to log file {path!r}: {exc}", file=sys.stderr)
+        log.error("log_file_not_writable", path=path, error=str(exc))
         sys.exit(2)
