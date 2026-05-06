@@ -18,7 +18,7 @@ PID_DIR="${ROOT_DIR}/.dev-runtime/pids"
 
 SERVICES=(map-sim uds echoshield-sim sentrycs-sim cot-gateway tak-relay tak-client-sim)
 URLS=(
-    "http://127.0.0.1:8090/objects"
+    "http://127.0.0.1:8090/map"
     "http://127.0.0.1:8092/map"
     "http://127.0.0.1:8093/map"
 )

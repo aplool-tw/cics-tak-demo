@@ -69,7 +69,7 @@ Startup order (enforced by health-check loop before opening browser):
 7. `tak-client-sim` — `:8093/health`
 
 Browser tabs opened (after health checks pass):
-- `http://127.0.0.1:8090/objects` — Map Sim object list
+- `http://127.0.0.1:8090/map` — Map Sim tactical map
 - `http://127.0.0.1:8092/map` — CoT Gateway tactical map
 - `http://127.0.0.1:8093/map` — TAK Client Sim tactical map
 
@@ -154,7 +154,7 @@ scripts/demo-3drone.sh --stop
 
 | Map | URL | Content |
 |-----|-----|---------|
-| Map Sim | http://127.0.0.1:8090/objects | Raw drone positions from UDS |
+| Map Sim | http://127.0.0.1:8090/map | Map Sim tactical map |
 | CoT Gateway | http://127.0.0.1:8092/map | Correlated EchoShield + Sentrycs tracks |
 | TAK Client Sim | http://127.0.0.1:8093/map | CoT XML received from TAK relay (MIL-STD-2525C icons) |
 

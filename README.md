@@ -107,7 +107,7 @@ Demo 腳本會依序啟動 7 個服務（map-sim → uds → echoshield-sim → 
 
 | Web Map | URL | 內容 |
 |---------|-----|------|
-| **Map Sim** | `http://127.0.0.1:8090/objects` | 原始無人機位置（UDS 推送） |
+| **Map Sim** | `http://127.0.0.1:8090/map` | 原始無人機位置（UDS 推送） |
 | **CoT Gateway** | `http://127.0.0.1:8092/map` | EchoShield + Sentrycs 融合 CoT 戰術地圖 |
 | **TAK Client Sim** | `http://127.0.0.1:8093/map` | TAK relay 收到的 CoT XML（MIL-STD-2525C 圖示） |
 
