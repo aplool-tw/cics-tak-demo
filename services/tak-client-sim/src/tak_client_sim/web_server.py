@@ -200,6 +200,9 @@ _MAP_HTML_TEMPLATE = """\
 
     function updateSites(events) {
       siteLayer.clearLayers();
+      // clear site marker refs (rebuilt each refresh)
+      Object.keys(siteMarkers).forEach(k => delete siteMarkers[k]);
+
       const spEvt    = events.find(e => e.uid === SITE_SP_UID);
       const hpEvt    = events.find(e => e.uid === SITE_HP_UID);
       const ringEvts = events.filter(e => e.uid.startsWith(SITE_RING_PFX));
@@ -219,9 +222,9 @@ _MAP_HTML_TEMPLATE = """\
         const ringLabel = ringEvts.length
           ? ringEvts.map(r => (parseInt(r.uid.slice(SITE_RING_PFX.length)) / 1000) + ' km').join(' / ')
           : '–';
-        L.marker([spEvt.lat, spEvt.lon], { icon: spIcon })
-          .bindTooltip('SP 戰略要點 (雷達陣地)', {
-            permanent: true, direction: 'right', offset: [12, 0],
+        const spM = L.marker([spEvt.lat, spEvt.lon], { icon: spIcon })
+          .bindTooltip('SP ' + (spEvt.remarks || '戰略要點'), {
+            permanent: showLabels, direction: 'right', offset: [12, 0],
             className: 'leaflet-tooltip-sp'
           })
           .bindPopup(
@@ -231,6 +234,8 @@ _MAP_HTML_TEMPLATE = """\
             prow('防禦圈', ringLabel),
             { maxWidth: 280 }
           ).addTo(siteLayer);
+        siteMarkers[SITE_SP_UID] = spM;
+        if (!showLabels) spM.closeTooltip();
       }
 
       if (hpEvt) {
@@ -238,9 +243,9 @@ _MAP_HTML_TEMPLATE = """\
         const distLabel = spCoord
           ? dist(spCoord.lat, spCoord.lon, hpEvt.lat, hpEvt.lon).toFixed(0) + ' m'
           : '–';
-        L.marker([hpEvt.lat, hpEvt.lon], { icon: hpIcon })
-          .bindTooltip('HP 指定停機點', {
-            permanent: true, direction: 'right', offset: [12, 0],
+        const hpM = L.marker([hpEvt.lat, hpEvt.lon], { icon: hpIcon })
+          .bindTooltip('HP ' + (hpEvt.remarks || '指定停機點'), {
+            permanent: showLabels, direction: 'right', offset: [12, 0],
             className: 'leaflet-tooltip-hp'
           })
           .bindPopup(
@@ -250,6 +255,8 @@ _MAP_HTML_TEMPLATE = """\
             prow('與 SP 距離', distLabel),
             { maxWidth: 260 }
           ).addTo(siteLayer);
+        siteMarkers[SITE_HP_UID] = hpM;
+        if (!showLabels) hpM.closeTooltip();
       }
     }
 
@@ -269,7 +276,8 @@ _MAP_HTML_TEMPLATE = """\
     legend.addTo(map);
 
     /* ── state ─────────────────────────────────────────────── */
-    const markers   = {};   // uid -> L.Marker
+    const markers   = {};   // uid -> L.Marker  (drone tracks)
+    const siteMarkers = {}; // uid -> L.Marker  (SP / HP site points)
     let showLabels  = true;
     let selectedUid = null;
     let firstFit    = true;
@@ -395,11 +403,19 @@ _MAP_HTML_TEMPLATE = """\
 
     /* ── label visibility ────────────────────────────────────── */
     function applyLabelVisibility() {
+      // drone markers
       Object.keys(markers).forEach(uid => {
         const tt = markers[uid].getTooltip();
         if (!tt) return;
         if (showLabels) markers[uid].openTooltip();
         else markers[uid].closeTooltip();
+      });
+      // site markers (SP / HP)
+      Object.keys(siteMarkers).forEach(uid => {
+        const tt = siteMarkers[uid].getTooltip();
+        if (!tt) return;
+        if (showLabels) siteMarkers[uid].openTooltip();
+        else siteMarkers[uid].closeTooltip();
       });
     }
 

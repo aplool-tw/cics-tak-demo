@@ -97,6 +97,14 @@ def test_build_map_html_has_dynamic_sp_hp_rendering() -> None:
     assert "siteLayer" in html
     assert "spCoord" in html
     assert "hpCoord" in html
+    assert "siteMarkers" in html
+
+
+def test_build_map_html_labels_toggle_applies_to_site_markers() -> None:
+    html = _build_map_html()
+    assert "applyLabelVisibility" in html
+    # label toggle must affect both drone markers and site markers
+    assert "siteMarkers" in html
 
 
 # ── _fmt_dt ───────────────────────────────────────────────────────────────
