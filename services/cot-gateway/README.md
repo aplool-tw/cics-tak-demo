@@ -16,6 +16,28 @@ python3 -m pip install --break-system-packages -e '.[dev]'
 python3 -m cot_gateway --config config/gateway.yaml
 ```
 
+## Web Map Viewer
+
+The built-in Leaflet.js map at `http://127.0.0.1:8092/map` shows all active CoT tracks:
+
+- Live drone markers with MIL-STD-2525C tactical symbols
+- `a-h-*` (hostile/fused) → red diamond; `a-u-*` (unknown/single-source) → grey circle
+- Stale markers dimmed at opacity 0.45
+- SP / HP range rings; event list panel with source badges and distance to SP
+
+```bash
+# Start gateway, then open browser
+python3 -m cot_gateway --config config/gateway.yaml
+open http://127.0.0.1:8092/map
+```
+
+For a full demo with all services and 3 map viewers simultaneously, use the demo scripts at repo root:
+
+```bash
+scripts/demo-1drone.sh   # 1-drone scenario
+scripts/demo-3drone.sh   # 3-drone scenario
+```
+
 ## Test
 
 ```bash

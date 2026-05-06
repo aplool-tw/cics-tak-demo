@@ -2,7 +2,7 @@
 
 > 台灣反無人機 TAK 戰術感知 PoC：整合 EchoShield 4D 雷達與 Sentrycs C-UAS 射頻偵測，融合輸出 CoT 至 TAK Server / ATAK 顯示端。
 
-[![tests](https://img.shields.io/badge/tests-553%20passing-brightgreen)]() [![python](https://img.shields.io/badge/python-3.11+-blue)]() [![status](https://img.shields.io/badge/PoC%20v1-complete-success)]()
+[![tests](https://img.shields.io/badge/tests-659%20passing-brightgreen)]() [![python](https://img.shields.io/badge/python-3.11+-blue)]() [![status](https://img.shields.io/badge/PoC%20v1-complete-success)]()
 
 ---
 
@@ -20,7 +20,7 @@
          │                             ▼                ▼
          │                   ┌─────────────────────────────────┐
          │                   │     Map Simulator (Registry)    │
-         │                   │     REST :8090 + TTL cleanup    │
+         │                   │  REST :8090 + Web Map :8090     │
          │                   └────────────────┬────────────────┘
          │                                    │ 10 Hz poll
          │                                    ▼
@@ -31,34 +31,34 @@
          │                                    │
          ▼                                    ▼
 ┌─────────────────────────────────────────────────────────┐
-│            CoT Gateway  (correlator + emitter)          │
+│          CoT Gateway  (correlator + emitter)            │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │ Echodyne     │  │  Track       │  │ MIL-STD-2525C│  │
 │  │ Adapter      │─▶│  Correlator  │─▶│ XML Generator│  │
 │  └──────────────┘  └──────────────┘  └──────┬───────┘  │
-│  ┌──────────────┐         ▲                 │          │
-│  │ Sentrycs     │─────────┘                 │          │
-│  │ Adapter      │                           ▼          │
-│  └──────────────┘                  TCP+SSL :8089       │
-└─────────────────────────────────────────┬───────────────┘
-                                          │
-                     ┌────────────────────┴────────────────┐
-                     ▼                                     ▼
-             ┌──────────────┐                   ┌─────────────────────┐
-             │  TAK Server  │                   │   TAK Client Sim    │
-             │  (stub/prod) │ ─── CoT push ──▶  │  console validator  │
-             └──────────────┘                   │  (no ATAK needed)   │
-                                                └─────────────────────┘
+│  ┌──────────────┐         ▲          Web Map :8092 │    │
+│  │ Sentrycs     │─────────┘                 │      │    │
+│  │ Adapter      │                           ▼      │    │
+│  └──────────────┘                  TCP :8089       │    │
+└──────────────────────────────────────────┬──────────────┘
+                                           │
+                    ┌──────────────────────┴──────────────────┐
+                    ▼                                         ▼
+           ┌────────────────┐                   ┌─────────────────────────┐
+           │   TAK Relay    │                   │     TAK Client Sim      │
+           │ scripts/tak_   │──── CoT push ────▶│  console + Web Map      │
+           │ relay.py :8089 │                   │  :8093  MIL-STD-2525C   │
+           └────────────────┘                   └─────────────────────────┘
 ```
 
 | 服務 | 路徑 | 角色 | 預設 Port |
 |------|------|------|-----------|
 | **UDS** (Unified Drone Simulator) | `services/uds/` | 無人機飛行模擬 + 接管閉環 | REST `:8080` |
-| **Map Sim** | `services/map-sim/` | 物件狀態中央登錄表 + TTL | REST `:8090` |
+| **Map Sim** | `services/map-sim/` | 物件狀態中央登錄表 + TTL；Web Map `:8090/objects` | REST `:8090` |
 | **EchoShield Sim** | `services/echoshield-sim/` | 雷達 4D 模擬 + 噪點 | TCP NDJSON `:9000` |
 | **Sentrycs Sim** | `services/sentrycs-sim/` | RF C-UAS 反制設備模擬 | HTTP JSON `:7070` |
-| **CoT Gateway** | `services/cot-gateway/` | 雷達/RF 融合 + CoT XML 推送 | → TAK `:8089` |
-| **TAK Client Sim** | `services/tak-client-sim/` | CoT 接收驗證器（取代 ATAK） | TCP+SSL `:8089` |
+| **CoT Gateway** | `services/cot-gateway/` | 雷達/RF 融合 + CoT XML 推送；**Web Map** `:8092/map` | → TAK `:8089` |
+| **TAK Client Sim** | `services/tak-client-sim/` | CoT 接收驗證 + **Web Map** `:8093/map`（MIL-STD-2525C icons） | TCP `:8089` |
 
 ---
 
@@ -82,7 +82,36 @@ done
 
 > macOS / 系統 Python 受 PEP 668 限制時請加 `--break-system-packages`，或先建立 `python3 -m venv .venv && source .venv/bin/activate`。
 
-### 一鍵啟動全部服務
+### Demo 一鍵啟動（推薦）
+
+最快的方式是使用 demo 腳本，可自動啟動全部 7 個服務並開啟三個瀏覽器視窗：
+
+```bash
+# 安裝所有服務（一次即可）
+for svc in uds map-sim echoshield-sim sentrycs-sim cot-gateway tak-client-sim; do
+  pip install -e "services/${svc}[dev]" --break-system-packages
+done
+
+# 單機無人機情境 demo（1 架無人機）
+scripts/demo-1drone.sh
+
+# 三機無人機情境 demo（3 架無人機）
+scripts/demo-3drone.sh
+
+# 停止所有服務
+scripts/demo-1drone.sh --stop
+scripts/demo-3drone.sh --stop
+```
+
+Demo 腳本會依序啟動 7 個服務（map-sim → uds → echoshield-sim → sentrycs-sim → cot-gateway → tak-relay → tak-client-sim），完成 health-check 後自動開啟三個 Web Map Viewer：
+
+| Web Map | URL | 內容 |
+|---------|-----|------|
+| **Map Sim** | `http://127.0.0.1:8090/objects` | 原始無人機位置（UDS 推送） |
+| **CoT Gateway** | `http://127.0.0.1:8092/map` | EchoShield + Sentrycs 融合 CoT 戰術地圖 |
+| **TAK Client Sim** | `http://127.0.0.1:8093/map` | TAK relay 收到的 CoT XML（MIL-STD-2525C 圖示） |
+
+### 開發用多服務啟動
 
 ```bash
 scripts/dev-launcher.sh                  # 啟動全部 6 個服務（預設 ports）
@@ -142,9 +171,14 @@ tail -f .dev-runtime/logs/cot-gateway.log
 
 ### E2E 情境驗證（不需要 ATAK）
 
-Feature 007 提供兩個端對端模擬情境，用於驗證整條鏈路。搭配 `tak-client-sim` 即可在 console 上觀察 CoT 推送結果。
+Feature 007 提供兩個端對端模擬情境，用於驗證整條鏈路。搭配 `tak-client-sim` Web Map Viewer 即可在瀏覽器上觀察 CoT 推送結果（不需安裝 ATAK）。
 
 ```bash
+# 推薦：使用 demo 腳本自動啟動並開啟 3 個 web map（見上方 Demo 一鍵啟動）
+scripts/demo-1drone.sh    # 單機情境
+scripts/demo-3drone.sh    # 三機情境
+
+# 或手動指定情境 YAML：
 # Scenario 1 — 單架無人機（TRK-E01，15 m/s，從正北 5 km 逼近）
 scripts/dev-launcher.sh \
   --uds-scenario services/uds/scenarios/e2e_single_drone.yaml \
@@ -168,6 +202,23 @@ python3 specs/007-scenario/scripts/validate_cot.py --file /tmp/cot_capture.ndjso
 ```
 
 詳見 [`dev-docs/007-scenario.md`](dev-docs/007-scenario.md) 與 [`specs/007-scenario/quickstart.md`](specs/007-scenario/quickstart.md)。
+
+---
+
+### Web Map Viewers
+
+所有三個 Web Map Viewer 使用 Leaflet.js，支援即時 CoT 追蹤、戰術圖示與互動式 popup：
+
+| Map | URL | CoT 資料來源 | 圖示樣式 |
+|-----|-----|-------------|---------|
+| **Map Sim** | `http://127.0.0.1:8090/objects` | UDS 推送（原始位置） | 文字清單 |
+| **CoT Gateway** | `http://127.0.0.1:8092/map` | EchoShield + Sentrycs 融合 | MIL-STD-2525C |
+| **TAK Client Sim** | `http://127.0.0.1:8093/map` | TAK relay CoT XML | MIL-STD-2525C |
+
+CoT 圖示對照：
+- `a-h-*`（敵方／融合）→ 🔴 紅色旋轉菱形 + 方向箭頭
+- `a-u-*`（未知／單源）→ ⬜ 灰色圓圈 + 對角十字 + 方向箭頭
+- Stale → 淡化版本（opacity 0.45）
 
 ---
 
@@ -209,8 +260,12 @@ cics-tak-demo/
 │   ├── 003-echoshield-sim/
 │   ├── 004-sentrycs-sim/
 │   ├── 005-cot-gateway/
-│   ├── 006-tak-client-sim/
-│   └── 007-scenario/         ← E2E 情境 + scripts/validate_*.py
+│   ├── 006-006-tak-client-sim/
+│   ├── 007-scenario/         ← E2E 情境 + scripts/validate_*.py
+│   ├── 010-perimeter-defense/
+│   ├── 011-cot-gw-perimeter/
+│   ├── 012-track-update-fix/
+│   └── 013-tak-client-sim-webmap/ ← Web Map Viewer + Demo Scripts
 ├── dev-docs/                 ← 各 feature 開發完成紀錄
 │   ├── 001-uds.md
 │   ├── 002-map-sim.md
@@ -218,20 +273,26 @@ cics-tak-demo/
 │   ├── 004-sentrycs-sim.md
 │   ├── 005-cot-gateway.md
 │   ├── 006-tak-client-sim.md
-│   └── 007-scenario.md
+│   ├── 007-scenario.md
+│   ├── ...
+│   └── 013-tak-client-sim-webmap.md
 ├── services/                 ← 六個獨立 Python 服務
 │   ├── uds/
 │   ├── map-sim/
 │   ├── echoshield-sim/
-│   │   └── config/           ← e2e_scenario.yaml（感測器設於 SP）
+│   │   └── config/           ← e2e_scenario.yaml / demo.yaml
 │   ├── sentrycs-sim/
-│   │   └── config/           ← e2e_single_drone.yaml / e2e_multi_drone.yaml
+│   │   └── config/           ← e2e_single_drone.yaml / e2e_multi_drone.yaml / demo.yaml
 │   ├── cot-gateway/
+│   │   └── ...               ← Web Map Viewer :8092/map
 │   └── tak-client-sim/
-│       └── ...               ← CoT 接收 + console 輸出（取代 ATAK）
+│       └── ...               ← CoT 接收 + console + Web Map :8093/map（MIL-STD-2525C）
 ├── scripts/
 │   ├── dev-launcher.sh       ← 多服務啟動腳本（含 --echoshield-config）
-│   └── dev-launcher.example.conf
+│   ├── demo-1drone.sh        ← 單機無人機 demo（7 服務 + 3 browser tabs）
+│   ├── demo-3drone.sh        ← 三機無人機 demo（7 服務 + 3 browser tabs）
+│   ├── tak_relay.py          ← TAK plaintext TCP broadcast relay（demo 用）
+│   └── gen-certs.sh          ← 自簽 PKI 產生工具
 └── .specify/                 ← Speckit 工具與模板
 ```
 
@@ -268,16 +329,16 @@ done
 python3 -m pytest specs/007-scenario/scripts/ -q
 ```
 
-當前測試總計：**553 pass**（服務 522 + 情境驗證 31）
+當前測試總計：**659 pass**（服務 628 + 情境驗證 31）
 
 | Service | Tests |
 |---------|-------|
 | UDS | 83 |
-| Map Sim | 102 |
+| Map Sim | 107 |
 | EchoShield Sim | 74 |
-| Sentrycs Sim | 110 |
-| CoT Gateway | 94 |
-| TAK Client Sim | 59 |
+| Sentrycs Sim | 117 |
+| CoT Gateway | 149 |
+| TAK Client Sim | 98 |
 | 情境驗證腳本 | 31 |
 
 ### Lint
