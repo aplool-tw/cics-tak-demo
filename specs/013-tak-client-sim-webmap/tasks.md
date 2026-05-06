@@ -96,19 +96,19 @@ description: "Task list for feature 013-tak-client-sim-webmap"
 
 ### Tests for US-002 — write and confirm RED first
 
-- [ ] T020 [P] [US2] Write failing test: use `subprocess.run` to invoke `scripts/demo-1drone.sh` with a missing config file path injected via env var (or temp YAML absence), assert exit code is non-zero and stderr contains an actionable file-not-found message in `services/tak-client-sim/tests/unit/test_demo_scripts.py`
-- [ ] T021 [P] [US2] Write failing test: verify `scripts/demo-3drone.sh` references `demo_three_drones.yaml` for both `UDS_SCENARIO` and `SNTR_CONFIG` variables (grep-based assertion on script contents), and verify `scripts/demo-1drone.sh` references `demo_single_drone.yaml` for `UDS_SCENARIO` in `services/tak-client-sim/tests/unit/test_demo_scripts.py`
+- [X] T020 [P] [US2] Write failing test: use `subprocess.run` to invoke `scripts/demo-1drone.sh` with a missing config file path injected via env var (or temp YAML absence), assert exit code is non-zero and stderr contains an actionable file-not-found message in `services/tak-client-sim/tests/unit/test_demo_scripts.py`
+- [X] T021 [P] [US2] Write failing test: verify `scripts/demo-3drone.sh` references `demo_three_drones.yaml` for both `UDS_SCENARIO` and `SNTR_CONFIG` variables (grep-based assertion on script contents), and verify `scripts/demo-1drone.sh` references `demo_single_drone.yaml` for `UDS_SCENARIO` in `services/tak-client-sim/tests/unit/test_demo_scripts.py`
 
 ### Implementation for US-002
 
-- [ ] T022 [US2] Create `scripts/demo-1drone.sh`: add `#!/usr/bin/env bash`, `set -euo pipefail`, `SCRIPT_DIR`, `die()` helper, `.dev-runtime/` directory setup, PID-file directory creation, and all config variable declarations (`UDS_SCENARIO`, `ECHO_CONFIG`, `SNTR_CONFIG`, `GW_CONFIG`, `TAK_CONFIG`) with their correct relative paths in `scripts/demo-1drone.sh`
-- [ ] T023 [US2] Add pre-flight checks to `scripts/demo-1drone.sh`: (1) `command -v python3`, (2) `command -v curl` (required for health-check loop), (3) existence of all 5 config files, (4) Python module importability for `map_sim`, `uds`, `echoshield_sim`, `sentrycs_sim`, `cot_gateway`, `tak_client_sim` using `python3 -c "import <module>"`, (5) `[[ -f scripts/tak_relay.py ]]` file-existence check in `scripts/demo-1drone.sh`
-- [ ] T024 [US2] Add `check_port_free()` helper (using `/dev/tcp` bash built-in) and pre-flight port conflict detection for ports 8089, 8090, 8092, 8093, 18080, 7070 — all checked before first service launch in `scripts/demo-1drone.sh`
-- [ ] T025 [US2] Add 7-service launch block in correct startup order (map-sim → uds → echoshield-sim → sentrycs-sim → cot-gateway → tak-relay → tak-client-sim): each launched via `python3 -m <module>` (or `python3 scripts/tak_relay.py`) with `&`, PID captured to `<SVC>_PID`, and PID written to `.dev-runtime/pids/<svc-name>.pid` in `scripts/demo-1drone.sh`
-- [ ] T026 [US2] Add health-check loop (30 s timeout, 1 s poll): HTTP checks via `curl -sf` for `:8090/health`, `:9001/info`, `:7070/health`, `:8092/health`, `:8093/health`; TCP checks via `/dev/tcp` for `:18080` and `:8089`; progress ticker `map:· uds:· echo:· sntr:· gw:· relay:· tak:·`; dead-process detection (PID no longer running triggers `die()`) in `scripts/demo-1drone.sh`
-- [ ] T027 [US2] Add scenario banner output (single-drone TRK-E01 timeline) and browser-open loop for 3 URLs (`http://127.0.0.1:8090/objects`, `http://127.0.0.1:8092/map`, `http://127.0.0.1:8093/map`) using `xdg-open "$url" 2>/dev/null || open "$url" 2>/dev/null || echo "Open manually: $url"` in `scripts/demo-1drone.sh`
-- [ ] T028 [US2] Add `cleanup()` function (SIGTERM all PIDs → `sleep 1` → SIGKILL, remove all 7 PID files from `.dev-runtime/pids/`) and `trap cleanup INT TERM EXIT`; add `--stop` flag handler (reads PID files, sends SIGTERM, removes files, graceful if PID file missing) in `scripts/demo-1drone.sh`
-- [ ] T029 [US2] Set executable bit and run `shellcheck -S warning scripts/demo-1drone.sh` — fix all reported warnings before proceeding in `scripts/demo-1drone.sh`
+- [X] T022 [US2] Create `scripts/demo-1drone.sh`: add `#!/usr/bin/env bash`, `set -euo pipefail`, `SCRIPT_DIR`, `die()` helper, `.dev-runtime/` directory setup, PID-file directory creation, and all config variable declarations (`UDS_SCENARIO`, `ECHO_CONFIG`, `SNTR_CONFIG`, `GW_CONFIG`, `TAK_CONFIG`) with their correct relative paths in `scripts/demo-1drone.sh`
+- [X] T023 [US2] Add pre-flight checks to `scripts/demo-1drone.sh`: (1) `command -v python3`, (2) `command -v curl` (required for health-check loop), (3) existence of all 5 config files, (4) Python module importability for `map_sim`, `uds`, `echoshield_sim`, `sentrycs_sim`, `cot_gateway`, `tak_client_sim` using `python3 -c "import <module>"`, (5) `[[ -f scripts/tak_relay.py ]]` file-existence check in `scripts/demo-1drone.sh`
+- [X] T024 [US2] Add `check_port_free()` helper (using `/dev/tcp` bash built-in) and pre-flight port conflict detection for ports 8089, 8090, 8092, 8093, 18080, 7070 — all checked before first service launch in `scripts/demo-1drone.sh`
+- [X] T025 [US2] Add 7-service launch block in correct startup order (map-sim → uds → echoshield-sim → sentrycs-sim → cot-gateway → tak-relay → tak-client-sim): each launched via `python3 -m <module>` (or `python3 scripts/tak_relay.py`) with `&`, PID captured to `<SVC>_PID`, and PID written to `.dev-runtime/pids/<svc-name>.pid` in `scripts/demo-1drone.sh`
+- [X] T026 [US2] Add health-check loop (30 s timeout, 1 s poll): HTTP checks via `curl -sf` for `:8090/health`, `:9001/info`, `:7070/health`, `:8092/health`, `:8093/health`; TCP checks via `/dev/tcp` for `:18080` and `:8089`; progress ticker `map:· uds:· echo:· sntr:· gw:· relay:· tak:·`; dead-process detection (PID no longer running triggers `die()`) in `scripts/demo-1drone.sh`
+- [X] T027 [US2] Add scenario banner output (single-drone TRK-E01 timeline) and browser-open loop for 3 URLs (`http://127.0.0.1:8090/objects`, `http://127.0.0.1:8092/map`, `http://127.0.0.1:8093/map`) using `xdg-open "$url" 2>/dev/null || open "$url" 2>/dev/null || echo "Open manually: $url"` in `scripts/demo-1drone.sh`
+- [X] T028 [US2] Add `cleanup()` function (SIGTERM all PIDs → `sleep 1` → SIGKILL, remove all 7 PID files from `.dev-runtime/pids/`) and `trap cleanup INT TERM EXIT`; add `--stop` flag handler (reads PID files, sends SIGTERM, removes files, graceful if PID file missing) in `scripts/demo-1drone.sh`
+- [X] T029 [US2] Set executable bit and run `shellcheck -S warning scripts/demo-1drone.sh` — fix all reported warnings before proceeding in `scripts/demo-1drone.sh`
 
 **Checkpoint**: `shellcheck scripts/demo-1drone.sh` exits 0 and `pytest services/tak-client-sim/tests/unit/test_demo_scripts.py::test_demo_1drone_missing_config` passes GREEN.
 
@@ -124,8 +124,8 @@ description: "Task list for feature 013-tak-client-sim-webmap"
 
 ### Implementation for US-003
 
-- [ ] T030 [P] [US3] Create `scripts/demo-3drone.sh` by copying `scripts/demo-1drone.sh` and substituting: `UDS_SCENARIO` → `services/uds/scenarios/demo_three_drones.yaml`, `SNTR_CONFIG` → `services/sentrycs-sim/config/demo_three_drones.yaml`, scenario banner text → three-drone variant; all other logic (health checks, browser URLs, cleanup, `--stop`) remains identical in `scripts/demo-3drone.sh`
-- [ ] T031 [US3] Set executable bit and run `shellcheck -S warning scripts/demo-3drone.sh` — fix all reported warnings in `scripts/demo-3drone.sh`
+- [X] T030 [P] [US3] Create `scripts/demo-3drone.sh` by copying `scripts/demo-1drone.sh` and substituting: `UDS_SCENARIO` → `services/uds/scenarios/demo_three_drones.yaml`, `SNTR_CONFIG` → `services/sentrycs-sim/config/demo_three_drones.yaml`, scenario banner text → three-drone variant; all other logic (health checks, browser URLs, cleanup, `--stop`) remains identical in `scripts/demo-3drone.sh`
+- [X] T031 [US3] Set executable bit and run `shellcheck -S warning scripts/demo-3drone.sh` — fix all reported warnings in `scripts/demo-3drone.sh`
 
 **Checkpoint**: `pytest services/tak-client-sim/tests/unit/test_demo_scripts.py::test_demo_3drone_scenario_paths` passes GREEN.
 
