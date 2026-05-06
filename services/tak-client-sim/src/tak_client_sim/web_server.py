@@ -90,6 +90,14 @@ _MAP_HTML_TEMPLATE = """\
     .legend-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
     .legend-ring{width:11px;height:11px;border-radius:50%;border:2px solid;background:transparent;flex-shrink:0}
     .legend-sep{border-top:1px solid #1e3a5f;margin:4px 0}
+
+    /* ── map display controls (brightness / opacity) ────────── */
+    #map-ctrl{position:absolute;bottom:34px;left:10px;z-index:1000;width:190px;background:rgba(13,27,42,0.92);border:1px solid #1e3a5f;border-radius:5px;padding:8px 11px;font-size:11px;font-family:monospace;color:#90caf9}
+    #map-ctrl-head{font-size:10px;color:#64b5f6;margin-bottom:6px;letter-spacing:.5px}
+    .ctrl-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+    .ctrl-lbl{flex-shrink:0;width:68px}
+    .ctrl-val{width:32px;text-align:right;color:#00d4ff;flex-shrink:0}
+    .ctrl-row input[type=range]{flex:1;margin:0 5px;accent-color:#00d4ff;height:4px;cursor:pointer}
   </style>
 </head>
 <body>
@@ -107,7 +115,21 @@ _MAP_HTML_TEMPLATE = """\
   </div>
 
   <div id="body">
-    <div id="map"></div>
+    <div id="map">
+      <div id="map-ctrl">
+        <div id="map-ctrl-head">&#9788; Map Display</div>
+        <div class="ctrl-row">
+          <span class="ctrl-lbl">Brightness</span>
+          <input id="bri" type="range" min="20" max="150" step="5" value="40">
+          <span class="ctrl-val" id="bri-val">40%</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-lbl">Opacity</span>
+          <input id="opa" type="range" min="20" max="100" step="5" value="100">
+          <span class="ctrl-val" id="opa-val">100%</span>
+        </div>
+      </div>
+    </div>
     <div id="panel">
       <div id="panel-title">&#128225; CoT 事件列表</div>
       <div id="panel-body">
@@ -125,9 +147,25 @@ _MAP_HTML_TEMPLATE = """\
 
     /* ── map ────────────────────────────────────────────────── */
     const map = L.map('map').setView([SP.lat, SP.lon], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
     }).addTo(map);
+
+    /* ── map display controls (brightness / opacity) ─────────── */
+    function applyTileStyle() {
+      const bri = parseInt(document.getElementById('bri').value, 10);
+      const opa = parseInt(document.getElementById('opa').value, 10);
+      document.getElementById('bri-val').textContent = bri + '%';
+      document.getElementById('opa-val').textContent = opa + '%';
+      const c = tileLayer.getContainer();
+      if (c) {
+        c.style.filter  = `brightness(${bri / 100})`;
+        c.style.opacity = String(opa / 100);
+      }
+    }
+    document.getElementById('bri').addEventListener('input', applyTileStyle);
+    document.getElementById('opa').addEventListener('input', applyTileStyle);
+    map.whenReady(applyTileStyle);
 
     /* ── range rings around SP ──────────────────────────────── */
     const RINGS = [
