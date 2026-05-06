@@ -16,6 +16,7 @@ class ClientConfig(BaseModel):
 
     host: str = "tak-server"
     port: int = Field(default=8089, ge=1, le=65535)
+    use_ssl: bool = True
     use_ssl_verify: bool = False
     ca_bundle: Optional[str] = None
     max_retries: int = Field(default=0, ge=0)
@@ -76,6 +77,10 @@ def load_config(args: argparse.Namespace) -> ClientConfig:
         base["host"] = args.host
     if getattr(args, "port", None) is not None:
         base["port"] = args.port
+    if getattr(args, "ssl", False):
+        base["use_ssl"] = True
+    if getattr(args, "no_ssl", False):
+        base["use_ssl"] = False
     if getattr(args, "no_ssl_verify", False):
         base["use_ssl_verify"] = False
     if getattr(args, "filter", None) is not None:

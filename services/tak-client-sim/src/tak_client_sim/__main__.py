@@ -15,6 +15,8 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--host", default=None, help="TAK Server host (default: tak-server)")
     p.add_argument("--port", type=int, default=None, help="TAK Server port (default: 8089)")
+    p.add_argument("--ssl", action="store_true", dest="ssl", help="Use SSL/TLS when connecting to TAK Server")
+    p.add_argument("--no-ssl", action="store_true", dest="no_ssl", help="Use plaintext TCP when connecting to TAK Server")
     p.add_argument(
         "--no-ssl-verify",
         action="store_true",

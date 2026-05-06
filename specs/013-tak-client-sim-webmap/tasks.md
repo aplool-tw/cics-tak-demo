@@ -29,7 +29,7 @@ description: "Task list for feature 013-tak-client-sim-webmap"
 
 **Purpose**: Confirm the existing test baseline is clean before any changes.
 
-- [ ] T001 Run `pytest services/tak-client-sim/tests/unit/` and confirm zero failures (baseline green-bar before any changes)
+- [X] T001 Run `pytest services/tak-client-sim/tests/unit/` and confirm zero failures (baseline green-bar before any changes)
 
 ---
 
@@ -41,16 +41,16 @@ description: "Task list for feature 013-tak-client-sim-webmap"
 
 ### Tests — write and confirm RED first
 
-- [ ] T002 [P] Write failing unit tests for `ClientConfig.use_ssl` field: assert default=True, assert YAML `use_ssl: false` loads correctly, assert `use_ssl: true` round-trips, assert `ValidationError` on `extra="forbid"` still holds in `services/tak-client-sim/tests/unit/test_config_use_ssl.py`
-- [ ] T003 [P] Write failing unit tests for `--ssl` / `--no-ssl` CLI override in `load_config()`: assert `--no-ssl` sets `use_ssl=False` overriding YAML, assert `--ssl` sets `use_ssl=True` overriding YAML, assert neither flag leaves config value unchanged in `services/tak-client-sim/tests/unit/test_config_use_ssl.py`
-- [ ] T004 Write failing unit test for `connect_with_retry()` plaintext path: mock `asyncio.open_connection`, assert it is called with `ssl=None` when `use_ssl=False`, and assert it is called with an `ssl.SSLContext` instance when `use_ssl=True` in `services/tak-client-sim/tests/unit/test_config_use_ssl.py`
+- [X] T002 [P] Write failing unit tests for `ClientConfig.use_ssl` field: assert default=True, assert YAML `use_ssl: false` loads correctly, assert `use_ssl: true` round-trips, assert `ValidationError` on `extra="forbid"` still holds in `services/tak-client-sim/tests/unit/test_config_use_ssl.py`
+- [X] T003 [P] Write failing unit tests for `--ssl` / `--no-ssl` CLI override in `load_config()`: assert `--no-ssl` sets `use_ssl=False` overriding YAML, assert `--ssl` sets `use_ssl=True` overriding YAML, assert neither flag leaves config value unchanged in `services/tak-client-sim/tests/unit/test_config_use_ssl.py`
+- [X] T004 Write failing unit test for `connect_with_retry()` plaintext path: mock `asyncio.open_connection`, assert it is called with `ssl=None` when `use_ssl=False`, and assert it is called with an `ssl.SSLContext` instance when `use_ssl=True` in `services/tak-client-sim/tests/unit/test_config_use_ssl.py`
 
 ### Implementation
 
-- [ ] T005 Add `use_ssl: bool = True` field immediately after `port` field in `ClientConfig` (preserves backward compatibility — omitting field in YAML defaults to True) in `services/tak-client-sim/src/tak_client_sim/config.py`
-- [ ] T006 Add `--ssl` (`action="store_true"`, `dest="ssl"`) and `--no-ssl` (`action="store_true"`, `dest="no_ssl"`) arguments to `_build_parser()`, and add `getattr(args, "ssl", None)` / `getattr(args, "no_ssl", False)` override block in `load_config()` in `services/tak-client-sim/src/tak_client_sim/__main__.py`
-- [ ] T007 Replace `ssl_ctx = build_ssl_context(config)` with `ssl_ctx = build_ssl_context(config) if config.use_ssl else None` in `connect_with_retry()` in `services/tak-client-sim/src/tak_client_sim/connection.py`
-- [ ] T008 Add `use_ssl: false  # connects to tak_relay.py (plaintext TCP on :8089)` line after `use_ssl_verify` in `services/tak-client-sim/config/demo.yaml`
+- [X] T005 Add `use_ssl: bool = True` field immediately after `port` field in `ClientConfig` (preserves backward compatibility — omitting field in YAML defaults to True) in `services/tak-client-sim/src/tak_client_sim/config.py`
+- [X] T006 Add `--ssl` (`action="store_true"`, `dest="ssl"`) and `--no-ssl` (`action="store_true"`, `dest="no_ssl"`) arguments to `_build_parser()`, and add `getattr(args, "ssl", None)` / `getattr(args, "no_ssl", False)` override block in `load_config()` in `services/tak-client-sim/src/tak_client_sim/__main__.py`
+- [X] T007 Replace `ssl_ctx = build_ssl_context(config)` with `ssl_ctx = build_ssl_context(config) if config.use_ssl else None` in `connect_with_retry()` in `services/tak-client-sim/src/tak_client_sim/connection.py`
+- [X] T008 Add `use_ssl: false  # connects to tak_relay.py (plaintext TCP on :8089)` line after `use_ssl_verify` in `services/tak-client-sim/config/demo.yaml`
 
 **Checkpoint**: Run `pytest services/tak-client-sim/tests/unit/test_config_use_ssl.py` — all T002–T004 tests must now be GREEN.
 

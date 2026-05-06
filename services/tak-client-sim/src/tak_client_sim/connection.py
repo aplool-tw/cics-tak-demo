@@ -33,7 +33,7 @@ async def connect_with_retry(
 ) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     """Connect to TAK Server with exponential backoff. Exits with code 1 on max retries exceeded."""
     attempt = 0
-    ssl_ctx = build_ssl_context(config)
+    ssl_ctx = build_ssl_context(config) if config.use_ssl else None
 
     while not stop.is_set():
         try:

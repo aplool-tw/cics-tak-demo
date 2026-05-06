@@ -11,6 +11,7 @@
 host: 127.0.0.1
 port: 8089
 use_ssl_verify: false
+use_ssl: false  # connects to tak_relay.py (plaintext TCP on :8089)
 max_retries: 9999             # retry indefinitely — keeps running without TAK server
 
 web_enabled: true
