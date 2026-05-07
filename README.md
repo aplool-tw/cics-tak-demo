@@ -72,9 +72,10 @@
 
 ### 安裝依賴
 
-每個服務有獨立 `pyproject.toml`，可分別安裝：
+每個服務有獨立 `pyproject.toml`，共享的 TAK 連線程式庫位於 `libs/tak-connection/`：
 
 ```bash
+pip install -e "libs/tak-connection[dev]" --break-system-packages
 for svc in uds map-sim echoshield-sim sentrycs-sim cot-gateway tak-client-sim; do
   pip install -e "services/${svc}[dev]" --break-system-packages
 done
@@ -87,7 +88,8 @@ done
 最快的方式是使用 demo 腳本，可自動啟動全部 7 個服務並開啟三個瀏覽器視窗：
 
 ```bash
-# 安裝所有服務（一次即可）
+# 安裝共享 TAK 連線庫與所有服務（一次即可）
+pip install -e "libs/tak-connection[dev]" --break-system-packages
 for svc in uds map-sim echoshield-sim sentrycs-sim cot-gateway tak-client-sim; do
   pip install -e "services/${svc}[dev]" --break-system-packages
 done
@@ -110,6 +112,16 @@ Demo 腳本會依序啟動 7 個服務（map-sim → uds → echoshield-sim → 
 | **Map Sim** | `http://127.0.0.1:8090/map` | 原始無人機位置（UDS 推送） |
 | **CoT Gateway** | `http://127.0.0.1:8092/map` | EchoShield + Sentrycs 融合 CoT 戰術地圖 |
 | **TAK Client Sim** | `http://127.0.0.1:8093/map` | TAK relay 收到的 CoT XML（MIL-STD-2525C 圖示） |
+
+### Remote TAK Server
+
+若要改接正式 TAK Server，不再需要設定 `TAK_HOST` / `TAK_PORT` / `TAK_USE_SSL` 環境變數：
+
+1. 編輯 repo root 的 `config/remote-tak.yaml`
+2. 將憑證放到 `config/certs/gateway.p12`（需要 CA 驗證時再加入 `config/certs/ca-bundle.pem`）
+3. 執行 `scripts/demo-1drone-remote-tak.sh` 或 `scripts/demo-3drone-remote-tak.sh`
+
+更完整的操作範例請見 [`specs/016-tak-shared-connection/quickstart.md`](specs/016-tak-shared-connection/quickstart.md)。
 
 ### 開發用多服務啟動
 

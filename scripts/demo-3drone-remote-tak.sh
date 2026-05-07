@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # demo-3drone-remote-tak.sh — Start the three-drone TAK pipeline with optional remote TAK server support.
 #
-# LOCAL MODE (default):  starts tak-relay locally, same as demo-3drone.sh
-# REMOTE MODE (TAK_HOST): skips tak-relay, connects cot-gateway directly to real TAK server
+# LOCAL MODE (default): starts tak-relay locally, same as demo-3drone.sh
+# REMOTE MODE (config/remote-tak.yaml): skips tak-relay and connects to a remote TAK server
 #
 # Usage (local):
 #   bash scripts/demo-3drone-remote-tak.sh
 #
 # Usage (remote TAK server):
-#   TAK_HOST=192.168.1.100 bash scripts/demo-3drone-remote-tak.sh
-#   TAK_HOST=192.168.1.100 TAK_PORT=8089 TAK_USE_SSL=true bash scripts/demo-3drone-remote-tak.sh
+#   edit config/remote-tak.yaml
+#   bash scripts/demo-3drone-remote-tak.sh
 
 set -euo pipefail
 
@@ -21,20 +21,28 @@ UDS_SCENARIO="${ROOT_DIR}/services/uds/scenarios/demo_three_drones.yaml"
 ECHO_CONFIG="${ROOT_DIR}/services/echoshield-sim/config/demo.yaml"
 SNTR_CONFIG="${ROOT_DIR}/services/sentrycs-sim/config/demo_three_drones.yaml"
 GW_CONFIG="${ROOT_DIR}/services/cot-gateway/config/demo.yaml"
+GW_REMOTE_CONFIG="${ROOT_DIR}/.dev-runtime/cot-gateway-remote.yaml"
 TAK_CLIENT_CONFIG="${ROOT_DIR}/services/tak-client-sim/config/demo.yaml"
 
 LOG_DIR="${ROOT_DIR}/.dev-runtime/logs"
 PID_DIR="${ROOT_DIR}/.dev-runtime/pids"
 
-# Remote TAK server support: set TAK_HOST env var to point to real TAK server
-# TAK_PORT defaults to 8089, TAK_USE_SSL defaults to true
+# Remote TAK server support: edit config/remote-tak.yaml to activate remote mode.
+REMOTE_CONFIG="${ROOT_DIR}/config/remote-tak.yaml"
 REMOTE_TAK_MODE=false
-if [[ -n "${TAK_HOST:-}" ]]; then
-    REMOTE_TAK_MODE=true
-fi
+TAK_HOST=""
+TAK_PORT="8089"
+TAK_USE_SSL="true"
 
-TAK_PORT="${TAK_PORT:-8089}"
-TAK_USE_SSL="${TAK_USE_SSL:-true}"
+if [[ -f "${REMOTE_CONFIG}" ]]; then
+    TAK_HOST=$(python3 -c "import yaml, sys; cfg=yaml.safe_load(open('${REMOTE_CONFIG}')); print(cfg.get('tak_server',{}).get('host',''))" 2>/dev/null \
+        || { printf '[tak-demo] ERROR: Cannot parse %s — check YAML syntax\n' "${REMOTE_CONFIG}" >&2; exit 1; })
+    TAK_PORT=$(python3 -c "import yaml; cfg=yaml.safe_load(open('${REMOTE_CONFIG}')); print(cfg.get('tak_server',{}).get('port',8089))" 2>/dev/null || echo "8089")
+    TAK_USE_SSL=$(python3 -c "import yaml; cfg=yaml.safe_load(open('${REMOTE_CONFIG}')); print(str(cfg.get('tak_server',{}).get('use_ssl',True)).lower())" 2>/dev/null || echo "true")
+    if [[ -n "${TAK_HOST}" && "${TAK_HOST}" != "127.0.0.1" && "${TAK_HOST}" != "localhost" ]]; then
+        REMOTE_TAK_MODE=true
+    fi
+fi
 
 # Services list differs by mode
 if [[ "${REMOTE_TAK_MODE}" == "true" ]]; then
@@ -323,8 +331,8 @@ print_banner() {
         printf '%s\n' "${RESET}"
         echo
         log "Remote TAK server: ${TAK_HOST}:${TAK_PORT} (SSL=${TAK_USE_SSL})"
-        warn "Ensure TAK_HOST is reachable and certificates are in place."
-        echo "  cert_file: services/cot-gateway/config/certs/gateway.p12"
+        warn "Ensure config/remote-tak.yaml is correct and certificates are in place."
+        echo "  cert_file: config/certs/gateway.p12"
         echo
     else
         echo "  +=================================================================+"
@@ -346,6 +354,25 @@ print_banner() {
     echo "  t=140s : TRK-E02 MITIGATING → takeover to HP"
     echo
 }
+
+prepare_gateway_remote_config() {
+    [[ "${REMOTE_TAK_MODE}" == "true" ]] || return 0
+
+    python3 - <<PY || die "Cannot prepare ${GW_REMOTE_CONFIG} from ${GW_CONFIG} and ${REMOTE_CONFIG}"
+from pathlib import Path
+import yaml
+
+base = yaml.safe_load(Path("${GW_CONFIG}").read_text(encoding="utf-8")) or {}
+remote = yaml.safe_load(Path("${REMOTE_CONFIG}").read_text(encoding="utf-8")) or {}
+if not isinstance(base, dict) or not isinstance(remote, dict):
+    raise SystemExit("config root must be a mapping")
+if not isinstance(remote.get("tak_server"), dict):
+    raise SystemExit("tak_server must be a mapping")
+base["tak_server"] = remote["tak_server"]
+Path("${GW_REMOTE_CONFIG}").write_text(yaml.safe_dump(base, sort_keys=False), encoding="utf-8")
+PY
+}
+
 
 launch_services() {
     log "Starting map-sim on :8090..."
@@ -369,14 +396,9 @@ launch_services() {
     write_pid "sentrycs-sim" "${SNTR_PID}"
 
     if [[ "${REMOTE_TAK_MODE}" == "true" ]]; then
-        local gw_extra_args=""
-        gw_extra_args="--tak-host ${TAK_HOST} --tak-port ${TAK_PORT}"
-        if [[ "${TAK_USE_SSL}" == "false" ]]; then
-            gw_extra_args="${gw_extra_args} --no-ssl"
-        fi
+        prepare_gateway_remote_config
         log "Starting cot-gateway on :8092 → remote TAK ${TAK_HOST}:${TAK_PORT}..."
-        # shellcheck disable=SC2086
-        (cd "${ROOT_DIR}/services/cot-gateway" && exec python3 -m cot_gateway --config "${GW_CONFIG}" ${gw_extra_args}) >>"${LOG_DIR}/cot-gateway.log" 2>&1 &
+        (cd "${ROOT_DIR}/services/cot-gateway" && exec python3 -m cot_gateway --config "${GW_REMOTE_CONFIG}") >>"${LOG_DIR}/cot-gateway.log" 2>&1 &
     else
         log "Starting cot-gateway on :8092..."
         (cd "${ROOT_DIR}/services/cot-gateway" && exec python3 -m cot_gateway --config "${GW_CONFIG}") >>"${LOG_DIR}/cot-gateway.log" 2>&1 &
@@ -392,7 +414,15 @@ launch_services() {
     fi
 
     log "Starting tak-client-sim on :8093..."
-    (cd "${ROOT_DIR}/services/tak-client-sim" && exec python3 -m tak_client_sim --config "${TAK_CLIENT_CONFIG}") >>"${LOG_DIR}/tak-client-sim.log" 2>&1 &
+    if [[ "${REMOTE_TAK_MODE}" == "true" ]]; then
+        local tak_extra_args=(--host "${TAK_HOST}" --port "${TAK_PORT}" --ssl)
+        if [[ "${TAK_USE_SSL}" == "false" ]]; then
+            tak_extra_args=(--host "${TAK_HOST}" --port "${TAK_PORT}" --no-ssl)
+        fi
+        (cd "${ROOT_DIR}/services/tak-client-sim" && exec python3 -m tak_client_sim --config "${TAK_CLIENT_CONFIG}" "${tak_extra_args[@]}") >>"${LOG_DIR}/tak-client-sim.log" 2>&1 &
+    else
+        (cd "${ROOT_DIR}/services/tak-client-sim" && exec python3 -m tak_client_sim --config "${TAK_CLIENT_CONFIG}") >>"${LOG_DIR}/tak-client-sim.log" 2>&1 &
+    fi
     TAK_CLIENT_PID=$!
     write_pid "tak-client-sim" "${TAK_CLIENT_PID}"
 
