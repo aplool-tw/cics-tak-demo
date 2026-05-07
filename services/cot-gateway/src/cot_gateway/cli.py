@@ -26,6 +26,11 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     p.add_argument("--web-host", metavar="HOST", help="Web server bind host")
     p.add_argument("--web-port", type=int, metavar="PORT", help="Web server bind port")
     p.add_argument("--sites-file", metavar="PATH", help="Path to sites.yaml")
+    p.add_argument("--tak-host", metavar="HOST", help="TAK Server host (overrides config)")
+    p.add_argument(
+        "--tak-port", type=int, metavar="PORT", help="TAK Server port (overrides config)"
+    )
+    p.add_argument("--no-ssl", action="store_true", help="Use plaintext TCP to TAK Server")
     return p.parse_args(argv)
 
 
@@ -75,6 +80,17 @@ def main(argv: Optional[list[str]] = None) -> int:
         web_overrides["sites_file"] = args.sites_file
     if web_overrides:
         cfg = cfg.model_copy(update={"web": cfg.web.model_copy(update=web_overrides)})
+
+    # Apply CLI overrides to tak_server config
+    tak_overrides: dict = {}
+    if getattr(args, "tak_host", None):
+        tak_overrides["host"] = args.tak_host
+    if getattr(args, "tak_port", None):
+        tak_overrides["port"] = args.tak_port
+    if getattr(args, "no_ssl", False):
+        tak_overrides["use_ssl"] = False
+    if tak_overrides:
+        cfg = cfg.model_copy(update={"tak_server": cfg.tak_server.model_copy(update=tak_overrides)})
 
     configure_logging(level=cfg.logging.level, json=cfg.logging.json, verbose=args.verbose)
     log = get_logger("cot_gateway.cli")

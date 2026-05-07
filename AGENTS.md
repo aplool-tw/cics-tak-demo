@@ -90,6 +90,7 @@ Specify → Clarify → Plan → Tasks → Analyze → Implement → Test → Do
 - `pydantic v2` model 設定 `model_config = ConfigDict(extra="forbid", frozen=True)`，YAML 多餘欄位即 fail-fast
 - `from __future__ import annotations` 全檔啟用
 - 結構化日誌：`logger.info("event_name", key1=v1, key2=v2)`，**禁用** f-string log
+- ⚠️ Log format ≠ wire format：`cot-gateway` 與 `tak-client-sim` 輸出的 log 是 structlog JSON；TCP socket 傳輸的 bytes 是 CoT XML。兩者格式獨立，不可混淆。
 - 不使用 `print()`（**例外**：`tak-client-sim` 的 `formatter.py#print_event()` 及 `connection.py` 為 FR-TCS-023 要求的 console 輸出，允許使用 `print()`）
 - `asyncio.Lock` 內**禁止** await I/O
 - 所有 wire JSON 經 pydantic 驗證；reject 時 log `invalid_wire_fields` 並繼續（不退出）

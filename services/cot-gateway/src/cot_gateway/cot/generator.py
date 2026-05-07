@@ -47,6 +47,7 @@ def generate_cot(
     *,
     force_stale_eq_time: bool = False,
     override_uid: Optional[str] = None,
+    xml_declaration: bool = False,
 ) -> str:
     """Render a single CoT event XML string (no trailing newline).
 
@@ -54,6 +55,8 @@ def generate_cot(
     ----------
     force_stale_eq_time : when True, produce stale == time (source-switch or TTL Lost final CoT).
     override_uid : when set, use this uid (for source-switch "final CoT" on the old uid).
+    xml_declaration : when True, prepend ``<?xml version='1.0' encoding='UTF-8' standalone='yes'?>``
+        for real TAK server compatibility (ATAK/WinTAK).
     """
     if now is None:
         now = datetime.now(timezone.utc)
@@ -92,6 +95,7 @@ def generate_cot(
         },
     )
     detail = ET.SubElement(event, "detail")
+    ET.SubElement(detail, "uid", {"Droid": uid})
     ET.SubElement(detail, "contact", {"callsign": uid})
     remarks = ET.SubElement(detail, "remarks")
     remarks.text = _build_remarks(track)
@@ -101,7 +105,10 @@ def generate_cot(
         {"speed": f"{track.velocity_ms:.1f}", "course": f"{track.azimuth_deg:.1f}"},
     )
 
-    return ET.tostring(event, encoding="unicode")
+    xml_str = ET.tostring(event, encoding="unicode")
+    if xml_declaration:
+        return "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>" + xml_str
+    return xml_str
 
 
 def _type_from_uid(uid: str) -> str:

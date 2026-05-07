@@ -131,7 +131,13 @@ class GatewayMain:
         old_uids, new_uid = detect_source_switch(track, self.prev_uid_by_entity_key)
         for old_uid in old_uids:
             # Emit stale=time final CoT for each superseded uid
-            final_xml = generate_cot(track, now=now, force_stale_eq_time=True, override_uid=old_uid)
+            final_xml = generate_cot(
+                track,
+                now=now,
+                force_stale_eq_time=True,
+                override_uid=old_uid,
+                xml_declaration=self.config.tak_server.xml_declaration,
+            )
             self.transmitter.enqueue(final_xml)
             self.seen_uids.discard(old_uid)
             if self._track_store is not None:
@@ -145,7 +151,7 @@ class GatewayMain:
             )
 
         # Emit current CoT for new uid
-        xml = generate_cot(track, now=now)
+        xml = generate_cot(track, now=now, xml_declaration=self.config.tak_server.xml_declaration)
         self.transmitter.enqueue(xml)
         if self._track_store is not None:
             await self._track_store.upsert(new_uid, track)
@@ -186,7 +192,12 @@ class GatewayMain:
                 lost = self.correlator.update_ttl(now)
                 for lost_track in lost:
                     uid = uid_for(lost_track)
-                    xml = generate_cot(lost_track, now=now, force_stale_eq_time=True)
+                    xml = generate_cot(
+                        lost_track,
+                        now=now,
+                        force_stale_eq_time=True,
+                        xml_declaration=self.config.tak_server.xml_declaration,
+                    )
                     self.transmitter.enqueue(xml)
                     self.seen_uids.discard(uid)
                     if self._track_store is not None:
