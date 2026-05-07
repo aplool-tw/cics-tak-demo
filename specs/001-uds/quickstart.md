@@ -11,7 +11,7 @@
 
 - Python **3.11+**
 - `pip install -e services/uds[dev]`（安裝 runtime + 測試依賴；`pyproject.toml` 由 tasks 階段建立）
-- Map Simulator（`:8090`）已啟動（可選；UDS 在 Map Simulator 不可用時仍會執行並印 warning）
+- Map Simulator（`:18090`）已啟動（可選；UDS 在 Map Simulator 不可用時仍會執行並印 warning）
 
 ---
 
@@ -22,13 +22,13 @@
 python -m uds \
   --scenario services/uds/scenarios/single_drone_invasion.yaml \
   --api-port 8080 \
-  --map-sim-url http://127.0.0.1:8090 \
+  --map-sim-url http://127.0.0.1:18090 \
   --hz 10
 ```
 
-- `:8080` 僅註冊 `POST /command/takeover`（正式契約）。
+- `:18080` 僅註冊 `POST /command/takeover`（正式契約）。
 - `GET /status/{drone_id}` 與 `GET /drones` **未註冊**，呼叫回 404。
-- 每秒對每架活躍無人機各發 10 次 `POST :8090/objects/update`。
+- 每秒對每架活躍無人機各發 10 次 `POST :18090/objects/update`。
 
 ### 2.1 Debug 模式
 
@@ -45,7 +45,7 @@ python -m uds --scenario services/uds/scenarios/single_drone_invasion.yaml --deb
 |------|------|------|
 | `--scenario <path>` | （必填） | YAML 場景檔 |
 | `--api-port <int>` | `8080` | REST API 埠號 |
-| `--map-sim-url <url>` | `http://127.0.0.1:8090` | Map Simulator base URL |
+| `--map-sim-url <url>` | `http://127.0.0.1:18090` | Map Simulator base URL |
 | `--hz <int>` | `10`（或 YAML 覆寫） | 主迴圈頻率（1–20） |
 | `--verbose` | 關閉 | log level → DEBUG |
 | `--debug` | 關閉 | 註冊除錯端點 `GET /status`、`GET /drones` |
@@ -100,7 +100,7 @@ scenario:
 （假設 Map Simulator 已啟動）在另一個終端機：
 
 ```bash
-curl 'http://127.0.0.1:8090/objects?lat=25.0330&lon=121.5654&radius_m=5000' | jq
+curl 'http://127.0.0.1:18090/objects?lat=25.0330&lon=121.5654&radius_m=5000' | jq
 ```
 
 應看到 `TRK-001` 位置每 100 ms 更新一次。
@@ -108,7 +108,7 @@ curl 'http://127.0.0.1:8090/objects?lat=25.0330&lon=121.5654&radius_m=5000' | jq
 ### 4.2 送接管指令
 
 ```bash
-curl -X POST http://127.0.0.1:8080/command/takeover \
+curl -X POST http://127.0.0.1:18080/command/takeover \
   -H 'Content-Type: application/json' \
   -d '{
         "drone_id": "TRK-001",
@@ -140,8 +140,8 @@ curl -X POST http://127.0.0.1:8080/command/takeover \
 | `target_lat: 999` | 400 `invalid coordinates` |
 | 省略 `target_alt_m` | 400 `invalid altitude` |
 | 對已 `LANDED` 的 `TRK-001` 再送接管 | 400 `already landed` |
-| 預設模式下 `curl :8080/drones` | 404（路由未註冊） |
-| `--debug` 模式下 `curl :8080/drones` | 200，回傳 drone 清單 |
+| 預設模式下 `curl :18080/drones` | 404（路由未註冊） |
+| `--debug` 模式下 `curl :18080/drones` | 200，回傳 drone 清單 |
 
 ---
 

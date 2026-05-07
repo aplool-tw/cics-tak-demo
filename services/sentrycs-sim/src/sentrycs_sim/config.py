@@ -47,12 +47,12 @@ class SentrycsConfig(BaseModel):
     sensor_alt_m: float = Field(default=0.0)
     detection_radius_m: float = Field(default=8000.0, gt=0.0)
     poll_interval_s: float = Field(default=0.5, gt=0.0)
-    map_sim_url: str = "http://localhost:8090"
+    map_sim_url: str = "http://localhost:18090"
     map_sim_timeout_s: float = Field(default=1.0, gt=0.0)
-    uds_url: str = "http://localhost:8080"
+    uds_url: str = "http://localhost:18080"
     uds_timeout_s: float = Field(default=3.0, gt=0.0)
     api_host: str = "0.0.0.0"
-    api_port: int = Field(default=7070, ge=1, le=65535)
+    api_port: int = Field(default=17070, ge=1, le=65535)
     neutralized_hold_s: float = Field(default=30.0, ge=0.0)
     mitigating_disappear_grace_s: float = Field(default=10.0, ge=0.0)
     drones: list[DroneScenario] = Field(..., min_length=1)

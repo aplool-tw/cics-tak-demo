@@ -92,7 +92,7 @@ cd services/cot-gateway && python3 -m cot_gateway --config config/demo.yaml
 ### 2. Open the tactical map
 
 ```
-http://localhost:8092/map
+http://localhost:18092/map
 ```
 
 ### 3. Expected event timeline (drone starts 3 500 m north of SP, 35 m/s)

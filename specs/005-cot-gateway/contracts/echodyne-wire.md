@@ -1,7 +1,7 @@
 # Contract: EchoShield Wire Parser（Gateway 上游消費端）
 
 本契約定義 CoT Gateway 的 `EchodyneAdapter` 如何消費 EchoShield Simulator（或真實雷達硬體）
-從 TCP `:9000` 輸出的 newline-delimited JSON 串流。
+從 TCP `:19000` 輸出的 newline-delimited JSON 串流。
 
 **上游權威 schema**：[`specs/003-echoshield-sim/contracts/`](../../003-echoshield-sim/contracts/)。
 本檔僅定義 Gateway 側的**消費規則**（欄位對應、錯誤處理、首見旗標職責），不重新定義 wire schema
@@ -14,7 +14,7 @@
 | 項目 | 值 |
 | --- | --- |
 | 協議 | TCP（明文，無 TLS） |
-| 端點 | 設定檔 `echoshield.host:port`，預設 `echoshield-sim:9000` |
+| 端點 | 設定檔 `echoshield.host:port`，預設 `echoshield-sim:19000` |
 | 框架 | Newline-delimited JSON；UTF-8；分隔符 `\n` (0x0A) |
 | 連線模式 | Gateway 為 client；長連線；EOF 或 ConnectionResetError 即視為斷線 |
 | 重連 | 固定 `reconnect_interval_s=5.0`；**無限重試**（FR-GW-004） |

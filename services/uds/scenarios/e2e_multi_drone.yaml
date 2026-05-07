@@ -3,7 +3,7 @@ scenario:
   description: "三架無人機從不同方向同時逼近 SP(24.725806N,121.033750E)，驗證多機並行追蹤與接管不干擾"
   update_hz: 10
   servers:
-    command_api_port: 8080
+    command_api_port: 18080
   drones:
     - drone_id: "TRK-E0A"
       model: "DJI Mavic 3"

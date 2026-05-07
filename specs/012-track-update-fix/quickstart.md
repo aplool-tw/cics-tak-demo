@@ -216,7 +216,7 @@ pytest tests/unit/test_server_js.py   # existing JS tests
 pytest tests/unit/test_server.py      # existing server tests
 ```
 
-Manual smoke test: open `http://localhost:8092/map` — drone marker must move without blinking.
+Manual smoke test: open `http://localhost:18092/map` — drone marker must move without blinking.
 
 ---
 
@@ -252,7 +252,7 @@ All modified files must report zero violations.
 
 ```bash
 # With gateway running:
-curl -s http://localhost:8092/tracks | python3 -m json.tool | grep '"uid"'
+curl -s http://localhost:18092/tracks | python3 -m json.tool | grep '"uid"'
 # Expected: one "uid" line per active track, e.g. "uid": "ECHO-TRK-001"
 ```
 
@@ -285,7 +285,7 @@ grep -n "clearLayers" services/cot-gateway/src/cot_gateway/web/server.py
    ```bash
    cot-gateway --config config/demo.yaml
    ```
-2. Open `http://localhost:8092/map` in a browser.
+2. Open `http://localhost:18092/map` in a browser.
 3. Observe the drone icon advancing smoothly — **no blink** between 2-second refreshes (RC1).
 4. Start the Sentrycs simulator. Wait for the fusion event.
 5. Observe the ATAK TAK client — exactly one red FUSED icon appears; both prior grey icons

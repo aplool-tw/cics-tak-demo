@@ -25,7 +25,7 @@ This feature resolves five root causes (RC1–RC5) that degrade the Taiwan anti-
 
 ### User Story 1 — Live Track Position Updates Without Page Reload (Priority: P1)
 
-A demo operator opens the CoT Gateway tactical map at `http://localhost:8092/map` and watches the drone icon advance across the screen as the scenario progresses.  Today, the browser silently returns the cached first-seen position for every `fetch('/tracks')` call, so the drone appears frozen from the operator's perspective even though the underlying data is updating correctly.
+A demo operator opens the CoT Gateway tactical map at `http://localhost:18092/map` and watches the drone icon advance across the screen as the scenario progresses.  Today, the browser silently returns the cached first-seen position for every `fetch('/tracks')` call, so the drone appears frozen from the operator's perspective even though the underlying data is updating correctly.
 
 **Why this priority**: A frozen drone makes the demo narrative impossible — the presenter cannot say "watch the drone cross the ring" if nothing moves.  This is the most damaging visible defect.
 

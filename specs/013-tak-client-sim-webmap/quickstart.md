@@ -37,21 +37,21 @@ scripts/demo-1drone.sh
 
 | Service | Port | Role |
 |---------|------|------|
-| map-sim | :8090 | Receives drone positions from UDS |
+| map-sim | :18090 | Receives drone positions from UDS |
 | uds | :18080 | Plays back 1-drone invasion scenario |
-| echoshield-sim | :9000/:9001 | Radar feed → CoT Gateway |
-| sentrycs-sim | :7070 | RF detection API → CoT Gateway |
-| cot-gateway | :8092 | Correlates tracks; web map viewer |
-| tak_relay.py | :8089 | Plaintext TCP broadcast relay |
-| tak-client-sim | :8093 | Receives CoT XML; TAK client map |
+| echoshield-sim | :19000/:19001 | Radar feed → CoT Gateway |
+| sentrycs-sim | :17070 | RF detection API → CoT Gateway |
+| cot-gateway | :18092 | Correlates tracks; web map viewer |
+| tak_relay.py | :18089 | Plaintext TCP broadcast relay |
+| tak-client-sim | :18093 | Receives CoT XML; TAK client map |
 
 **Browser tabs opened automatically:**
 
 | Tab | URL | Content |
 |-----|-----|---------|
-| 1 | http://127.0.0.1:8090/objects | Map Sim — raw UDS drone positions |
-| 2 | http://127.0.0.1:8092/map | CoT Gateway — correlated tracks (EchoShield + Sentrycs) |
-| 3 | http://127.0.0.1:8093/map | TAK Client Sim — MIL-STD-2525C icons |
+| 1 | http://127.0.0.1:18090/objects | Map Sim — raw UDS drone positions |
+| 2 | http://127.0.0.1:18092/map | CoT Gateway — correlated tracks (EchoShield + Sentrycs) |
+| 3 | http://127.0.0.1:18093/map | TAK Client Sim — MIL-STD-2525C icons |
 
 **Scenario timeline (from script start, ~5 s startup):**
 
@@ -110,7 +110,7 @@ cd services/map-sim && python3 -m map_sim --port 8090
 # Terminal 2 — uds
 cd services/uds && python3 -m uds \
     --scenario scenarios/demo_single_drone.yaml \
-    --api-port 18080 --map-sim-url http://127.0.0.1:8090
+    --api-port 18080 --map-sim-url http://127.0.0.1:18090
 
 # Terminal 3 — echoshield-sim
 cd services/echoshield-sim && python3 -m echoshield_sim --config config/demo.yaml
@@ -129,9 +129,9 @@ python3 -m tak_client_sim --config services/tak-client-sim/config/demo.yaml
 ```
 
 Open browsers:
-- http://127.0.0.1:8090/objects
-- http://127.0.0.1:8092/map
-- http://127.0.0.1:8093/map
+- http://127.0.0.1:18090/objects
+- http://127.0.0.1:18092/map
+- http://127.0.0.1:18093/map
 
 ---
 
@@ -143,9 +143,9 @@ Find and stop the conflicting process:
 
 ```bash
 # Linux
-ss -tlnp | grep ':8089\|:8090\|:8092\|:8093\|:18080\|:7070'
+ss -tlnp | grep ':18089\|:18090\|:18092\|:18093\|:18080\|:17070'
 # macOS
-lsof -i :8089 -i :8090 -i :8092 -i :8093
+lsof -i :18089 -i :18090 -i :18092 -i :18093
 ```
 
 Or run `scripts/demo-1drone.sh --stop` first to clean up a previous run.
@@ -167,7 +167,7 @@ scripts/demo-1drone.sh
 
 ### TAK client map shows no tracks
 
-1. Verify cot-gateway is healthy: `curl http://127.0.0.1:8092/health`
+1. Verify cot-gateway is healthy: `curl http://127.0.0.1:18092/health`
 2. Verify tak_relay.py is accepting connections: `bash -c "echo > /dev/tcp/127.0.0.1/8089" && echo "relay UP"`
 3. Check logs: `.dev-runtime/logs/tak-client-sim.log`
 

@@ -110,7 +110,7 @@
 - [X] T023 [P] Run full cot-gateway pytest suite: `cd services/cot-gateway && pytest -q` — confirm 0 regressions across all 94 tests
 - [X] T024 [P] Run full sentrycs-sim pytest suite: `cd services/sentrycs-sim && pytest -q` — confirm 0 regressions across all 110 tests (including new loop + config tests)
 - [X] T025 [P] Run full uds pytest suite: `cd services/uds && pytest -q` — confirm 0 regressions across all 83 tests
-- [X] T026 Run end-to-end smoke test per `specs/010-perimeter-defense/quickstart.md`: start UDS + sentrycs-sim + echoshield-sim + cot-gateway, open `http://localhost:8080/map`, verify legend entries, drone movement, fused-track transition, and perimeter-triggered takeover log event
+- [X] T026 Run end-to-end smoke test per `specs/010-perimeter-defense/quickstart.md`: start UDS + sentrycs-sim + echoshield-sim + cot-gateway, open `http://localhost:18080/map`, verify legend entries, drone movement, fused-track transition, and perimeter-triggered takeover log event
 
 **Checkpoint**: All 468 tests pass, lint clean, smoke test confirms all 4 user stories end-to-end.
 

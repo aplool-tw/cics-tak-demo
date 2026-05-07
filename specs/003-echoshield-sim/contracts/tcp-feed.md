@@ -1,8 +1,8 @@
-# Contract: EchoShield TCP JSON Feed (`:9000`)
+# Contract: EchoShield TCP JSON Feed (`:19000`)
 
 **Feature**: `003-echoshield-sim`
 **Version**: `1.0.0`（凍結；任何變更需 bump minor/major + 更新 spec）
-**Endpoint**: `tcp://{feed_host}:{feed_port}`（預設 `tcp://0.0.0.0:9000`）
+**Endpoint**: `tcp://{feed_host}:{feed_port}`（預設 `tcp://0.0.0.0:19000`）
 **Direction**: Server → Client（單向 push；Server 不讀 Client 的任何輸入）
 **Transport**: Plain TCP（無 TLS、無認證；PoC only）
 **Encoding**: UTF-8

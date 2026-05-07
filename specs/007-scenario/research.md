@@ -260,7 +260,7 @@ sentrycs-sim 以**場景計時器**（`at_s` 計數，從服務啟動時開始�
 |------|------|------|
 | 輪詢 map-sim | M1 最直接；不依賴 log 格式 | 只能驗 M1 |
 | 解析 tak-client-sim log | 可驗 M2-M4 CoT 序列；離線可用 | 依賴 tak-client-sim 輸出格式 |
-| 直連 cot-gateway TCP :8089 | 最直接的 CoT 來源 | 需長連線監聽；與 tak-client-sim 競爭連線 |
+| 直連 cot-gateway TCP :18089 | 最直接的 CoT 來源 | 需長連線監聽；與 tak-client-sim 競爭連線 |
 | 解析 cot-gateway log | 不依賴 tak-client-sim | log 格式需另行確認 |
 
 ### 選擇依據

@@ -3,7 +3,7 @@ scenario:
   description: "單架無人機從正北 8.99km 處向戰略要點 SP(24.725806N,121.033750E) 逼近，EchoShield 偵測後 Sentrycs 接管，改飛至 HP(SP 東北方 45° ~1.5km)"
   update_hz: 10
   servers:
-    command_api_port: 8080
+    command_api_port: 18080
   drones:
     - drone_id: "TRK-E01"
       model: "DJI Mavic 3"

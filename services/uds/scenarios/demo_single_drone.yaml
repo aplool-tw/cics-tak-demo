@@ -3,7 +3,7 @@ scenario:
   description: "單架無人機從正北 3.5km 處向戰略要點 SP(24.725806N,121.033750E) 逼近（示範用，35m/s 快速啟動）"
   update_hz: 10
   servers:
-    command_api_port: 8080
+    command_api_port: 18080
   drones:
     - drone_id: "TRK-E01"
       model: "DJI Mavic 3"

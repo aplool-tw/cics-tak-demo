@@ -139,7 +139,7 @@ assert ellipse.attrib["minor"] == "1000.0"
 
 ### 4.2 Capture CoT TCP stream (integration)
 
-If a local TAK server is running on `127.0.0.1:8089` (non-SSL, see `demo.yaml`):
+If a local TAK server is running on `127.0.0.1:18089` (non-SSL, see `demo.yaml`):
 
 ```bash
 # In a second terminal — listen for raw CoT XML on the TAK TCP port:

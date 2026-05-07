@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # demo-cot-gateway-map-3drones.sh — Start the full CoT Gateway pipeline with a
 # 3-drone convergence scenario and open the browser-based tactical map at
-# http://127.0.0.1:8092/map
+# http://127.0.0.1:18092/map
 #
 # Services started (all local):
-#   map-sim        :8090  — receives drone positions from UDS
+#   map-sim        :18090  — receives drone positions from UDS
 #   uds            :18080 — plays back three-drone invasion scenario
-#   echoshield-sim :9000  — radar feed → CoT Gateway (TCP NDJSON)
-#                  :9001  — HTTP info (sensor position)
-#   sentrycs-sim   :7070  — RF detection API → CoT Gateway
-#   cot-gateway    :8092  — correlates tracks, exposes web map viewer
+#   echoshield-sim :19000  — radar feed → CoT Gateway (TCP NDJSON)
+#                  :19001  — HTTP info (sensor position)
+#   sentrycs-sim   :17070  — RF detection API → CoT Gateway
+#   cot-gateway    :18092  — correlates tracks, exposes web map viewer
 #
 # Usage:
 #   scripts/demo-cot-gateway-map-3drones.sh           # start demo
@@ -33,11 +33,11 @@ ECHO_CONFIG="${ROOT_DIR}/services/echoshield-sim/config/demo.yaml"
 SNTR_SCENARIO="${ROOT_DIR}/services/sentrycs-sim/config/demo_three_drones.yaml"
 GW_CONFIG="${ROOT_DIR}/services/cot-gateway/config/demo.yaml"
 
-MAP_URL="http://127.0.0.1:8092/map"
-GW_HEALTH="http://127.0.0.1:8092/health"
-MAPSIM_HEALTH="http://127.0.0.1:8090/health"
-SNTR_HEALTH="http://127.0.0.1:7070/health"
-ECHO_INFO="http://127.0.0.1:9001/info"
+MAP_URL="http://127.0.0.1:18092/map"
+GW_HEALTH="http://127.0.0.1:18092/health"
+MAPSIM_HEALTH="http://127.0.0.1:18090/health"
+SNTR_HEALTH="http://127.0.0.1:17070/health"
+ECHO_INFO="http://127.0.0.1:19001/info"
 
 LOG_DIR="${ROOT_DIR}/.dev-runtime/logs"
 PID_DIR="${ROOT_DIR}/.dev-runtime/pids"
@@ -152,8 +152,8 @@ echo "    t=210s : TRK-E02 NEUTRALIZED"
 echo
 
 # ── launch map-sim ─────────────────────────────────────────────────────────────
-log "Starting map-sim on :8090..."
-(cd "${ROOT_DIR}/services/map-sim" && exec python3 -m map_sim --port 8090) \
+log "Starting map-sim on :18090..."
+(cd "${ROOT_DIR}/services/map-sim" && exec python3 -m map_sim --port 18090) \
     >> "${LOG_DIR}/map-sim.log" 2>&1 &
 MAPSIM_PID=$!
 echo "${MAPSIM_PID}" > "${PID_DIR}/map-sim.pid"
@@ -163,13 +163,13 @@ log "Starting uds on :18080 with three-drone scenario..."
 (cd "${ROOT_DIR}/services/uds" && exec python3 -m uds \
     --scenario "${UDS_SCENARIO}" \
     --api-port 18080 \
-    --map-sim-url "http://127.0.0.1:8090") \
+    --map-sim-url "http://127.0.0.1:18090") \
     >> "${LOG_DIR}/uds.log" 2>&1 &
 UDS_PID=$!
 echo "${UDS_PID}" > "${PID_DIR}/uds.pid"
 
 # ── launch echoshield-sim ──────────────────────────────────────────────────────
-log "Starting echoshield-sim (TCP :9000, HTTP /info :9001)..."
+log "Starting echoshield-sim (TCP :19000, HTTP /info :19001)..."
 (cd "${ROOT_DIR}/services/echoshield-sim" && exec python3 -m echoshield_sim \
     --config "${ECHO_CONFIG}") \
     >> "${LOG_DIR}/echoshield-sim.log" 2>&1 &
@@ -177,7 +177,7 @@ ECHO_PID=$!
 echo "${ECHO_PID}" > "${PID_DIR}/echoshield-sim.pid"
 
 # ── launch sentrycs-sim ────────────────────────────────────────────────────────
-log "Starting sentrycs-sim on :7070..."
+log "Starting sentrycs-sim on :17070..."
 (cd "${ROOT_DIR}/services/sentrycs-sim" && exec python3 -m sentrycs_sim \
     --scenario "${SNTR_SCENARIO}") \
     >> "${LOG_DIR}/sentrycs-sim.log" 2>&1 &
@@ -185,7 +185,7 @@ SNTR_PID=$!
 echo "${SNTR_PID}" > "${PID_DIR}/sentrycs-sim.pid"
 
 # ── launch cot-gateway ─────────────────────────────────────────────────────────
-log "Starting cot-gateway (web map :8092)..."
+log "Starting cot-gateway (web map :18092)..."
 (cd "${ROOT_DIR}/services/cot-gateway" && exec python3 -m cot_gateway \
     --config "${GW_CONFIG}") \
     >> "${LOG_DIR}/cot-gateway.log" 2>&1 &

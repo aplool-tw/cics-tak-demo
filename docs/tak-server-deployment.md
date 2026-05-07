@@ -83,7 +83,7 @@ docker compose logs -f tak-server-stub
 
 Behavior:
 
-- Listens on `:8089` (override with `TAK_PORT` env var).
+- Listens on `:18089` (override with `TAK_PORT` env var).
 - Requires TLS; client certs are validated against `ca.crt` (mTLS
   optional — defaults to `CERT_OPTIONAL`).
 - Logs every connection / received CoT line / disconnect as JSON to stdout.
@@ -95,7 +95,7 @@ Wire it to the gateway:
 ```bash
 export TAK_P12_PASSWORD=takpoc          # match gen-certs.sh password
 ./scripts/dev-launcher.sh --services cot-gateway,sentrycs-sim,echoshield-sim,uds,map-sim \
-    --tak-host localhost --tak-port 8089 --tak-use-ssl
+    --tak-host localhost --tak-port 18089 --tak-use-ssl
 ```
 
 The gateway picks up `services/cot-gateway/config/certs/gateway.p12` (which

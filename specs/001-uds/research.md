@@ -117,7 +117,7 @@
 - **Decision**：`pytest` ≥ 8.0、`pytest-asyncio` ≥ 0.23（`asyncio_mode = "auto"`）、
   `aiohttp.test_utils.TestServer`（fake Map Simulator）、`freezegun`（積分重現性）。
 - **Rationale**：
-  - 契約測試可直接 in-process，不需要跑真實 :8080。
+  - 契約測試可直接 in-process，不需要跑真實 :18080。
   - `TestServer` 在同 loop 內啟動，fake Map Simulator 回 200/500/timeout 可覆蓋 FR-UDS-014 容錯路徑。
   - `freezegun` 搭配注入 `clock()` 函數可重現 SC-008（同場景兩次執行、位置差 ≤ 1 m）。
 - **Alternatives considered**：

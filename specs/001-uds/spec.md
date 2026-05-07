@@ -18,13 +18,13 @@
 
 - 由 YAML 場景檔載入無人機與飛行任務。
 - 在單一 asyncio 主迴圈中計算所有無人機的飛行軌跡。
-- 每個主迴圈週期針對每架活躍無人機各呼叫一次 `POST /objects/update`（per-drone 粒度，依 `08-api-icd.md` §3.1 ICD）主動推送至 Map Simulator（`:8090`），供 EchoShield Simulator 與 Sentrycs Simulator 透過 Map Simulator 查詢取得。
-- 提供 `:8080` HTTP REST API 供 Sentrycs Simulator 查詢狀態、發送接管指令；接管指令會即時改變 UDS 內的航線計算，促成偵測 → 反制 → 降落的完整閉環。
+- 每個主迴圈週期針對每架活躍無人機各呼叫一次 `POST /objects/update`（per-drone 粒度，依 `08-api-icd.md` §3.1 ICD）主動推送至 Map Simulator（`:18090`），供 EchoShield Simulator 與 Sentrycs Simulator 透過 Map Simulator 查詢取得。
+- 提供 `:18080` HTTP REST API 供 Sentrycs Simulator 查詢狀態、發送接管指令；接管指令會即時改變 UDS 內的航線計算，促成偵測 → 反制 → 降落的完整閉環。
 
 > **架構澄清（依 `docs/system-docs/CHANGELOG.md` v0.3 與 `01-system-architecture.md` v0.7 為準）**：
-> - UDS **僅** 暴露兩個輸出介面：`HTTP :8080`（Command & Query API）與 `HTTP POST :8090/objects/update`（主動推送至 Map Simulator）。
-> - UDS **不再** 自行開啟 TCP `:9000`；EchoShield JSON Feed（`:9000`）已由獨立的 EchoShield Simulator 負責。
-> - `02-unified-drone-simulator-spec.md` §1.2 與第 5 節關於「EchoShield TCP Feed（:9000）」的敘述屬於舊版 v0.1 內容，尚未同步更新；本規格以 CHANGELOG v0.3 的修訂為準。
+> - UDS **僅** 暴露兩個輸出介面：`HTTP :18080`（Command & Query API）與 `HTTP POST :18090/objects/update`（主動推送至 Map Simulator）。
+> - UDS **不再** 自行開啟 TCP `:19000`；EchoShield JSON Feed（`:19000`）已由獨立的 EchoShield Simulator 負責。
+> - `02-unified-drone-simulator-spec.md` §1.2 與第 5 節關於「EchoShield TCP Feed（:19000）」的敘述屬於舊版 v0.1 內容，尚未同步更新；本規格以 CHANGELOG v0.3 的修訂為準。
 
 ---
 
@@ -34,7 +34,7 @@
 
 - Q: UDS → Map Simulator `POST /objects/update` 的請求粒度應如何定義（每個主迴圈週期是呼叫一次含所有無人機，還是每架一次）？ → A: **Per-drone**：依 `03-map-simulator-spec.md` 與 `08-api-icd.md` §3.1 現有 ICD，request body 為單一無人機 JSON；UDS 每個主迴圈週期對每架 `flight_state ≠ IDLE` 的無人機各呼叫一次 `POST /objects/update`（10 架 × 10 Hz ⇒ 100 req/s）。
 - Q: 當無人機進入 `LANDED` 時，UDS 對 Map Simulator 的「收尾推送」語意應如何明確定義？ → A: **同週期收尾推送 + 之後停止**：UDS 在狀態切換到 `LANDED` 的「同一個主迴圈週期」必須對該 `drone_id` 推送恰一筆 `POST /objects/update`，其 request body 中 `flight_state = "LANDED"`（明確旗標）；自下一個主迴圈週期起，不再推送該 `drone_id` 的任何更新（直到場景重置 / `LANDED → IDLE`）。不採用「只靠下一週期起停推、不發最後一筆」的替代方案。
-- Q: UDS `:8080` REST API 的契約範圍應如何劃分（`POST /command/takeover` 與 `GET /status/{drone_id}` / `GET /drones` 是否皆為正式契約）？ → A: **只有 takeover 為正式契約**：`POST /command/takeover` 是 UDS 對 Sentrycs Simulator 的正式 API 契約，必須納入契約測試並維持向後相容；`GET /status/{drone_id}` 與 `GET /drones` 降級為「除錯端點」，僅在啟動時帶 `--debug` 旗標才會註冊路由（預設關閉），回應 schema 不納入契約測試，且不保證跨版本穩定。Sentrycs Simulator 正式運行路徑**不得**依賴這兩個端點；位置查詢一律透過 Map Simulator。
+- Q: UDS `:18080` REST API 的契約範圍應如何劃分（`POST /command/takeover` 與 `GET /status/{drone_id}` / `GET /drones` 是否皆為正式契約）？ → A: **只有 takeover 為正式契約**：`POST /command/takeover` 是 UDS 對 Sentrycs Simulator 的正式 API 契約，必須納入契約測試並維持向後相容；`GET /status/{drone_id}` 與 `GET /drones` 降級為「除錯端點」，僅在啟動時帶 `--debug` 旗標才會註冊路由（預設關閉），回應 schema 不納入契約測試，且不保證跨版本穩定。Sentrycs Simulator 正式運行路徑**不得**依賴這兩個端點；位置查詢一律透過 Map Simulator。
 - Q: Scenario YAML `timeline[].action` 的合法值域應如何約束？ → A: **封閉白名單 { `start_flying` }**：PoC 階段 `timeline[].action` 僅允許 `start_flying` 一種值；載入 YAML 時若遇到其他值（含拼寫錯誤、未知 action、空字串），`ScenarioLoader` 必須以 `unknown action: <value>` 之類的明確訊息 fail-fast（拋錯 + 非零 exit code），不得靜默忽略，也不得執行任何後續的主迴圈初始化。未來若需擴充（如 `set_waypoint`、`hold`），須透過版本化 schema 另行引入。
 - Q: `POST /command/takeover` 的 `target_lat/target_lon/target_alt_m` 欄位語意與無人機當前狀態前置條件應如何明確化？ → A: **全部必填 + 座標/高度值域校驗 + 以 409 區分「未起飛」**：
   - `target_lat` 與 `target_lon` 皆為必填；載入時必須校驗 `target_lat ∈ [-90, 90]`、`target_lon ∈ [-180, 180]`，任一越界 → 回傳 **HTTP 400 `invalid coordinates`**。
@@ -66,7 +66,7 @@
 
 Sentrycs Simulator 作為 RF 偵測模擬器，在內部狀態機進入「下令接管」時，直接呼叫 UDS 發出接管指令；位置資訊一律透過 Map Simulator 取得，不依賴 UDS 查詢端點。
 
-**Why this priority**：沒有這條路徑，接管閉環無法觸發。`POST /command/takeover` 是 UDS `:8080` REST API 對外的**唯一正式契約**。
+**Why this priority**：沒有這條路徑，接管閉環無法觸發。`POST /command/takeover` 是 UDS `:18080` REST API 對外的**唯一正式契約**。
 
 **Independent Test**：以 `curl` 或 Sentrycs Simulator 的單元測試，針對一個已知的 `drone_id` 呼叫 `POST /command/takeover`，驗證回應格式、HTTP 狀態碼與錯誤處理符合契約；契約測試僅涵蓋此端點。
 
@@ -89,11 +89,11 @@ EchoShield Simulator（雷達）與 Sentrycs Simulator（RF）作為下游消費
 
 **Why this priority**：UDS → Map Simulator → 感測器模擬器是 PoC 的主要資料流；若 UDS 不推送或推送內容不足，下游都無法產生有效偵測資料。
 
-**Independent Test**：啟動 UDS 與 Map Simulator（其他元件可關閉），在 Map Simulator `:8090` 端輪詢 `GET /objects`，驗證每個主迴圈週期都會更新，且欄位完整可讓 EchoShield/Sentrycs Simulator 完成自身計算。
+**Independent Test**：啟動 UDS 與 Map Simulator（其他元件可關閉），在 Map Simulator `:18090` 端輪詢 `GET /objects`，驗證每個主迴圈週期都會更新，且欄位完整可讓 EchoShield/Sentrycs Simulator 完成自身計算。
 
 **Acceptance Scenarios**:
 
-1. **Given** UDS 與 Map Simulator 都已啟動且場景含 N 架活躍無人機，**When** UDS 完成一次主迴圈更新，**Then** UDS 必須針對每架 `flight_state ≠ IDLE` 的無人機各呼叫一次 `POST http://<map-sim>:8090/objects/update`（共 N 筆請求），每筆 request body 為單一無人機 JSON（依 `08-api-icd.md` §3.1）。
+1. **Given** UDS 與 Map Simulator 都已啟動且場景含 N 架活躍無人機，**When** UDS 完成一次主迴圈更新，**Then** UDS 必須針對每架 `flight_state ≠ IDLE` 的無人機各呼叫一次 `POST http://<map-sim>:18090/objects/update`（共 N 筆請求），每筆 request body 為單一無人機 JSON（依 `08-api-icd.md` §3.1）。
 2. **Given** UDS 的主迴圈頻率設為 10 Hz 且場景含 N 架活躍無人機，**When** 持續執行 10 秒，**Then** 期間 `POST /objects/update` 的實際呼叫次數必須落在 N × (95 ~ 105) 之間（每架 10±0.5 Hz，允許 ±5% 抖動）。
 3. **Given** 無人機進入 `LANDED`，**When** UDS 處理切換到 `LANDED` 的那個主迴圈週期，**Then** UDS 必須對該 `drone_id` 推送恰一筆 `POST /objects/update`，其 `flight_state` 欄位明確為 `"LANDED"`；自下一個主迴圈週期起，該 `drone_id` 不再出現在任何 `POST /objects/update` 請求中。
 
@@ -118,11 +118,11 @@ EchoShield Simulator（雷達）與 Sentrycs Simulator（RF）作為下游消費
 
 ### Functional Requirements
 
-以下需求依 `docs/system-docs/02-unified-drone-simulator-spec.md` §2 為基礎，並依 CHANGELOG v0.3 澄清移除 TCP `:9000` 相關職責，改以 `POST /objects/update` 推送為主。
+以下需求依 `docs/system-docs/02-unified-drone-simulator-spec.md` §2 為基礎，並依 CHANGELOG v0.3 澄清移除 TCP `:19000` 相關職責，改以 `POST /objects/update` 推送為主。
 
 - **FR-UDS-001**：UDS 必須為每架無人機維護飛行狀態物件（位置、速度、方向、高度、狀態機），並在每個主迴圈週期依 `dt` 更新該物件。
-- **FR-UDS-002**：UDS 必須在每個主迴圈週期對每架 `flight_state ≠ IDLE` 的無人機各發送一次 `POST http://<map-sim-host>:8090/objects/update`（per-drone 粒度），每筆 request body 為單一無人機 JSON，欄位依 `docs/system-docs/03-map-simulator-spec.md` §3.1 與 `contracts/rest-api.md` §3.2 所定義的 8 個欄位：`drone_id`、`lat`、`lon`、`alt_m`、`speed_ms`（由 `DroneState.velocity_ms` 換算）、`heading_deg`、`status`（由 `flight_state.value` 換算）、`timestamp`。**UDS 推送不包含** `model` 或 `operator_lat/operator_lon`（這些欄位由 Sentrycs Simulator 於其 `:7070` JSON 輸出中提供，不屬於 UDS→Map Simulator 的推送契約）。
-- **FR-UDS-003**：UDS 必須以 HTTP REST Server 於 `:8080` 提供**正式契約端點**：
+- **FR-UDS-002**：UDS 必須在每個主迴圈週期對每架 `flight_state ≠ IDLE` 的無人機各發送一次 `POST http://<map-sim-host>:18090/objects/update`（per-drone 粒度），每筆 request body 為單一無人機 JSON，欄位依 `docs/system-docs/03-map-simulator-spec.md` §3.1 與 `contracts/rest-api.md` §3.2 所定義的 8 個欄位：`drone_id`、`lat`、`lon`、`alt_m`、`speed_ms`（由 `DroneState.velocity_ms` 換算）、`heading_deg`、`status`（由 `flight_state.value` 換算）、`timestamp`。**UDS 推送不包含** `model` 或 `operator_lat/operator_lon`（這些欄位由 Sentrycs Simulator 於其 `:17070` JSON 輸出中提供，不屬於 UDS→Map Simulator 的推送契約）。
+- **FR-UDS-003**：UDS 必須以 HTTP REST Server 於 `:18080` 提供**正式契約端點**：
   - `POST /command/takeover` — 接收接管指令（**唯一正式契約**，必須納入契約測試並維持向後相容）。
 - **FR-UDS-003a**（除錯端點）：UDS 可選擇性提供下列除錯端點，**僅在啟動時帶 `--debug` 旗標才註冊**（預設關閉，未帶旗標時路由不存在，回應 404）：
   - `GET /status/{drone_id}` — 回傳指定無人機當前狀態。
@@ -143,7 +143,7 @@ EchoShield Simulator（雷達）與 Sentrycs Simulator（RF）作為下游消費
 - **FR-UDS-008**：UDS 必須支援直線飛行、轉向飛行與降落軌跡插值，使用 WGS84 Haversine 距離、Bearing 計算與座標偏移公式。
 - **FR-UDS-009**：UDS 主迴圈頻率必須可透過 CLI 旗標 / 場景檔設定，預設 10 Hz、合法範圍 1–20 Hz。設定優先序：**CLI `--hz` > 場景檔 `scenario.update_hz` > 預設 10**（任一來源越界皆 fail-fast）。相同優先序規則套用於 `--api-port` 與 `scenario.servers.command_api_port`（CLI 覆寫 YAML 覆寫預設 8080）。
 - **FR-UDS-010**：UDS 必須在單一行程內支援同時模擬至少 10 架無人機（PoC 規模上限）。
-- **FR-UDS-011**：UDS CLI 必須至少提供 `--scenario`（YAML 路徑）、`--api-port`（預設 8080）、`--map-sim-url`（預設 `http://127.0.0.1:8090`）、`--hz`、`--verbose`、`--debug`（布林旗標；預設 false；啟用後才註冊 FR-UDS-003a 的除錯端點）。
+- **FR-UDS-011**：UDS CLI 必須至少提供 `--scenario`（YAML 路徑）、`--api-port`（預設 8080）、`--map-sim-url`（預設 `http://127.0.0.1:18090`）、`--hz`、`--verbose`、`--debug`（布林旗標；預設 false；啟用後才註冊 FR-UDS-003a 的除錯端點）。
 - **FR-UDS-012**：UDS 必須使用 WGS84 座標系（Haversine 距離、Bearing、座標偏移皆以地球半徑 6,371,000 m 計算）。
 - **FR-UDS-013**：UDS 必須對轉向實施平滑限制，每個主迴圈週期最多轉向 30°，避免方位瞬間跳變造成下游感測器模擬異常。
 - **FR-UDS-014**：UDS 推送至 Map Simulator 的請求若失敗（連線拒絕、逾時、5xx），必須記錄結構化錯誤日誌且**不中止**主迴圈；下一週期依舊嘗試推送。
@@ -157,7 +157,7 @@ EchoShield Simulator（雷達）與 Sentrycs Simulator（RF）作為下游消費
   - 上述所有錯誤回應皆不得變更目標無人機的 `flight_state`，也不得產生任何 `POST /objects/update` 的副作用。
 
 > **對 `02-spec` §2 的修正說明**：
-> - 原 FR-UDS-002「TCP Server Port 9000，以 10 Hz 輸出 EchoShield JSON 格式」已改為 FR-UDS-002「每週期 `POST /objects/update`」；`:9000` 由 EchoShield Simulator 負責，不再是 UDS 的職責。
+> - 原 FR-UDS-002「TCP Server Port 9000，以 10 Hz 輸出 EchoShield JSON 格式」已改為 FR-UDS-002「每週期 `POST /objects/update`」；`:19000` 由 EchoShield Simulator 負責，不再是 UDS 的職責。
 > - 原 FR-UDS-014「LANDED 後自動停止 EchoShield TCP 廣播（最後一筆 track_status: LOST）」的「廣播 / track_status」語意已改為 FR-UDS-006 的「收尾推送 / LANDED 旗標」語意：UDS 在進入 `LANDED` 的同一週期對 Map Simulator 推送恰一筆 `flight_state = "LANDED"` 的 `POST /objects/update`，之後不再推送該 `drone_id`；`track_status` 由 EchoShield Simulator 產生，非 UDS。現行 FR-UDS-014 專責「推送失敗的容錯策略」，與 LANDED 收尾語意不再共用同一條需求。
 > - 原 FR-UDS-012「錯誤模擬」為選配功能，PoC 不列入必要範圍，故本規格不複述。
 

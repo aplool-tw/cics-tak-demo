@@ -113,7 +113,7 @@ if getattr(args, "no_ssl", False):
 ### Addition
 
 ```yaml
-use_ssl: false       # connects to tak_relay.py (plaintext TCP on :8089)
+use_ssl: false       # connects to tak_relay.py (plaintext TCP on :18089)
 ```
 
 Placed after `use_ssl_verify: false` for visual grouping of SSL-related fields.

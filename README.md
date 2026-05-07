@@ -14,19 +14,19 @@
 ┌─────────────────┐  POST /command/takeover   ┌───────────────────┐
 │  Sentrycs Sim   │ ─────────────────────────▶│  Unified Drone    │
 │  (RF C-UAS)     │ ◀── GET /objects ──┐      │  Simulator (UDS)  │
-│  HTTP :7070     │                    │      │  REST :8080       │
+│  HTTP :17070     │                    │      │  REST :8080       │
 └────────┬────────┘                    │      └─────────┬─────────┘
          │ 1 Hz HTTP poll              │                │ push 8 fields
          │                             ▼                ▼
          │                   ┌─────────────────────────────────┐
          │                   │     Map Simulator (Registry)    │
-         │                   │  REST :8090 + Web Map :8090     │
+         │                   │  REST :18090 + Web Map :18090     │
          │                   └────────────────┬────────────────┘
          │                                    │ 10 Hz poll
          │                                    ▼
          │                          ┌──────────────────┐
          │                          │ EchoShield Sim   │
-         │                          │ TCP NDJSON :9000 │
+         │                          │ TCP NDJSON :19000 │
          │                          └─────────┬────────┘
          │                                    │
          ▼                                    ▼
@@ -36,10 +36,10 @@
 │  │ Echodyne     │  │  Track       │  │ MIL-STD-2525C│  │
 │  │ Adapter      │─▶│  Correlator  │─▶│ XML Generator│  │
 │  └──────────────┘  └──────────────┘  └──────┬───────┘  │
-│  ┌──────────────┐         ▲          Web Map :8092 │    │
+│  ┌──────────────┐         ▲          Web Map :18092 │    │
 │  │ Sentrycs     │─────────┘                 │      │    │
 │  │ Adapter      │                           ▼      │    │
-│  └──────────────┘                  TCP :8089       │    │
+│  └──────────────┘                  TCP :18089       │    │
 └──────────────────────────────────────────┬──────────────┘
                                            │
                     ┌──────────────────────┴──────────────────┐
@@ -47,18 +47,18 @@
            ┌────────────────┐                   ┌─────────────────────────┐
            │   TAK Relay    │                   │     TAK Client Sim      │
            │ scripts/tak_   │──── CoT push ────▶│  console + Web Map      │
-           │ relay.py :8089 │                   │  :8093  MIL-STD-2525C   │
+           │ relay.py :18089 │                   │  :18093  MIL-STD-2525C   │
            └────────────────┘                   └─────────────────────────┘
 ```
 
 | 服務 | 路徑 | 角色 | 預設 Port |
 |------|------|------|-----------|
 | **UDS** (Unified Drone Simulator) | `services/uds/` | 無人機飛行模擬 + 接管閉環 | REST `:8080` |
-| **Map Sim** | `services/map-sim/` | 物件狀態中央登錄表 + TTL；Web Map `:8090/objects` | REST `:8090` |
-| **EchoShield Sim** | `services/echoshield-sim/` | 雷達 4D 模擬 + 噪點 | TCP NDJSON `:9000` |
-| **Sentrycs Sim** | `services/sentrycs-sim/` | RF C-UAS 反制設備模擬 | HTTP JSON `:7070` |
-| **CoT Gateway** | `services/cot-gateway/` | 雷達/RF 融合 + CoT XML 推送；**Web Map** `:8092/map` | → TAK `:8089` |
-| **TAK Client Sim** | `services/tak-client-sim/` | CoT 接收驗證 + **Web Map** `:8093/map`（MIL-STD-2525C icons） | TCP `:8089` |
+| **Map Sim** | `services/map-sim/` | 物件狀態中央登錄表 + TTL；Web Map `:18090/objects` | REST `:18090` |
+| **EchoShield Sim** | `services/echoshield-sim/` | 雷達 4D 模擬 + 噪點 | TCP NDJSON `:19000` |
+| **Sentrycs Sim** | `services/sentrycs-sim/` | RF C-UAS 反制設備模擬 | HTTP JSON `:17070` |
+| **CoT Gateway** | `services/cot-gateway/` | 雷達/RF 融合 + CoT XML 推送；**Web Map** `:18092/map` | → TAK `:18089` |
+| **TAK Client Sim** | `services/tak-client-sim/` | CoT 接收驗證 + **Web Map** `:18093/map`（MIL-STD-2525C icons） | TCP `:18089` |
 
 ---
 
@@ -109,9 +109,9 @@ Demo 腳本會依序啟動 7 個服務（map-sim → uds → echoshield-sim → 
 
 | Web Map | URL | 內容 |
 |---------|-----|------|
-| **Map Sim** | `http://127.0.0.1:8090/map` | 原始無人機位置（UDS 推送） |
-| **CoT Gateway** | `http://127.0.0.1:8092/map` | EchoShield + Sentrycs 融合 CoT 戰術地圖 |
-| **TAK Client Sim** | `http://127.0.0.1:8093/map` | TAK relay 收到的 CoT XML（MIL-STD-2525C 圖示） |
+| **Map Sim** | `http://127.0.0.1:18090/map` | 原始無人機位置（UDS 推送） |
+| **CoT Gateway** | `http://127.0.0.1:18092/map` | EchoShield + Sentrycs 融合 CoT 戰術地圖 |
+| **TAK Client Sim** | `http://127.0.0.1:18093/map` | TAK relay 收到的 CoT XML（MIL-STD-2525C 圖示） |
 
 ### Remote TAK Server
 
@@ -147,19 +147,19 @@ scripts/dev-launcher.sh --uds-port 18080 --map-sim-port 18090
 # Gateway 連到遠端的 EchoShield 與 TAK Server
 scripts/dev-launcher.sh --services cot-gateway \
   --gateway-echoshield-host 10.0.0.5 \
-  --gateway-tak-host tak.example.com --gateway-tak-port 8089
+  --gateway-tak-host tak.example.com --gateway-tak-port 18089
 
 # 啟用 TAK SSL 上傳（搭配 infra/tak-server 內建 stub 或正式 TAK Server）
 scripts/gen-certs.sh                                   # 產生 PoC 自簽 PKI
 ( cd infra/tak-server && docker compose up -d )        # 啟動 stub
 scripts/dev-launcher.sh --services cot-gateway \
-  --tak-host localhost --tak-port 8089 --tak-use-ssl
+  --tak-host localhost --tak-port 18089 --tak-use-ssl
 
 # 完整跨服務 URL 覆寫
 scripts/dev-launcher.sh \
-  --uds-map-sim-url   http://map-host:8090 \
+  --uds-map-sim-url   http://map-host:18090 \
   --sentrycs-uds-url  http://uds-host:8080 \
-  --echoshield-map-sim-url http://map-host:8090
+  --echoshield-map-sim-url http://map-host:18090
 ```
 
 ### 端對端冒煙驗證
@@ -169,10 +169,10 @@ scripts/dev-launcher.sh \
 scripts/dev-launcher.sh
 
 # 2. 確認 Map Sim 持續收到 UDS 推送
-curl http://localhost:8090/objects
+curl http://localhost:18090/objects
 
 # 3. 確認 Sentrycs 偵測有資料
-curl http://localhost:7070/detections
+curl http://localhost:17070/detections
 
 # 4. 觀察 EchoShield TCP feed
 nc localhost 9000   # 每 100ms 一行 NDJSON
@@ -223,9 +223,9 @@ python3 specs/007-scenario/scripts/validate_cot.py --file /tmp/cot_capture.ndjso
 
 | Map | URL | CoT 資料來源 | 圖示樣式 |
 |-----|-----|-------------|---------|
-| **Map Sim** | `http://127.0.0.1:8090/objects` | UDS 推送（原始位置） | 文字清單 |
-| **CoT Gateway** | `http://127.0.0.1:8092/map` | EchoShield + Sentrycs 融合 | MIL-STD-2525C |
-| **TAK Client Sim** | `http://127.0.0.1:8093/map` | TAK relay CoT XML | MIL-STD-2525C |
+| **Map Sim** | `http://127.0.0.1:18090/objects` | UDS 推送（原始位置） | 文字清單 |
+| **CoT Gateway** | `http://127.0.0.1:18092/map` | EchoShield + Sentrycs 融合 | MIL-STD-2525C |
+| **TAK Client Sim** | `http://127.0.0.1:18093/map` | TAK relay CoT XML | MIL-STD-2525C |
 
 CoT 圖示對照：
 - `a-h-*`（敵方／融合）→ 🔴 紅色旋轉菱形 + 方向箭頭
@@ -245,7 +245,7 @@ scripts/gen-certs.sh
 
 # 3. Gateway 啟用 SSL 上傳
 scripts/dev-launcher.sh --services cot-gateway \
-  --tak-host localhost --tak-port 8089 --tak-use-ssl
+  --tak-host localhost --tak-port 18089 --tak-use-ssl
 
 # 4. 觀察 stub 收到的 CoT
 docker compose -f infra/tak-server/docker-compose.yaml logs -f tak-server-stub
@@ -296,9 +296,9 @@ cics-tak-demo/
 │   ├── sentrycs-sim/
 │   │   └── config/           ← e2e_single_drone.yaml / e2e_multi_drone.yaml / demo.yaml
 │   ├── cot-gateway/
-│   │   └── ...               ← Web Map Viewer :8092/map
+│   │   └── ...               ← Web Map Viewer :18092/map
 │   └── tak-client-sim/
-│       └── ...               ← CoT 接收 + console + Web Map :8093/map（MIL-STD-2525C）
+│       └── ...               ← CoT 接收 + console + Web Map :18093/map（MIL-STD-2525C）
 ├── scripts/
 │   ├── dev-launcher.sh       ← 多服務啟動腳本（含 --echoshield-config）
 │   ├── demo-1drone.sh        ← 單機無人機 demo（7 服務 + 3 browser tabs）

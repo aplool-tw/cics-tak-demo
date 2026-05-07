@@ -51,7 +51,7 @@ Unified Drone Simulator 與 Map Simulator 形成「推送-登錄」關係：
 2. **Map Simulator 是資料中介**：維護中央物件登錄表，供感測器模擬器查詢
 3. **感測器模擬器是消費者**：EchoShield Simulator 和 Sentrycs Simulator 只向 Map Simulator 查詢，不直接與 UDS 互動（接管指令除外）
 
-UDS 在每次主迴圈更新（1/update_hz 秒）後，呼叫 `POST /objects/update` 將所有活躍無人機的最新狀態推送至 Map Simulator（預設 localhost:8090）。
+UDS 在每次主迴圈更新（1/update_hz 秒）後，呼叫 `POST /objects/update` 將所有活躍無人機的最新狀態推送至 Map Simulator（預設 localhost:18090）。
 
 ---
 
@@ -90,7 +90,7 @@ flowchart TD
         DT["DroneState (無人機狀態物件)"]
     end
     subgraph OUTPUTS["輸出介面"]
-        TCP_SVR["EchoShieldFeedServer (asyncio TCP :9000)"]
+        TCP_SVR["EchoShieldFeedServer (asyncio TCP :19000)"]
         REST_SVR["CommandApiServer (aiohttp REST :8080)"]
     end
     CLI --> SL
@@ -210,7 +210,7 @@ stateDiagram-v2
 
 ## 6. Sentrycs Query & Command API（REST Port 8080）
 
-> **架構更新說明（v0.2）**：`GET /status/{drone_id}` 位置查詢功能已由 **Map Simulator（:8090）** 承接。感測器模擬器（EchoShield Simulator、Sentrycs Simulator）改向 Map Simulator 查詢物件位置。UDS 的 :8080 REST API 現在僅保留 **接管指令**（`POST /command/takeover`）和 **列出無人機**（`GET /drones`）功能。
+> **架構更新說明（v0.2）**：`GET /status/{drone_id}` 位置查詢功能已由 **Map Simulator（:18090）** 承接。感測器模擬器（EchoShield Simulator、Sentrycs Simulator）改向 Map Simulator 查詢物件位置。UDS 的 :8080 REST API 現在僅保留 **接管指令**（`POST /command/takeover`）和 **列出無人機**（`GET /drones`）功能。
 
 ### 6.1 GET /status/{drone_id}
 
@@ -702,7 +702,7 @@ class CommandApiServer:
 class UnifiedDroneSimulator:
 
     def __init__(self, scenario_file: str, echo_port: int = 9000, api_port: int = 8080,
-                 map_sim_url: str = "http://localhost:8090", update_hz: float = 10.0):
+                 map_sim_url: str = "http://localhost:18090", update_hz: float = 10.0):
         self.scenario_file = scenario_file
         self.echo_port = echo_port
         self.api_port = api_port
@@ -778,8 +778,8 @@ class UnifiedDroneSimulator:
 ```bash
 python unified_drone_simulator.py \
   --scenario scenarios/single_drone_invasion.yaml \
-  --echo-port 9000 \
-  --api-port 8080 \
+  --echo-port 19000 \
+  --api-port 18080 \
   --hz 10 \
   --verbose
 
@@ -788,7 +788,7 @@ python unified_drone_simulator.py \
 # --echo-port  EchoShield TCP 輸出 Port（預設 9000）
 # --api-port   Sentrycs Query & Command API Port（預設 8080）
 # --hz             更新頻率 Hz（預設 10，範圍 1-20）
-# --map-sim-url    Map Simulator URL（預設 http://localhost:8090）
+# --map-sim-url    Map Simulator URL（預設 http://localhost:18090）
 # --verbose        詳細日誌輸出
 ```
 

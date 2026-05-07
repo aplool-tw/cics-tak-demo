@@ -160,9 +160,9 @@ Use the same `/dev/tcp` TCP connect as above to health-check the TAK relay, sinc
 
 | Item | Resolution |
 |------|-----------|
-| Which relay for `:8089`? | `tak_relay.py` (plaintext TCP); NOT `stub_server.py` (TLS) |
+| Which relay for `:18089`? | `tak_relay.py` (plaintext TCP); NOT `stub_server.py` (TLS) |
 | How does `tak-client-sim` connect plaintext? | New `use_ssl: bool = True` field; `ssl=None` when false |
-| Correct map-sim browser URL | `http://127.0.0.1:8090/objects` (NOT `/map`) |
+| Correct map-sim browser URL | `http://127.0.0.1:18090/objects` (NOT `/map`) |
 | Canonical port list | 8089, 8090, 8092, 8093, 18080, 7070 |
 | `tak_relay.py` pre-flight check method | `[[ -f scripts/tak_relay.py ]]` (file existence) |
 | `cot_type` available in JS? | Yes — already in `/events` JSON, read by `popupHtml()` |

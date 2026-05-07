@@ -13,7 +13,7 @@ API schema 若變更以 004 為準。
 | 項目 | 值 |
 | --- | --- |
 | 協議 | HTTP/1.1（明文，無 TLS；PoC 內網） |
-| 端點 | `GET http://{sentrycs.host}:{sentrycs.port}/detections`，預設 `http://sentrycs-sim:7070/detections` |
+| 端點 | `GET http://{sentrycs.host}:{sentrycs.port}/detections`，預設 `http://sentrycs-sim:17070/detections` |
 | 輪詢頻率 | 1 Hz（`poll_interval_s=1.0`；FR-GW-005） |
 | Timeout | `timeout_s=2.0`（低於 poll_interval 以免堆積） |
 | Client | `aiohttp.ClientSession`（單例，整個 Gateway 生命週期） |

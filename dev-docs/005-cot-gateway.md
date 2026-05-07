@@ -37,12 +37,12 @@ PoC 核心融合層。整合 EchoShield Sim（雷達）與 Sentrycs Sim（RF 反
 
 | Source | Wire | 文件 |
 |--------|------|------|
-| EchoShield :9000 | TCP NDJSON `RadarTrack` | `specs/003-echoshield-sim/contracts/tcp-feed.md` |
-| Sentrycs :7070 | HTTP GET /detections（1 Hz 輪詢） | `specs/004-sentrycs-sim/contracts/http-status-api.md` |
+| EchoShield :19000 | TCP NDJSON `RadarTrack` | `specs/003-echoshield-sim/contracts/tcp-feed.md` |
+| Sentrycs :17070 | HTTP GET /detections（1 Hz 輪詢） | `specs/004-sentrycs-sim/contracts/http-status-api.md` |
 
 欄位命名對齊：EchoShield wire `latitude/longitude/altitude_m` → 內部 `lat/lon/alt_m` → CoT XML `lat/lon/hae`。
 
-### 下游 TAK Uplink :8089
+### 下游 TAK Uplink :18089
 
 - TCP + SSL（PoC `CERT_NONE`、cryptography 載 p12 解 PEM）
 - newline-delimited CoT XML（每筆事件 `\n` 結尾）
@@ -73,7 +73,7 @@ PoC 核心融合層。整合 EchoShield Sim（雷達）與 Sentrycs Sim（RF 反
 
 ```
                  ┌─ echoshield_reader ──┐
-                 │  (TCP client :9000)  │
+                 │  (TCP client :19000)  │
                  │                      │
                  │                      ▼
                  │              ┌──────────────┐       ┌──────────────┐
@@ -84,7 +84,7 @@ PoC 核心融合層。整合 EchoShield Sim（雷達）與 Sentrycs Sim（RF 反
                  │                      │                     ▼
                  │                      │            ┌──────────────┐
                  └─ sentrycs_poller ───┘            │  cot_queue   │
-                    (HTTP 1 Hz :7070)               │  (max 500)   │
+                    (HTTP 1 Hz :17070)               │  (max 500)   │
                                                     └──────┬───────┘
                                                            │
                                                            ▼
@@ -93,7 +93,7 @@ PoC 核心融合層。整合 EchoShield Sim（雷達）與 Sentrycs Sim（RF 反
                                                   │  + tak_xmit  │
                                                   └──────┬───────┘
                                                          │
-                                                         ▼ TCP+SSL :8089
+                                                         ▼ TCP+SSL :18089
                                                     TAK Server
 ```
 

@@ -126,7 +126,7 @@ p.add_argument("--no-ssl", action="store_true", dest="no_ssl", help="Plaintext T
 
 **Add line**:
 ```yaml
-use_ssl: false       # connects to tak_relay.py (plaintext TCP on :8089)
+use_ssl: false       # connects to tak_relay.py (plaintext TCP on :18089)
 ```
 
 ---
@@ -141,13 +141,13 @@ use_ssl: false       # connects to tak_relay.py (plaintext TCP on :8089)
 
 | # | Service | Launch command | PID var | Health check |
 |---|---------|---------------|---------|--------------|
-| 1 | map-sim | `python3 -m map_sim --port 8090` | `MAPSIM_PID` | `GET http://127.0.0.1:8090/health` → 200 |
-| 2 | uds | `python3 -m uds --scenario demo_single_drone.yaml --api-port 18080 --map-sim-url http://127.0.0.1:8090` | `UDS_PID` | TCP connect `:18080` |
-| 3 | echoshield-sim | `python3 -m echoshield_sim --config demo.yaml` | `ECHO_PID` | `GET http://127.0.0.1:9001/info` → 200 |
-| 4 | sentrycs-sim | `python3 -m sentrycs_sim --scenario config/demo.yaml` | `SNTR_PID` | `GET http://127.0.0.1:7070/health` → 200 |
-| 5 | cot-gateway | `python3 -m cot_gateway --config demo.yaml` | `GW_PID` | `GET http://127.0.0.1:8092/health` → 200 |
-| 6 | tak-relay | `python3 scripts/tak_relay.py --port 8089` | `RELAY_PID` | TCP connect `:8089` |
-| 7 | tak-client-sim | `python3 -m tak_client_sim --config services/tak-client-sim/config/demo.yaml` | `TAK_PID` | `GET http://127.0.0.1:8093/health` → 200 |
+| 1 | map-sim | `python3 -m map_sim --port 8090` | `MAPSIM_PID` | `GET http://127.0.0.1:18090/health` → 200 |
+| 2 | uds | `python3 -m uds --scenario demo_single_drone.yaml --api-port 18080 --map-sim-url http://127.0.0.1:18090` | `UDS_PID` | TCP connect `:18080` |
+| 3 | echoshield-sim | `python3 -m echoshield_sim --config demo.yaml` | `ECHO_PID` | `GET http://127.0.0.1:19001/info` → 200 |
+| 4 | sentrycs-sim | `python3 -m sentrycs_sim --scenario config/demo.yaml` | `SNTR_PID` | `GET http://127.0.0.1:17070/health` → 200 |
+| 5 | cot-gateway | `python3 -m cot_gateway --config demo.yaml` | `GW_PID` | `GET http://127.0.0.1:18092/health` → 200 |
+| 6 | tak-relay | `python3 scripts/tak_relay.py --port 8089` | `RELAY_PID` | TCP connect `:18089` |
+| 7 | tak-client-sim | `python3 -m tak_client_sim --config services/tak-client-sim/config/demo.yaml` | `TAK_PID` | `GET http://127.0.0.1:18093/health` → 200 |
 
 **Pre-flight checks** (all before first service launch):
 1. Config file existence: `UDS_SCENARIO`, `ECHO_CONFIG`, `SNTR_CONFIG`, `GW_CONFIG`, `TAK_CONFIG`
@@ -170,7 +170,7 @@ check_port_free() {
 
 **Browser launch** (after all healthy):
 ```bash
-for url in "http://127.0.0.1:8090/objects" "http://127.0.0.1:8092/map" "http://127.0.0.1:8093/map"; do
+for url in "http://127.0.0.1:18090/objects" "http://127.0.0.1:18092/map" "http://127.0.0.1:18093/map"; do
     xdg-open "$url" 2>/dev/null || open "$url" 2>/dev/null || echo "Open manually: $url"
 done
 ```

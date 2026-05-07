@@ -3,7 +3,7 @@ scenario:
   description: "10 架無人機群入侵，測試 FR-UDS-010 上限 / SC-004"
   update_hz: 10
   servers:
-    command_api_port: 8080
+    command_api_port: 18080
 
   drones:
     - drone_id: "TRK-001"

@@ -32,7 +32,7 @@ python -m map_sim --help
 ### 2.1 預設啟動（PoC 對齊）
 
 ```bash
-# 綁 127.0.0.1:8090；ttl_warn_s=5.0；ttl_remove_s=10.0
+# 綁 127.0.0.1:18090；ttl_warn_s=5.0；ttl_remove_s=10.0
 map-sim
 ```
 
@@ -71,13 +71,13 @@ map-sim --ttl-warn-s 1.0 --ttl-remove-s 2.0 --verbose
 
 ## 3. 手動驗證（curl 範例）
 
-假設 server 跑在 `http://127.0.0.1:8090`。
+假設 server 跑在 `http://127.0.0.1:18090`。
 
 ### 3.1 推送無人機狀態（User Story 1）
 
 ```bash
 # (1) 合法 8 欄位 payload
-curl -sS -X POST http://127.0.0.1:8090/objects/update \
+curl -sS -X POST http://127.0.0.1:18090/objects/update \
   -H 'Content-Type: application/json' \
   -d '{
     "drone_id": "TRK-001",
@@ -92,7 +92,7 @@ curl -sS -X POST http://127.0.0.1:8090/objects/update \
 # → 200 {"status":"updated","drone_id":"TRK-001","registered_at":"..."}
 
 # (2) 多餘欄位（Sentrycs 專屬）— MUST 仍 200
-curl -sS -X POST http://127.0.0.1:8090/objects/update \
+curl -sS -X POST http://127.0.0.1:18090/objects/update \
   -H 'Content-Type: application/json' \
   -d '{
     "drone_id": "TRK-002",
@@ -107,7 +107,7 @@ curl -sS -X POST http://127.0.0.1:8090/objects/update \
 # → 200（額外欄位被靜默忽略）
 
 # (3) 缺必填 — 400
-curl -sS -X POST http://127.0.0.1:8090/objects/update \
+curl -sS -X POST http://127.0.0.1:18090/objects/update \
   -H 'Content-Type: application/json' \
   -d '{"drone_id": "TRK-003", "lat": 25.0}'
 # → 400 {"status":"error","reason":"missing required field: lon"}
@@ -117,22 +117,22 @@ curl -sS -X POST http://127.0.0.1:8090/objects/update \
 
 ```bash
 # (1) Radar 半徑 4800 m 查詢
-curl -sS 'http://127.0.0.1:8090/objects?lat=25.0330&lon=121.5654&radius_m=4800'
+curl -sS 'http://127.0.0.1:18090/objects?lat=25.0330&lon=121.5654&radius_m=4800'
 # → 200；objects[] 依 distance_m 升冪；各含 is_lost=false
 
 # (2) Sentrycs 半徑 8000 m + include_lost
-curl -sS 'http://127.0.0.1:8090/objects?lat=25.0330&lon=121.5654&radius_m=8000&include_lost=true'
+curl -sS 'http://127.0.0.1:18090/objects?lat=25.0330&lon=121.5654&radius_m=8000&include_lost=true'
 
 # (3) 範圍內無物件 — 200 count=0
-curl -sS 'http://127.0.0.1:8090/objects?lat=0&lon=0&radius_m=1000'
+curl -sS 'http://127.0.0.1:18090/objects?lat=0&lon=0&radius_m=1000'
 # → 200 {"query":{...},"count":0,"objects":[]}
 
 # (4) 缺參數 — 400
-curl -sS 'http://127.0.0.1:8090/objects?lat=25.0&lon=121.5'
+curl -sS 'http://127.0.0.1:18090/objects?lat=25.0&lon=121.5'
 # → 400 {"status":"error","reason":"missing required parameter: radius_m"}
 
 # (5) radius_m = 0 — 400
-curl -sS 'http://127.0.0.1:8090/objects?lat=25.0&lon=121.5&radius_m=0'
+curl -sS 'http://127.0.0.1:18090/objects?lat=25.0&lon=121.5&radius_m=0'
 # → 400 {"status":"error","reason":"radius_m must be > 0"}
 ```
 
@@ -142,39 +142,39 @@ curl -sS 'http://127.0.0.1:8090/objects?lat=25.0&lon=121.5&radius_m=0'
 # 在另一 terminal 啟動 map-sim --ttl-warn-s 1 --ttl-remove-s 2 --verbose
 
 # t=0：推送 TRK-099
-curl -sS -X POST http://127.0.0.1:8090/objects/update \
+curl -sS -X POST http://127.0.0.1:18090/objects/update \
   -H 'Content-Type: application/json' \
   -d '{"drone_id":"TRK-099","lat":25.0,"lon":121.5,"alt_m":100,"speed_ms":10,
        "heading_deg":0,"status":"FLYING_NORMAL","timestamp":"2026-04-22T08:00:00Z"}'
 
 # t≈0.5s：仍 active
-curl -sS 'http://127.0.0.1:8090/objects/all' | jq
+curl -sS 'http://127.0.0.1:18090/objects/all' | jq
 # → {"total":1,"active":1,"lost":0,...}
 
 # t≈1.5s：is_lost=true，預設查詢看不到
 sleep 1
-curl -sS 'http://127.0.0.1:8090/objects?lat=25.0&lon=121.5&radius_m=5000' | jq
+curl -sS 'http://127.0.0.1:18090/objects?lat=25.0&lon=121.5&radius_m=5000' | jq
 # → count=0
-curl -sS 'http://127.0.0.1:8090/objects?lat=25.0&lon=121.5&radius_m=5000&include_lost=true' | jq
+curl -sS 'http://127.0.0.1:18090/objects?lat=25.0&lon=121.5&radius_m=5000&include_lost=true' | jq
 # → count=1；objects[0].status="FLYING_NORMAL"（原值未覆寫）；is_lost=true
 
 # t≈3s：已從 registry 移除（cleanup 週期 2 s）
 sleep 2
-curl -sS 'http://127.0.0.1:8090/objects/all' | jq
+curl -sS 'http://127.0.0.1:18090/objects/all' | jq
 # → {"total":0,...}
 ```
 
 ### 3.4 健康檢查
 
 ```bash
-curl -sS http://127.0.0.1:8090/health | jq
+curl -sS http://127.0.0.1:18090/health | jq
 # → {"status":"ok","registered_objects":N,"uptime_s":123.4}
 ```
 
 ### 3.5 手動移除（除錯）
 
 ```bash
-curl -sS -X DELETE http://127.0.0.1:8090/objects/TRK-001
+curl -sS -X DELETE http://127.0.0.1:18090/objects/TRK-001
 # → 200 {"status":"removed","drone_id":"TRK-001"}（或 "not_found"）
 ```
 
@@ -191,10 +191,10 @@ cd services/map-sim && map-sim --port 8090
 # Terminal 2: UDS 啟動並指向 Map Sim
 cd services/uds && uds \
   --scenario scenarios/single_drone_invasion.yaml \
-  --map-sim-url http://127.0.0.1:8090
+  --map-sim-url http://127.0.0.1:18090
 
 # Terminal 3: 以 curl 查詢（模擬 EchoShield / Sentrycs）
-watch -n 1 'curl -sS "http://127.0.0.1:8090/objects?lat=25.0330&lon=121.5654&radius_m=4800" | jq .count'
+watch -n 1 'curl -sS "http://127.0.0.1:18090/objects?lat=25.0330&lon=121.5654&radius_m=4800" | jq .count'
 ```
 
 預期：UDS 每 100 ms 對每架 drone 推一筆；Map Sim 的 `GET /objects/all` 的 `total` 應等於 UDS 場景中
@@ -275,4 +275,4 @@ black --check src tests
 | `POST /objects/update` 一直回 `missing required field: <name>` | request body 拼錯欄位名 | 檢查是否為 8 欄位名稱（`speed_ms` 而非 `velocity_ms`；見 `specs/001-uds/contracts/rest-api.md` §3.2 註）|
 | `GET /objects` 回 `count=0` 但 `/objects/all` 有物件 | 物件 `is_lost=true` 而未帶 `include_lost=true` | 確認 `last_seen_s`；或檢查 `radius_m` 是否太小 |
 | 啟動即 crash `ttl_remove_s must be >= ttl_warn_s > 0` | CLI 參數順序錯 | 確認 `--ttl-warn-s <= --ttl-remove-s` |
-| `aiohttp` Port 被佔用 | 已有 Map Sim 在跑或其他服務佔用 8090 | `lsof -i :8090`；或 `--port 8091` |
+| `aiohttp` Port 被佔用 | 已有 Map Sim 在跑或其他服務佔用 8090 | `lsof -i :18090`；或 `--port 8091` |

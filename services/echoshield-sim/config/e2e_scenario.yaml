@@ -10,6 +10,6 @@ position_noise_m: 5.0
 velocity_noise_ms: 0.5
 noise_seed: null
 # 以下三個欄位由 dev-launcher.sh --echoshield-config 模式動態覆寫：
-# map_sim_url: http://127.0.0.1:8090
+# map_sim_url: http://127.0.0.1:18090
 # feed_host: 127.0.0.1
-# feed_port: 9000
+# feed_port: 19000

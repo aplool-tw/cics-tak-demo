@@ -88,7 +88,7 @@ All 59 tests pass, `ruff` + `black` clean.
 pip install -e "services/tak-client-sim[dev]" --break-system-packages
 
 # Run (PoC, no SSL verify)
-python -m tak_client_sim --host localhost --port 8089
+python -m tak_client_sim --host localhost --port 18089
 
 # Tests
 ( cd services/tak-client-sim && python3 -m pytest -q )

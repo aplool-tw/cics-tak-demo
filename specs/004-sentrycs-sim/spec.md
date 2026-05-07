@@ -3,7 +3,7 @@
 **Feature Branch**: `004-sentrycs-sim`
 **Created**: 2026-04-23
 **Status**: Draft
-**Input**: User description: "Sentrycs C-UAS（被動 RF 偵測）模擬器，以 HTTP JSON Status API（:7070）輸出偵測資料給 CoT Gateway SentrycsAdapter，向 Map Simulator 查詢無人機位置，在 MITIGATING 狀態時呼叫 UDS `/command/takeover` 觸發接管，並模擬操控者 RF 定向位置。"
+**Input**: User description: "Sentrycs C-UAS（被動 RF 偵測）模擬器，以 HTTP JSON Status API（:17070）輸出偵測資料給 CoT Gateway SentrycsAdapter，向 Map Simulator 查詢無人機位置，在 MITIGATING 狀態時呼叫 UDS `/command/takeover` 觸發接管，並模擬操控者 RF 定向位置。"
 
 ---
 
@@ -102,11 +102,11 @@
 
 - **FR-SC-010**: System MUST 僅在由 `DETECTED → MITIGATING` 這一次狀態轉移時對 UDS 發送 `/command/takeover`；同一目標不可重送。
 - **FR-SC-011**: System MUST 將 UDS `/command/takeover` 回傳之 `409 Conflict` 視為「已接管」成功，照常進入 `MITIGATING`；`400/404` 視為失敗並保留於 `DETECTED`。
-- **FR-SC-012**: System MUST 使用可設定之 UDS host/port（預設 `localhost:8080`）與超時（建議 3 秒）。
+- **FR-SC-012**: System MUST 使用可設定之 UDS host/port（預設 `localhost:18080`）與超時（建議 3 秒）。
 
-#### 對外介面（HTTP JSON Status API :7070）
+#### 對外介面（HTTP JSON Status API :17070）
 
-- **FR-SC-013**: System MUST 提供 HTTP JSON 狀態 API，預設監聽 `0.0.0.0:7070`，Port 可由 CLI `--api-port` 與場景檔覆寫。
+- **FR-SC-013**: System MUST 提供 HTTP JSON 狀態 API，預設監聽 `0.0.0.0:17070`，Port 可由 CLI `--api-port` 與場景檔覆寫。
 - **FR-SC-014**: System MUST 提供 `GET /detections` 端點，回傳所有非 IDLE 偵測目標的陣列；IDLE 目標不包含在回傳中。
 - **FR-SC-015**: System MUST 提供 `GET /detection/{uid}` 端點，對存在且非 IDLE 的目標回傳單一 JSON（HTTP 200），否則回傳 HTTP 404（body `{"status":"error","reason":"not_found"}`）。
 - **FR-SC-015b**: System MUST 提供 `GET /health` 端點，回傳 HTTP 200 與 JSON `{status, uptime_s, tracked_drones, map_sim_reachable}`，供 smoke test 與就緒探測使用；該端點不得觸發任何狀態機副作用或寫入 registry。啟動後就緒時間 < 2 秒（SC-SC-011 以 `/health` 200 為就緒信號的等價條件）。
@@ -163,6 +163,6 @@
 - 操控者在場景期間靜止不動；RF 方向定位精度以固定 `ce=50m` 呈現（由 CoT Gateway 使用，本模擬器僅輸出距離/方位）。
 - UDS `/command/takeover` 是冪等的接管語意，對同一 `drone_id` 重複呼叫風險由上層避免；本模擬器保證每目標僅送一次。
 - CoT XML 生成由 CoT Gateway 的 SentrycsAdapter 負責，本模擬器僅輸出 JSON；§6 的 CoT 範例僅供參考，不屬於本 feature 的驗收範圍。
-- 預設 API Port `7070`、Map Simulator `localhost:8090`、UDS `localhost:8080`，均可由 YAML 覆寫。
+- 預設 API Port `7070`、Map Simulator `localhost:18090`、UDS `localhost:18080`，均可由 YAML 覆寫。
 - 依賴 Map Simulator 與 UDS 已凍結的契約：`GET /objects?lat=&lon=&radius_m=` 回傳含 `status + is_lost`；`POST /command/takeover` 接受 `{drone_id, target_lat, target_lon, target_alt_m}` 並回傳 200/400/404/409。
 - Python 3.11+、`aiohttp`、`PyYAML`、`pydantic v2`、`structlog` 為可用的執行環境依賴；WGS84 大地距離/方位計算由本服務以手寫 destination formula（約 15 行）實作，**不**引入 `geopy`，以守依賴最小化原則（詳 plan.md §Dependencies、research.md R3）。

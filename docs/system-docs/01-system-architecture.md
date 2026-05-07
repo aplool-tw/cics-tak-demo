@@ -55,16 +55,16 @@
 flowchart TB
     subgraph SENSE["感測層 (Sensing Layer)"]
         UDS["Unified Drone Simulator\n(Python)\nCommand API :8080"]
-        MS["Map Simulator\n(Python)\n物件登錄表 :8090"]
-        ES_SIM["EchoShield Simulator\n(Python)\nTCP Feed :9000"]
-        SC["Sentrycs Simulator\n(Python)\nStatus API :7070"]
+        MS["Map Simulator\n(Python)\n物件登錄表 :18090"]
+        ES_SIM["EchoShield Simulator\n(Python)\nTCP Feed :19000"]
+        SC["Sentrycs Simulator\n(Python)\nStatus API :17070"]
         DS["場景 YAML\n(無人機飛行設定)"]
     end
 
     subgraph C2["指管層 (C2 Layer)"]
         subgraph GW["CoT Gateway (Python)"]
-            EA["EchodyneAdapter\n(TCP Client :9000)"]
-            SA["SentrycsAdapter\n(HTTP Poll :7070)"]
+            EA["EchodyneAdapter\n(TCP Client :19000)"]
+            SA["SentrycsAdapter\n(HTTP Poll :17070)"]
             TC["TrackCorrelator\n(距離≤50m, 時間≤3s)"]
             CG["CotGenerator\n(MIL-STD-2525C)"]
             TT["TakTransmitter\n(TCP SSL)"]
@@ -85,16 +85,16 @@ flowchart TB
     MS -->|"HTTP GET /objects?radius_m=4800"| ES_SIM
     MS -->|"HTTP GET /objects?radius_m=8000"| SC
     SC -->|"HTTP POST /command/takeover"| UDS
-    ES_SIM -->|"TCP :9000 JSON (10 Hz)"| EA
-    SC -->|"HTTP :7070 JSON (1 Hz poll)"| SA
+    ES_SIM -->|"TCP :19000 JSON (10 Hz)"| EA
+    SC -->|"HTTP :17070 JSON (1 Hz poll)"| SA
     SA -->|Track 物件（SENTRYCS）| TC
     EA -->|Track 物件（ECHOSHIELD）| TC
     TC -->|Track 物件（含 FUSED）| CG
     CG -->|CoT XML| TT
-    TT -->|"TCP SSL :8089"| TAKSVR
-    TAKSVR -->|"TCP SSL :8089"| ATAK_C
-    TAKSVR -->|"TCP SSL :8089"| ATAK_T
-    TAKSVR -->|"TCP SSL :8089"| ATAK_P
+    TT -->|"TCP SSL :18089"| TAKSVR
+    TAKSVR -->|"TCP SSL :18089"| ATAK_C
+    TAKSVR -->|"TCP SSL :18089"| ATAK_T
+    TAKSVR -->|"TCP SSL :18089"| ATAK_P
 ```
 
 ---
@@ -103,12 +103,12 @@ flowchart TB
 
 | 元件 | 技術 | 職責 | 備註 |
 |------|------|------|------|
-| **Unified Drone Simulator** | Python asyncio + aiohttp | 維護無人機飛行狀態；每秒 POST 狀態至 Map Simulator（:8090）；提供 REST API（:8080）供 Sentrycs 發送接管指令 | PoC 無人機飛行引擎 |
-| **Map Simulator** | Python asyncio + aiohttp | 物件狀態中央登錄表；接收 UDS 狀態推送；提供地理範圍查詢 API（:8090）供 EchoShield / Sentrycs 查詢偵測範圍內物件；TTL 自動清理 | Single Source of Truth，解耦感測器與位置資料 |
+| **Unified Drone Simulator** | Python asyncio + aiohttp | 維護無人機飛行狀態；每秒 POST 狀態至 Map Simulator（:18090）；提供 REST API（:8080）供 Sentrycs 發送接管指令 | PoC 無人機飛行引擎 |
+| **Map Simulator** | Python asyncio + aiohttp | 物件狀態中央登錄表；接收 UDS 狀態推送；提供地理範圍查詢 API（:18090）供 EchoShield / Sentrycs 查詢偵測範圍內物件；TTL 自動清理 | Single Source of Truth，解耦感測器與位置資料 |
 | **EchoShield Simulator** | Python asyncio TCP Server | 向 Map Simulator 查詢雷達範圍內物件（4.8km）；加入雷達誤差模擬（±5m 位置噪點）；計算方位角/仰角；以 10 Hz TCP JSON Feed 輸出給 EchodyneAdapter | 雷達特性模擬（誤差、角度、偵測距離限制）|
-| **Sentrycs Simulator** | Python asyncio + aiohttp client | 維護 RF 偵測狀態機；向 Map Simulator 查詢 RF 偵測範圍（8km）內物件；觸發接管時呼叫 UDS POST /command/takeover；輸出 HTTP JSON Status API（:7070）供 SentrycsAdapter 輪詢 | 透過 Map Simulator 取得位置，不再直接查詢 UDS |
-| **SentrycsAdapter** | Python asyncio HTTP Client | 以 1 Hz 輪詢 Sentrycs Simulator HTTP :7070，解析 JSON，轉換為統一 Track 物件（含 drone_model、detection_status、operator_lat/lon）| CoT Gateway 模組之一 |
-| **EchodyneAdapter** | Python asyncio TCP Client | 連接 EchoShield Simulator TCP :9000（PoC）或真實 EchoShield 硬體（生產），解析 JSON，轉換為統一 Track 物件 | 兩種模式輸出格式相同，無需切換 Adapter |
+| **Sentrycs Simulator** | Python asyncio + aiohttp client | 維護 RF 偵測狀態機；向 Map Simulator 查詢 RF 偵測範圍（8km）內物件；觸發接管時呼叫 UDS POST /command/takeover；輸出 HTTP JSON Status API（:17070）供 SentrycsAdapter 輪詢 | 透過 Map Simulator 取得位置，不再直接查詢 UDS |
+| **SentrycsAdapter** | Python asyncio HTTP Client | 以 1 Hz 輪詢 Sentrycs Simulator HTTP :17070，解析 JSON，轉換為統一 Track 物件（含 drone_model、detection_status、operator_lat/lon）| CoT Gateway 模組之一 |
+| **EchodyneAdapter** | Python asyncio TCP Client | 連接 EchoShield Simulator TCP :19000（PoC）或真實 EchoShield 硬體（生產），解析 JSON，轉換為統一 Track 物件 | 兩種模式輸出格式相同，無需切換 Adapter |
 | **TrackCorrelator** | Python | 接收雷達與 RF 航跡，依距離≤50m/時間≤3s 條件進行融合，維護 TTL 10s | 核心業務邏輯 |
 | **CotGenerator** | Python | 將 Track 物件轉換為 CoT XML，依 MIL-STD-2525C 選擇正確 type | 支援 a-u-A-M-F-Q-r 及 a-h-A-M-F-Q-r |
 | **TakTransmitter** | Python TCP Socket | 將 CoT XML 透過 TCP SSL 8089 推送至 TAK Server，含指數退避重連 | |
@@ -133,7 +133,7 @@ flowchart TB
 
 1. Sentrycs Simulator 依狀態機（DETECTED → MITIGATING → NEUTRALIZED）轉移，並向統一模擬器輪詢最新位置
 2. Sentrycs Simulator 以 aiohttp HTTP Server（Port 7070，本機）提供 JSON Status API（含偵測狀態、型號、位置、操控者位置）
-3. CoT Gateway 的 **SentrycsAdapter** 以 1 Hz 輪詢 HTTP :7070，轉換為 Track 物件（source=SENTRYCS）
+3. CoT Gateway 的 **SentrycsAdapter** 以 1 Hz 輪詢 HTTP :17070，轉換為 Track 物件（source=SENTRYCS）
 4. Track 物件進入 **TrackCorrelator**，與 EchoShield 雷達航跡關聯融合
 5. CotGenerator 依融合結果生成 CoT XML，TakTransmitter 推送至 TAK Server
 6. TAK Server 分發至所有 ATAK 顯示端
@@ -234,7 +234,7 @@ sequenceDiagram
 
 | 決策 | 選擇 | 原因 |
 |------|------|------|
-| **Sentrycs 路由** | 透過 CoT Gateway | 統一所有資料流經 Gateway，確保融合邏輯集中管理；Sentrycs 透過 HTTP :7070 提供 JSON Status API，Gateway SentrycsAdapter 以 1 Hz 輪詢；本機 HTTP 無需 SSL，架構清晰，與 EchoShield TCP 路徑對稱 |
+| **Sentrycs 路由** | 透過 CoT Gateway | 統一所有資料流經 Gateway，確保融合邏輯集中管理；Sentrycs 透過 HTTP :17070 提供 JSON Status API，Gateway SentrycsAdapter 以 1 Hz 輪詢；本機 HTTP 無需 SSL，架構清晰，與 EchoShield TCP 路徑對稱 |
 | **TCP vs UDP** | PoC 用 TCP SSL 8089 | PoC 環境需要可靠傳輸，SSL 提供加密；作戰模式可切換 UDP 4242 提高吞吐量 |
 | **Python vs Go** | Python | 快速開發、豐富的 asyncio 生態、geopy/PyYAML 函式庫；PoC 不需高並發效能 |
 | **Docker 部署** | Docker + docker-compose | 環境一致性、快速部署/回滾、TAK Server 官方提供 Docker Image |
@@ -292,11 +292,11 @@ sequenceDiagram
 flowchart LR
     subgraph MACBOOK["展示環境主機（PoC）"]
         UDS["Unified Drone Simulator\n:8080 (Command API)"]
-        MS["Map Simulator\n:8090"]
-        ES_SIM2["EchoShield Simulator\n:9000 (TCP Feed)"]
-        SC["Sentrycs Simulator\n:7070 HTTP"]
+        MS["Map Simulator\n:18090"]
+        ES_SIM2["EchoShield Simulator\n:19000 (TCP Feed)"]
+        SC["Sentrycs Simulator\n:17070 HTTP"]
         GW["CoT Gateway\n(EchodyneAdapter + SentrycsAdapter)"]
-        TAKSVR["TAK Server（Docker）\n:8087 :8089 :8443 :8446"]
+        TAKSVR["TAK Server（Docker）\n:8087 :18089 :8443 :8446"]
     end
 
     subgraph WIFI["Wi-Fi 區域網路（同一 AP）"]
@@ -305,15 +305,15 @@ flowchart LR
         AP["ATAK（手機）"]
     end
 
-    UDS -->|"POST :8090"| MS
+    UDS -->|"POST :18090"| MS
     MS -->|"GET /objects"| ES_SIM2
     MS -->|"GET /objects"| SC
-    ES_SIM2 -->|"TCP :9000"| GW
-    SC -->|"HTTP :7070"| GW
-    GW -->|"TCP SSL :8089"| TAKSVR
-    TAKSVR -->|"TCP SSL :8089\n<HOST-LAN-IP>"| AT_C
-    TAKSVR -->|"TCP SSL :8089\n<HOST-LAN-IP>"| AT_T
-    TAKSVR -->|"TCP SSL :8089\n<HOST-LAN-IP>"| AP
+    ES_SIM2 -->|"TCP :19000"| GW
+    SC -->|"HTTP :17070"| GW
+    GW -->|"TCP SSL :18089"| TAKSVR
+    TAKSVR -->|"TCP SSL :18089\n<HOST-LAN-IP>"| AT_C
+    TAKSVR -->|"TCP SSL :18089\n<HOST-LAN-IP>"| AT_T
+    TAKSVR -->|"TCP SSL :18089\n<HOST-LAN-IP>"| AP
 ```
 
 ---
@@ -329,7 +329,7 @@ TAK-POC-CA (Root CA)
 ├── atak-tablet.p12    (ATAK 指揮端平板客戶端憑證)
 └── atak-phone.p12     (ATAK 手機客戶端憑證)
 
-> **注意**：Sentrycs Simulator 不再直連 TAK Server，改透過 HTTP :7070 JSON Status API 供 CoT Gateway SentrycsAdapter 輪詢，本機通訊無需 SSL。sentrycs.p12 已移除。
+> **注意**：Sentrycs Simulator 不再直連 TAK Server，改透過 HTTP :17070 JSON Status API 供 CoT Gateway SentrycsAdapter 輪詢，本機通訊無需 SSL。sentrycs.p12 已移除。
 ```
 
 憑證由 TAK Server 內建的 `makeRootCa.sh` 與 `makeCert.sh` 腳本生成，格式為 PKCS#12（.p12）。

@@ -33,6 +33,6 @@
 
 ## Notes
 
-- 規格內 FR-UDS-002 / FR-UDS-014 針對 `02-unified-drone-simulator-spec.md` §1.2 的過時敘述（TCP `:9000` 由 UDS 提供）進行了明確修正，並在 §1 的架構澄清段落中註記來源為 CHANGELOG v0.3。
+- 規格內 FR-UDS-002 / FR-UDS-014 針對 `02-unified-drone-simulator-spec.md` §1.2 的過時敘述（TCP `:19000` 由 UDS 提供）進行了明確修正，並在 §1 的架構澄清段落中註記來源為 CHANGELOG v0.3。
 - `POST /command/takeover` 的 request/response schema 不在本 spec 細述（屬 ICD 層次），只以 acceptance scenario 驗證行為；實作時以 `08-api-icd.md` 為依據即可。
 - Items marked incomplete require spec updates before `/speckit.clarify` or `/speckit.plan`.

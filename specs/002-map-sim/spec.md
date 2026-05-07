@@ -24,10 +24,10 @@
 **架構定位（對齊 `01-system-architecture.md` 與 `03-map-simulator-spec.md` §1.2）**：
 
 ```
-UDS（:8080）
+UDS（:18080）
   │ POST /objects/update（per-drone, ~10 Hz）
   ▼
-Map Simulator（:8090, 本 feature）
+Map Simulator（:18090, 本 feature）
   ▲                       ▲
   │ GET /objects?radius=  │ GET /objects?radius=
   │    4800（radar）      │    8000（RF）
@@ -57,7 +57,7 @@ UDS 作為無人機真實位置的 Single Source of Truth，每個主迴圈週�
 
 **Why this priority**：整個 PoC 的資料流起點。若 Map Sim 無法穩定接收 UDS 推送，後續所有感測器、融合、TAK 呈現均無資料可用。
 
-**Independent Test**：啟動 Map Sim（`:8090`），以 `curl` 或簡易腳本重現 UDS 的 8 欄位 payload，反覆呼叫 `POST /objects/update` 後以 `GET /objects/all` 驗證登錄表內容；不需啟動 UDS / EchoShield / Sentrycs。
+**Independent Test**：啟動 Map Sim（`:18090`），以 `curl` 或簡易腳本重現 UDS 的 8 欄位 payload，反覆呼叫 `POST /objects/update` 後以 `GET /objects/all` 驗證登錄表內容；不需啟動 UDS / EchoShield / Sentrycs。
 
 **Acceptance Scenarios**:
 
@@ -171,7 +171,7 @@ EchoShield Simulator（雷達，半徑 4800 m）與 Sentrycs Simulator（RF，�
 
 ## 5. Assumptions
 
-- **單機部署**：UDS、Map Sim、EchoShield Sim、Sentrycs Sim 均部署於同一台 PoC 主機，Map Sim 綁 `127.0.0.1:8090`；不處理跨主機、跨網段、反向代理、TLS。
+- **單機部署**：UDS、Map Sim、EchoShield Sim、Sentrycs Sim 均部署於同一台 PoC 主機，Map Sim 綁 `127.0.0.1:18090`；不處理跨主機、跨網段、反向代理、TLS。
 - **單一上游**：僅 UDS 一個來源推送 `POST /objects/update`；不考慮多個上游系統對同一 `drone_id` 競爭寫入的仲裁策略（最後到的一筆覆寫，不做 timestamp 排序合併）。
 - **不持久化**：Map Sim 重啟即清空登錄表；不寫入任何檔案或資料庫；狀態僅存記憶體。UDS 重啟後會重新推送，下游感測器容忍短暫空窗。
 - **不跨實例擴展**：單一 Map Sim 行程即可覆蓋 PoC 容量；不考慮橫向擴展、sharding、主從複製。

@@ -22,7 +22,7 @@ warnings.filterwarnings(
 class EchoshieldConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     host: str = "echoshield-sim"
-    port: int = Field(default=9000, gt=0, le=65535)
+    port: int = Field(default=19000, gt=0, le=65535)
     reconnect_interval_s: float = Field(default=5.0, gt=0.0)
 
 
@@ -30,7 +30,7 @@ class SentrycsConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     enabled: bool = True
     host: str = "sentrycs-sim"
-    port: int = Field(default=7070, gt=0, le=65535)
+    port: int = Field(default=17070, gt=0, le=65535)
     poll_interval_s: float = Field(default=1.0, gt=0.0)
     timeout_s: float = Field(default=2.0, gt=0.0)
 
@@ -45,7 +45,7 @@ class CorrelatorConfig(BaseModel):
 class TakServerConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     host: str = "tak-server"
-    port: int = Field(default=8089, gt=0, le=65535)
+    port: int = Field(default=18089, gt=0, le=65535)
     use_ssl: bool = True
     use_ssl_verify: bool = False
     cert_file: str = "config/certs/gateway.p12"
@@ -79,11 +79,11 @@ class WebConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     enabled: bool = False
     host: str = "0.0.0.0"
-    port: int = Field(default=8092, gt=0, le=65535)
+    port: int = Field(default=18092, gt=0, le=65535)
     sites_file: str = ""
     # URLs used to query live sensor positions for the /sites overlay
-    echoshield_info_url: str = "http://echoshield-sim:9001/info"
-    sentrycs_sensor_url: str = "http://sentrycs-sim:7070/sensor-info"
+    echoshield_info_url: str = "http://echoshield-sim:19001/info"
+    sentrycs_sensor_url: str = "http://sentrycs-sim:17070/sensor-info"
     # Default SP coords used to centre the map (overrideable via sites_file)
     sp_lat: float = Field(default=24.725806, ge=-90.0, le=90.0)
     sp_lon: float = Field(default=121.033750, ge=-180.0, le=180.0)

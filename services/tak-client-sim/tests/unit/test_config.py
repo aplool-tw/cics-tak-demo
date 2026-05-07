@@ -9,7 +9,7 @@ from tak_client_sim.config import ClientConfig, load_config
 def test_default_config() -> None:
     cfg = ClientConfig()
     assert cfg.host == "tak-server"
-    assert cfg.port == 8089
+    assert cfg.port == 18089
     assert cfg.use_ssl_verify is False
     assert cfg.max_retries == 0
     assert cfg.filter_prefix is None

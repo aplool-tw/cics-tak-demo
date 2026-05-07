@@ -24,13 +24,13 @@ class RadarConfig(BaseModel):
 
     noise_seed: Optional[int] = None
 
-    map_sim_url: str = "http://localhost:8090"
+    map_sim_url: str = "http://localhost:18090"
     feed_host: str = "0.0.0.0"
-    feed_port: int = Field(default=9000, ge=1, le=65535)
+    feed_port: int = Field(default=19000, ge=1, le=65535)
 
     # Optional HTTP info server (reports sensor position to CoT Gateway)
     info_host: str = "0.0.0.0"
-    info_port: int = Field(default=9001, ge=1, le=65535)
+    info_port: int = Field(default=19001, ge=1, le=65535)
 
     @field_validator("map_sim_url")
     @classmethod

@@ -15,8 +15,8 @@ from typing import Any
 @dataclass(slots=True)
 class Settings:
     scenario_path: str
-    api_port: int = 8080
-    map_sim_url: str = "http://127.0.0.1:8090"
+    api_port: int = 18080
+    map_sim_url: str = "http://127.0.0.1:18090"
     hz: int = 10
     verbose: bool = False
     debug: bool = False
@@ -52,7 +52,7 @@ class Settings:
         elif scenario is not None and getattr(scenario, "servers", None) is not None:
             api_port = int(scenario.servers.command_api_port)
         else:
-            api_port = 8080
+            api_port = 18080
 
         # validation (fail-fast)
         if not (1 <= hz <= 20):

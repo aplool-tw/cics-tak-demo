@@ -107,7 +107,7 @@ bash scripts/demo-map-viewer.sh
 bash scripts/demo-map-viewer.sh --stop
 
 # 直接開發測試
-open http://127.0.0.1:8090/map
+open http://127.0.0.1:18090/map
 ```
 
 ---
@@ -123,7 +123,7 @@ CoT Gateway 新增 `web/` module，整合即時 TAK 軌跡（EchoShield + Sentry
 | 功能 | 說明 |
 |------|------|
 | 即時軌跡 | 每 3 秒 poll `/tracks`，依來源著色：ECHOSHIELD=藍、SENTRYCS=紫、FUSED=紅 |
-| 感測器位置 | GET /info (EchoShield :9001) + GET /sensor-info (Sentrycs :7070) 顯示感測器 marker |
+| 感測器位置 | GET /info (EchoShield :19001) + GET /sensor-info (Sentrycs :17070) 顯示感測器 marker |
 | SP（雷達站） | 綠色 marker，附 1km/2km/3km 範圍圈 |
 | HP（停機點） | 橘色 H 標記 marker |
 | 軌跡卡片 | 右側面板顯示所有 active 軌跡，含 UID/座標/狀態 |
@@ -195,6 +195,6 @@ bash scripts/demo-cot-gateway-map.sh
 bash scripts/demo-cot-gateway-map.sh --stop
 
 # 開啟地圖
-open http://127.0.0.1:8091/map
+open http://127.0.0.1:18091/map
 ```
 

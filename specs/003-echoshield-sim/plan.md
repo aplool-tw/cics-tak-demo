@@ -6,9 +6,9 @@
 ## Summary
 
 EchoShield Simulator 取代真實 EchoShield® 4D Radar 硬體，作為 PoC 感測層。它以 10 Hz 週期向 Map
-Simulator（`GET /objects`，:8090）查詢雷達安裝點周邊 `max_range_m` 內的無人機，對每筆結果疊加雷達量
+Simulator（`GET /objects`，:18090）查詢雷達安裝點周邊 `max_range_m` 內的無人機，對每筆結果疊加雷達量
 測誤差（位置 σ=5m、高度 σ=2m、速度 σ=0.5m/s 的獨立 Gaussian 噪點），以安裝點為原點計算方位角與仰
-角，並透過 asyncio TCP Server（:9000）以換行分隔 JSON（UTF-8）廣播給所有已連線的 Client
+角，並透過 asyncio TCP Server（:19000）以換行分隔 JSON（UTF-8）廣播給所有已連線的 Client
 （CoT Gateway EchodyneAdapter）。Simulator 維護 `drone_id → track_id` 映射與 2.0s grace window 吸
 收抖動；map_sim 不可用時靜默跳過該輪；無物件時靜默不送任何 bytes。
 
@@ -22,7 +22,7 @@ wire schema 驗證、structlog 做結構化日誌、pytest + pytest-asyncio + fr
 **Language/Version**: Python 3.11+
 **Primary Dependencies**:
 - runtime：`aiohttp>=3.9`（HTTP client 查 Map Sim `GET /objects`）、`asyncio`（stdlib，主迴圈與
-  TCP server at :9000）、`pydantic>=2.6`（config / RadarTrack schema）、`structlog>=24.1`
+  TCP server at :19000）、`pydantic>=2.6`（config / RadarTrack schema）、`structlog>=24.1`
   （結構化 JSON 日誌）、`numpy>=1.26`（高斯噪點取樣，`np.random.Generator`）、`pyyaml`（讀 config）。
 - dev：`pytest>=8.0`、`pytest-asyncio>=0.23`（asyncio_mode=auto）、`freezegun>=1.4`（凍結
   `timestamp` 欄位）、`aiohttp`（test stub server，reuse runtime dep）、`ruff`、`black`。
@@ -82,7 +82,7 @@ specs/003-echoshield-sim/
 ├── data-model.md              # Phase 1 產物
 ├── quickstart.md              # Phase 1 產物
 ├── contracts/
-│   └── tcp-feed.md            # TCP JSON wire protocol（:9000）
+│   └── tcp-feed.md            # TCP JSON wire protocol（:19000）
 ├── checklists/                # 既存（by /speckit.checklist）
 └── tasks.md                   # Phase 2 產物（/speckit.tasks 產生，非本命令）
 ```
@@ -115,7 +115,7 @@ services/echoshield-sim/
 │       │   └── client.py                # aiohttp client：GET /objects，timeout=1.0s，single-flight
 │       ├── feed/
 │       │   ├── __init__.py
-│       │   └── tcp_server.py            # asyncio TCP server :9000，broadcast fan-out
+│       │   └── tcp_server.py            # asyncio TCP server :19000，broadcast fan-out
 │       └── loop.py                      # 10 Hz 主迴圈、tick scheduler、lifecycle 管理
 └── tests/
     ├── conftest.py

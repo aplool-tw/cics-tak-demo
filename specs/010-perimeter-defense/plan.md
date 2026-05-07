@@ -309,7 +309,7 @@ Add both fields after `poll_interval_s`:
 sensor_lat: 24.725806
 sensor_lon: 121.033750
 poll_interval_s: 0.5
-map_sim_url: http://127.0.0.1:8090
+map_sim_url: http://127.0.0.1:18090
 
 # AFTER
 sensor_lat: 24.725806
@@ -317,7 +317,7 @@ sensor_lon: 121.033750
 poll_interval_s: 0.5
 detection_radius_m: 8000.0   # explicit — was implicit code default
 defense_radius_m: 1000.0     # perimeter trigger: takeover fires when drone < 1km from sensor
-map_sim_url: http://127.0.0.1:8090
+map_sim_url: http://127.0.0.1:18090
 ```
 
 #### Acceptance checks for Item 4

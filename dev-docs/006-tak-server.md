@@ -14,7 +14,7 @@ behavior, or test suite of features 001-005.
 | Path                                       | Purpose                                                   |
 | ------------------------------------------ | --------------------------------------------------------- |
 | `infra/tak-server/Dockerfile`              | python:3.12-slim image; no third-party deps               |
-| `infra/tak-server/stub_server.py`          | asyncio TLS CoT collector on :8089 (stdlib only)          |
+| `infra/tak-server/stub_server.py`          | asyncio TLS CoT collector on :18089 (stdlib only)          |
 | `infra/tak-server/docker-compose.yaml`     | `stub` profile (default) + commented `prod` profile       |
 | `infra/tak-server/README.md`               | Operator quickstart, file reference, troubleshooting      |
 | `scripts/gen-certs.sh`                     | openssl-based CA + server cert + gateway p12 generator    |
@@ -42,7 +42,7 @@ certs with the same names. Idempotent by default (refuses overwrite without
 ## Stub TAK Server design
 
 - Stdlib-only Python (asyncio + ssl + logging + json). **G7 compliant.**
-- Listens on :8089 TLS, validates client cert against `ca.crt`
+- Listens on :18089 TLS, validates client cert against `ca.crt`
   (`CERT_OPTIONAL`; mTLS upgradable via `--require-client-cert`).
 - Logs each connection / received CoT line / disconnect as JSON to stdout
   (G3-compatible structlog-shaped events).

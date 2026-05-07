@@ -3,10 +3,10 @@ sensor_lon: 121.5654
 
 # 以下皆為預設值，可省略
 poll_interval_s: 0.5
-map_sim_url: http://localhost:8090
-uds_url: http://localhost:8080
+map_sim_url: http://localhost:18090
+uds_url: http://localhost:18080
 api_host: 0.0.0.0
-api_port: 7070
+api_port: 17070
 neutralized_hold_s: 30.0
 mitigating_disappear_grace_s: 10.0
 

@@ -34,9 +34,9 @@ class DetectionStatus(str, Enum):
 | `sensor_lon` | float | ✅ | `[-180, 180]` | 感測器安裝經度 |
 | `detection_radius_m` | float | ❌ | 預設 `8000.0`（固定）| Map Sim 查詢半徑；固定 8 km |
 | `poll_interval_s` | float | ❌ | 預設 `0.5`（2 Hz）| Map Sim 輪詢週期 |
-| `map_sim_url` | string | ❌ | 預設 `http://localhost:8090` | Map Sim base URL |
+| `map_sim_url` | string | ❌ | 預設 `http://localhost:18090` | Map Sim base URL |
 | `map_sim_timeout_s` | float | ❌ | 預設 `1.0` | Map Sim 單次查詢逾時 |
-| `uds_url` | string | ❌ | 預設 `http://localhost:8080` | UDS base URL |
+| `uds_url` | string | ❌ | 預設 `http://localhost:18080` | UDS base URL |
 | `uds_timeout_s` | float | ❌ | 預設 `3.0` | UDS takeover 逾時 |
 | `api_host` | string | ❌ | 預設 `0.0.0.0` | Status API 綁定 host |
 | `api_port` | int | ❌ | `[1, 65535]`，預設 `7070` | Status API 綁定 port；CLI `--api-port` 可覆寫 |
@@ -194,7 +194,7 @@ scenario.yaml  --pydantic-->  SentrycsConfig
       │
       └── all transitions → DroneTrack.status_changed_at = now
 
-   HTTP API :7070
+   HTTP API :17070
       GET /detections      → DroneRegistry.snapshot()
       GET /detection/{uid} → DroneRegistry.get(uid)
       GET /health          → {"status": "ok", ...}

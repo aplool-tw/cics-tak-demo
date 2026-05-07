@@ -3,7 +3,7 @@
 **Feature Branch**: `003-echoshield-sim`
 **Created**: 2026-04-23
 **Status**: Draft
-**Input**: 感測層雷達模擬器；以 10 Hz 從 Map Sim `GET /objects` 取得範圍內物件，加入雷達誤差後以 TCP JSON Feed（:9000）供 CoT Gateway EchodyneAdapter 使用。
+**Input**: 感測層雷達模擬器；以 10 Hz 從 Map Sim `GET /objects` 取得範圍內物件，加入雷達誤差後以 TCP JSON Feed（:19000）供 CoT Gateway EchodyneAdapter 使用。
 
 ---
 
@@ -23,7 +23,7 @@ EchoShield Simulator 是 PoC 感測層的**雷達模擬器**，取代真實 Echo
 
 它的唯一資料源是 Map Simulator（`GET /objects`），作為「在特定地理位置上以一支雷達觀察世界」的角色：
 以固定 10 Hz 對雷達安裝點（`sensor_lat/lon`）與最大偵測距離（預設 4800m）查詢範圍內無人機，加入雷達特性
-模擬（位置噪點、速度噪點、方位角 / 仰角幾何），再以 asyncio TCP Server（:9000）將每筆航跡以換行分隔
+模擬（位置噪點、速度噪點、方位角 / 仰角幾何），再以 asyncio TCP Server（:19000）將每筆航跡以換行分隔
 JSON 廣播給所有已連線的 Client（EchodyneAdapter）。
 
 本模組**不負責**物件追蹤狀態管理的下游語義（如 CoT type、融合）——這些由 CoT Gateway 處理。本模組
@@ -35,7 +35,7 @@ JSON 廣播給所有已連線的 Client（EchodyneAdapter）。
 
 ### User Story 1 - CoT Gateway 透過 TCP 接收 10 Hz 雷達航跡 (Priority: P1)
 
-CoT Gateway 的 EchodyneAdapter 啟動後連接至 EchoShield Simulator 的 `TCP :9000`，持續收到每 100ms 一批
+CoT Gateway 的 EchodyneAdapter 啟動後連接至 EchoShield Simulator 的 `TCP :19000`，持續收到每 100ms 一批
 的 EchoShield JSON 航跡（換行分隔）。對 Adapter 而言，Simulator 與真實硬體在 wire protocol 層完全一致：
 同樣的 port、同樣的 JSON schema、同樣的推送節奏。
 
@@ -48,7 +48,7 @@ CoT Gateway 的 EchodyneAdapter 啟動後連接至 EchoShield Simulator 的 `TCP
 **Acceptance Scenarios**:
 
 1. **Given** Simulator 已啟動且 Map Sim 內有 1 架無人機位於雷達範圍內，**When** 測試 Client 連線至
-   `:9000`，**Then** Client 在 1.0s 內至少收到 8 筆 JSON 行（10 Hz × 1s，容忍初期抖動），每行以 `\n` 結尾，
+   `:19000`，**Then** Client 在 1.0s 內至少收到 8 筆 JSON 行（10 Hz × 1s，容忍初期抖動），每行以 `\n` 結尾，
    且為合法 UTF-8 JSON 物件。
 2. **Given** 同上，**When** Client 連線並讀取 5 秒，**Then** 所有訊息皆帶有 `track_id` / `latitude` /
    `longitude` / `altitude_m` / `velocity_ms` / `azimuth_deg` / `elevation_deg` / `timestamp` /
@@ -200,7 +200,7 @@ RadarProcessor，驗證 azimuth / elevation 在理論值的 ±0.1° 內、位置
 
 #### TCP Feed Server
 
-- **FR-ES-013**：Simulator **MUST** 於 `feed_host:feed_port`（預設 `0.0.0.0:9000`）啟動 asyncio TCP
+- **FR-ES-013**：Simulator **MUST** 於 `feed_host:feed_port`（預設 `0.0.0.0:19000`）啟動 asyncio TCP
   Server；**MUST** 支援 ≥ 2 個 Client 同時連線；所有 Client 收到相同的每輪 JSON 行內容。
 - **FR-ES-014**：Client 斷線（EOF / write error / reset）**MUST**：(a) 被 Simulator 偵測並從廣播名單
   移除；(b) 不影響其他 Client；(c) 不使主迴圈中斷。
@@ -239,7 +239,7 @@ RadarProcessor，驗證 azimuth / elevation 在理論值的 ±0.1° 內、位置
   - 噪點：`position_noise_m`（σ，預設 5.0）、`velocity_noise_ms`（σ，預設 0.5）、
     `noise_seed`（`int | None`，預設 `None`；若為整數則初始化噪點 RNG 以取得可重現序列，
     `None` 代表使用系統熵源）。
-  - 上下游：`map_sim_url`（預設 `http://localhost:8090`）、`feed_host` / `feed_port`（預設 `0.0.0.0:9000`）。
+  - 上下游：`map_sim_url`（預設 `http://localhost:18090`）、`feed_host` / `feed_port`（預設 `0.0.0.0:19000`）。
 
 - **RadarTrack**（EchoShield JSON 輸出的單筆航跡）。
   - `track_id`：string，格式 `echo-{8-hex}`，於單次 Active 生命週期內穩定。

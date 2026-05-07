@@ -32,9 +32,9 @@
 ```
 展示環境主機
 ├── localhost (127.0.0.1)
-│   ├── EchoShield Simulator :9000
+│   ├── EchoShield Simulator :19000
 │   ├── CoT Gateway（TCP client）
-│   ├── TAK Server Docker :8087 :8089 :8443 :8446
+│   ├── TAK Server Docker :8087 :18089 :8443 :8446
 │   └── TAK Server DB Docker（細部設計決定）
 │
 └── LAN IP（Wi-Fi，e.g. 192.168.1.100）
@@ -171,7 +171,7 @@ services:
     restart: unless-stopped
     ports:
       - "8087:8087"    # TCP 無 SSL（測試用）
-      - "8089:8089"    # TCP SSL（主線）
+      - "8089:18089"    # TCP SSL（主線）
       - "8443:8443"    # HTTPS Web Console
       - "8446:8446"    # HTTPS PKI Auto-enrollment
       - "4242:4242/udp" # UDP SA
@@ -476,7 +476,7 @@ curl -v telnet://localhost:8087
 
 ```bash
 # 測試 SSL 握手（本機執行，需先匯出 PEM）
-openssl s_client -connect localhost:8089 \
+openssl s_client -connect localhost:18089 \
   -cert ~/tak-poc/certs/files/gateway.pem \
   -key ~/tak-poc/certs/files/gateway.key \
   -CAfile ~/tak-poc/certs/files/truststore.pem \
@@ -549,7 +549,7 @@ docker logs takserver 2>&1 | grep -i "error\|exception\|warn" | tail -30
 
 ```bash
 # 確認 TAK Server Port 監聽中
-lsof -i :8087 -i :8089 -i :8443 -i :8446
+lsof -i :8087 -i :18089 -i :8443 -i :8446
 
 # 或
 netstat -an | grep -E '8087|8089|8443|8446'

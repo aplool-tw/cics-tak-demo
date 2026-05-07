@@ -225,6 +225,6 @@ DISCONNECTED ──(retry_count == max_retries=5)──► FATAL（raise → Gat
 │                                                                │   │
 │                                                             SSL+TCP │
 │                                                                ▼   │
-│                                                          TAK :8089 │
+│                                                          TAK :18089 │
 └───────────────────────────────────────────────────────────────────┘
 ```

@@ -120,7 +120,7 @@ cp services/cot-gateway/config/remote-tak.yaml services/cot-gateway/config/my-ta
 export TAK_HOST=192.168.1.100
 python3 -m cot_gateway \
   --config services/cot-gateway/config/remote-tak.yaml \
-  --tak-host "${TAK_HOST}" --tak-port 8089
+  --tak-host "${TAK_HOST}" --tak-port 18089
 
 # 3. OR use the demo script
 TAK_HOST=192.168.1.100 scripts/demo-1drone-remote-tak.sh

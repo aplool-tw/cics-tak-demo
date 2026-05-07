@@ -17,10 +17,10 @@
 | 00 | `00-index.md` | 文件索引 | 本文件，所有文件的入口與說明 | 草稿 |
 | 01 | `01-system-architecture.md` | 系統架構文件 | 三層架構、資料流、技術棧、網路拓樸、安全設計、效能設計 | 草稿 |
 | 02 | `02-unified-drone-simulator-spec.md` | 統一無人機模擬器規格 | Unified Drone Simulator 的完整開發規格：飛行引擎、接管閉環（`POST /command/takeover`）、飛行狀態機、Map Simulator 推送介面 | 草稿 |
-| 03 | `03-map-simulator-spec.md` | Map Simulator 規格 | 物件狀態中央登錄表的完整規格：REST API（:8090）、DroneObject dataclass、ObjectRegistry TTL 管理、與 UDS 整合的推送介面 | 草稿 |
-| 04 | `04-echoshield-simulator-spec.md` | EchoShield Simulator 規格 | EchoShield 雷達模擬器完整開發規格：Map Simulator 查詢、雷達誤差模擬（位置/速度噪點）、方位角/仰角計算、EchoShield TCP JSON Feed（:9000）| 草稿 |
-| 05 | `05-sentrycs-simulator-spec.md` | Sentrycs 模擬器規格 | Sentrycs C-UAS 模擬器開發規格，含狀態機、Map Simulator 查詢、HTTP JSON Status API（:7070）、CoT Gateway 整合 | 草稿 |
-| 06 | `06-cot-gateway-spec.md` | CoT Gateway 規格 | CoT Gateway 所有模組的詳細規格，含 EchodyneAdapter（:9000）、SentrycsAdapter（:7070）、TrackCorrelator、CotGenerator、TakTransmitter | 草稿 |
+| 03 | `03-map-simulator-spec.md` | Map Simulator 規格 | 物件狀態中央登錄表的完整規格：REST API（:18090）、DroneObject dataclass、ObjectRegistry TTL 管理、與 UDS 整合的推送介面 | 草稿 |
+| 04 | `04-echoshield-simulator-spec.md` | EchoShield Simulator 規格 | EchoShield 雷達模擬器完整開發規格：Map Simulator 查詢、雷達誤差模擬（位置/速度噪點）、方位角/仰角計算、EchoShield TCP JSON Feed（:19000）| 草稿 |
+| 05 | `05-sentrycs-simulator-spec.md` | Sentrycs 模擬器規格 | Sentrycs C-UAS 模擬器開發規格，含狀態機、Map Simulator 查詢、HTTP JSON Status API（:17070）、CoT Gateway 整合 | 草稿 |
+| 06 | `06-cot-gateway-spec.md` | CoT Gateway 規格 | CoT Gateway 所有模組的詳細規格，含 EchodyneAdapter（:19000）、SentrycsAdapter（:17070）、TrackCorrelator、CotGenerator、TakTransmitter | 草稿 |
 | 07 | `07-tak-server-deployment-spec.md` | TAK Server 部署規格 | 展示環境主機 Docker Desktop 部署步驟、PKI 憑證、ATAK 裝置連線設定 | 草稿 |
 | 08 | `08-api-icd.md` | API 介面控制文件（ICD） | 所有系統介面的完整定義，含 JSON Schema、CoT XML 範例、端對端訊息流 | 草稿 |
 | — | `CHANGELOG.md` | 文件修改日誌 | 所有版本的修改歷史記錄 | 維護中 |
@@ -45,8 +45,8 @@
 本 PoC 採用統一無人機模擬器替代真實硬體，所有服務部署於 展示環境主機：
 
 - **Unified Drone Simulator**（`02`）：Python 程式，執行無人機飛行引擎，每秒 push 狀態至 Map Simulator；Command API（:8080）接受接管指令
-- **Map Simulator**：物件狀態中央登錄表，提供地理範圍查詢 API（:8090），供 EchoShield / Sentrycs 模擬器查詢偵測範圍內物件
-- **Sentrycs C-UAS 模擬器**：消費統一模擬器數據，實作接管閉環，提供 JSON Status API（HTTP :7070）供 CoT Gateway SentrycsAdapter 輪詢後統一融合推送至 TAK Server
+- **Map Simulator**：物件狀態中央登錄表，提供地理範圍查詢 API（:18090），供 EchoShield / Sentrycs 模擬器查詢偵測範圍內物件
+- **Sentrycs C-UAS 模擬器**：消費統一模擬器數據，實作接管閉環，提供 JSON Status API（HTTP :17070）供 CoT Gateway SentrycsAdapter 輪詢後統一融合推送至 TAK Server
 - **TAK Server**：部署於 展示環境主機 Docker Desktop
 - **顯示端**：ATAK Android 裝置（平板/手機），與 展示主機 連接同一 Wi-Fi
 
@@ -66,8 +66,8 @@
 
 | 層次 | 元件 |
 |------|------|
-| 感測層 | UDS（飛行引擎 :8080）、Map Simulator（物件登錄表 :8090）、EchoShield Simulator（雷達 TCP :9000）、Sentrycs Simulator（RF :7070）|
-| 指管層 | CoT Gateway（EchodyneAdapter :9000 + SentrycsAdapter :7070 → TCP SSL :8089）、TAK Server（本地 Docker 環境）|
+| 感測層 | UDS（飛行引擎 :8080）、Map Simulator（物件登錄表 :18090）、EchoShield Simulator（雷達 TCP :19000）、Sentrycs Simulator（RF :17070）|
+| 指管層 | CoT Gateway（EchodyneAdapter :19000 + SentrycsAdapter :17070 → TCP SSL :18089）、TAK Server（本地 Docker 環境）|
 | 顯示層 | ATAK Android（平板/手機，同 Wi-Fi 網段）|
 
 ---

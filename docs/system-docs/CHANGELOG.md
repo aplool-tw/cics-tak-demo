@@ -16,7 +16,7 @@
 
 
 ### 新增
-- `04-echoshield-simulator-spec.md`：EchoShield Simulator 完整開發規格（新增獨立文件），涵蓋：Map Simulator 查詢、雷達誤差模擬、方位角/仰角計算、EchoShield TCP JSON Feed 輸出（:9000）
+- `04-echoshield-simulator-spec.md`：EchoShield Simulator 完整開發規格（新增獨立文件），涵蓋：Map Simulator 查詢、雷達誤差模擬、方位角/仰角計算、EchoShield TCP JSON Feed 輸出（:19000）
 
 ### 修改
 - **文件重新編號**：
@@ -38,7 +38,7 @@
 
 #### 移除 SimulatedDroneAdapter
 - **背景**：EchoShield Simulator 已可直接輸出 EchoShield JSON TCP Feed，不再需要 Gateway 內的橋接模組
-- **變更**：EchodyneAdapter 直接連接 EchoShield Simulator TCP :9000；PoC 與生產模式共用同一 Adapter，差異僅在設定檔 `host`/`port`
+- **變更**：EchodyneAdapter 直接連接 EchoShield Simulator TCP :19000；PoC 與生產模式共用同一 Adapter，差異僅在設定檔 `host`/`port`
 - **影響文件**：`01-system-architecture.md`（v0.6）、`04-cot-gateway-spec.md`（v0.4）
 
 #### 架構從四層改為三層
@@ -54,7 +54,7 @@
 ### 新增
 
 #### Map Simulator（地圖模擬器）
-- **角色**：感測層物件狀態中央登錄表（Port :8090）
+- **角色**：感測層物件狀態中央登錄表（Port :18090）
 - **資料流**：Unified Drone Simulator 每秒 POST /objects/update → Map Simulator；EchoShield Simulator / Sentrycs Simulator 改從 Map Simulator GET /objects?radius_m=N 查詢偵測範圍內物件
 - `03-map-simulator-spec.md`（原 `02b`）：Map Simulator 完整開發規格（v0.1）
 
@@ -72,13 +72,13 @@
 
 #### Sentrycs 資料路由變更
 - **舊**：Sentrycs Simulator 直接 TCP SSL 推送 CoT XML → TAK Server（Native TAK Push）
-- **新**：Sentrycs Simulator 提供 HTTP JSON Status API（Port :7070）→ CoT Gateway SentrycsAdapter 以 1 Hz 輪詢 → TrackCorrelator 融合 → TakTransmitter → TAK Server
+- **新**：Sentrycs Simulator 提供 HTTP JSON Status API（Port :17070）→ CoT Gateway SentrycsAdapter 以 1 Hz 輪詢 → TrackCorrelator 融合 → TakTransmitter → TAK Server
 - **理由**：統一路由讓 TrackCorrelator 可正確融合雷達位置（高精度）+ RF 型號/狀態（高識別度）；CoT type 邏輯集中在 CotGenerator 統一維護
 
 #### 受影響文件
 - `01-system-architecture.md`（v0.4）：架構圖、元件表、資料流、設計決策、PKI（移除 sentrycs.p12）
 - `05-sentrycs-simulator-spec.md`（v0.3）：移除 TakSslPusher 與 CotXmlBuilder；新增 SentrycsStatusApiServer（aiohttp HTTP Server）
-- `06-cot-gateway-spec.md`（v0.3）：新增 SentrycsAdapter 模組規格（HTTP Poll :7070 → Track 物件）
+- `06-cot-gateway-spec.md`（v0.3）：新增 SentrycsAdapter 模組規格（HTTP Poll :17070 → Track 物件）
 - `08-api-icd.md`（v0.4）：ICD-002 從「Sentrycs CoT XML Push」改為「Sentrycs JSON HTTP Feed」
 
 ---

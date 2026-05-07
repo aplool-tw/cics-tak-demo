@@ -2,7 +2,7 @@
 
 ## R1. HTTP Status API framework 選型
 
-**Decision**: 使用 `aiohttp.web`（與 Client 同一套 `aiohttp`）起 :7070 JSON API。
+**Decision**: 使用 `aiohttp.web`（與 Client 同一套 `aiohttp`）起 :17070 JSON API。
 
 **Rationale**:
 

@@ -1,18 +1,26 @@
 <!-- SPECKIT START -->
-Active feature plan: `specs/015-cot-xml-compliance/plan.md` (015-cot-xml-compliance —
-CoT XML Standard Format Compliance + Remote TAK Server Support).
-RC1: Add <uid Droid="{callsign}"/> as first <detail> child in generate_cot(); add
-xml_declaration: bool = False and ca_bundle: str|None = None to TakServerConfig; thread
-xml_declaration from config through all 3 generate_cot() call sites in loop.py.
-RC2: Add --tak-host HOST and --tak-port PORT CLI flags to cli.py (model_copy pattern);
-new config/remote-tak.yaml for cot-gateway; new config/remote-tak.yaml for tak-client-sim.
-RC3: New scripts/demo-1drone-remote-tak.sh and demo-3drone-remote-tak.sh with TAK_HOST /
-TAK_PORT / TAK_USE_SSL env-var branching (remote TAK if TAK_HOST set, else local relay).
-RC4: Add log-vs-wire clarification to cot-gateway README, tak-client-sim README, AGENTS.md;
-update specs/005-cot-gateway/contracts/cot-xml.md §1+§2 with <uid Droid>.
-G1 TDD: tests/unit/test_generator_xml_decl.py and test_config_xml_decl.py written BEFORE
-any source changes. G2: xml_declaration=False default preserves current byte structure.
-G7: xml.etree.ElementTree only; no new deps. 279 existing tests must stay green.
-Related artifacts: `specs/015-cot-xml-compliance/spec.md`,
-`specs/015-cot-xml-compliance/research.md`, `specs/015-cot-xml-compliance/quickstart.md`.
+Active feature plan: `specs/016-tak-shared-connection/plan.md` (016-tak-shared-connection —
+TAK Shared Connection Library + Unified Remote Config).
+RC1: New Python package libs/tak-connection with TakConnectionConfig (Pydantic v2, frozen,
+extra=forbid, 7 fields: host/port/use_ssl/use_ssl_verify/cert_file/cert_password/ca_bundle)
+and build_ssl_context(cfg) → ssl.SSLContext (PEM direct load + P12→temp PEM via cryptography,
+cert_file=None → CA-only TLS, temp file cleanup via try/finally fix).
+RC2: cot-gateway tak/ssl_context.py → thin wrapper constructing TakConnectionConfig from
+TakServerConfig fields, delegating to tak_connection.ssl_context.build_ssl_context(). Add
+tak-connection @ file://../../../libs/tak-connection to cot-gateway pyproject.toml.
+RC3: tak-client-sim connection.py → wrapper constructing TakConnectionConfig with
+cert_file=None (no client cert), delegating to tak_connection.build_ssl_context(). Add
+tak-connection + cryptography deps to tak-client-sim pyproject.toml.
+RC4: New config/remote-tak.yaml at repo root (committed, tak_server block only, placeholder
+IP 192.168.1.100). Remove services/cot-gateway/config/remote-tak.yaml and
+services/tak-client-sim/config/remote-tak.yaml.
+RC5: Refactor demo-1drone-remote-tak.sh and demo-3drone-remote-tak.sh: replace TAK_HOST
+env-var detection with config/remote-tak.yaml file-existence check + python3 YAML parse.
+Pass --host/--port to tak-client-sim in remote mode. Remove TAK_HOST/TAK_PORT/TAK_USE_SSL
+env-var code paths.
+G1 TDD: libs/tak-connection tests written BEFORE implementation, confirmed FAIL. G2: Both
+TakServerConfig and ClientConfig retain exact YAML field names/defaults. G7: only pydantic +
+cryptography (both pre-approved). 209 cot-gateway + 99 tak-client-sim tests must stay green.
+Related artifacts: `specs/016-tak-shared-connection/spec.md`,
+`specs/016-tak-shared-connection/research.md`, `specs/016-tak-shared-connection/quickstart.md`.
 <!-- SPECKIT END -->

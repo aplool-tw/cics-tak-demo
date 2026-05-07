@@ -30,8 +30,8 @@ description: "Task list for EchoShield Simulator implementation (TDD: contract �
 
 - [X] T001 Create service directory tree `services/echoshield-sim/{src/echoshield_sim,tests/{contract,integration,unit},scripts,config}` and empty `__init__.py` under `src/echoshield_sim/`, `src/echoshield_sim/models/`, `src/echoshield_sim/geo/`, `src/echoshield_sim/mapsim/`, `src/echoshield_sim/feed/`.
 - [X] T002 Create `services/echoshield-sim/pyproject.toml` mirroring `services/map-sim/pyproject.toml`（setuptools backend、`[project].name = "echoshield-sim"`、`[project.scripts] echoshield-sim = "echoshield_sim.cli:main"`、runtime deps: `aiohttp>=3.9,pydantic>=2.6,structlog>=24.1,numpy>=1.26,pyyaml`；dev deps: `pytest>=8.0,pytest-asyncio>=0.23,freezegun>=1.4,ruff,black`；pytest `asyncio_mode=auto`）.
-- [X] T003 [P] Create `services/echoshield-sim/README.md` pointing to `specs/003-echoshield-sim/quickstart.md` and summarising endpoints（Map Sim client → `:8090`、TCP feed → `:9000`）.
-- [X] T004 [P] Create `services/echoshield-sim/scripts/smoke.sh` mirroring `services/map-sim/scripts/smoke.sh`（`nc localhost 9000` tail + `curl :8090/objects` sanity check）.
+- [X] T003 [P] Create `services/echoshield-sim/README.md` pointing to `specs/003-echoshield-sim/quickstart.md` and summarising endpoints（Map Sim client → `:18090`、TCP feed → `:19000`）.
+- [X] T004 [P] Create `services/echoshield-sim/scripts/smoke.sh` mirroring `services/map-sim/scripts/smoke.sh`（`nc localhost 9000` tail + `curl :18090/objects` sanity check）.
 - [X] T005 [P] Create `services/echoshield-sim/config/local.yaml` from quickstart.md §1 template（sensor 24.0/121.0、`max_range_m: 4800`、`feed_port: 9000`、`noise_seed: null`（flat YAML key））.
 - [X] T006 [P] Create `services/echoshield-sim/tests/conftest.py` with shared fixtures: `frozen_time`（freezegun at `2026-04-24T08:15:30.000Z`）、`noise_seed=42`、`aiohttp` stub Map Sim server factory（reuse pattern from `services/map-sim/tests/conftest.py` if present）.
 - [X] T007 Install editable + dev：`cd services/echoshield-sim && pip install -e '.[dev]'`；verify `pytest -q` discovers zero tests cleanly and `ruff check src tests` passes.
@@ -65,7 +65,7 @@ description: "Task list for EchoShield Simulator implementation (TDD: contract �
 
 ## Phase 3: User Story 1 — CoT Gateway 透過 TCP 接收 10 Hz 雷達航跡（Priority: P1）🎯 MVP
 
-**Goal**: 啟動 `echoshield-sim` 後，TCP Client 連上 `:9000` 可收到合法 NDJSON 並於斷線 / 多連線下不影響其他 Client 或主迴圈。
+**Goal**: 啟動 `echoshield-sim` 後，TCP Client 連上 `:19000` 可收到合法 NDJSON 並於斷線 / 多連線下不影響其他 Client 或主迴圈。
 
 **Independent Test**: `nc localhost 9000` + stub RadarTrack producer（餵 1 筆固定 track 每 100ms）→ Client 於 1.0s 內收到 ≥ 8 行合法 JSON；中途 `Ctrl-C` 一個 Client 不影響另一個（符合 spec US1 Acceptance 1–3 + SC-ES-007）.
 

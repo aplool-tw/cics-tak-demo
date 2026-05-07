@@ -283,7 +283,7 @@ noise_seed: null
 **功能**：
 - `--scenario {single|multi}`：選擇驗收劇本
 - `--cot-log <path>`：tak-client-sim log 路徑（預設 `.dev-runtime/logs/tak-client-sim.log`）
-- `--map-sim-url <url>`：map-sim URL（預設 `http://127.0.0.1:8090`）
+- `--map-sim-url <url>`：map-sim URL（預設 `http://127.0.0.1:18090`）
 - `--offline`：不輪詢 map-sim，純 log 解析
 - `--wait`：等待場景完成（輪詢直到 LANDED 或 timeout）
 

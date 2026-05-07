@@ -42,7 +42,7 @@ class TimelineEvent(BaseModel):
 
 
 class Servers(BaseModel):
-    command_api_port: int = Field(8080, ge=1, le=65535)
+    command_api_port: int = Field(18080, ge=1, le=65535)
     echoshield_tcp_port: Optional[int] = None  # accepted but ignored
 
 

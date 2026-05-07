@@ -7,8 +7,8 @@
 
 UDS 是反無人機 TAK PoC 中「無人機真實位置」的 Single Source of Truth。以單一 asyncio 行程承載：
 (1) YAML 場景載入器；(2) 主迴圈軌跡引擎（WGS84 Haversine / bearing，10 Hz 預設）；(3) per-drone HTTP 推送器
-（每週期對每架 `flight_state ≠ IDLE` 的無人機各發一次 `POST :8090/objects/update`，10 架 × 10 Hz = 100 req/s）；
-(4) aiohttp REST Server（`:8080`），正式契約僅 `POST /command/takeover`，`GET /status/{drone_id}` 與
+（每週期對每架 `flight_state ≠ IDLE` 的無人機各發一次 `POST :18090/objects/update`，10 架 × 10 Hz = 100 req/s）；
+(4) aiohttp REST Server（`:18080`），正式契約僅 `POST /command/takeover`，`GET /status/{drone_id}` 與
 `GET /drones` 僅在 `--debug` 旗標下註冊，不納入契約測試；(5) 結構化日誌（structlog）。
 飛行狀態機 `IDLE → FLYING_NORMAL → MITIGATING_TAKEOVER → LANDING → LANDED`，`LANDED` 在同週期推送最後一筆
 （`flight_state="LANDED"`），之後停推該 `drone_id`。
@@ -36,7 +36,7 @@ UDS 是反無人機 TAK PoC 中「無人機真實位置」的 Single Source of T
 - `timeline[].action` 白名單僅 `start_flying`；其他值 fail-fast（載入期非零 exit）
 - 場景規模 ≤ 10 架；wall-clock `dt` 上限 1.0 s（時鐘跳變保護）
 - 本機明文 HTTP，無 TLS / 認證
-**Scale/Scope**: ≤ 10 架無人機、1 個 YAML 場景、2 個對外介面（:8080 REST、:8090 HTTP client 推送）
+**Scale/Scope**: ≤ 10 架無人機、1 個 YAML 場景、2 個對外介面（:18080 REST、:18090 HTTP client 推送）
 
 ## Constitution Check
 
@@ -65,7 +65,7 @@ specs/001-uds/
 ├── data-model.md        # Phase 1 — DroneState / FlightState / TakeoverCommand / Scenario schema
 ├── quickstart.md        # Phase 1 — 啟動、YAML 範例、測試指令
 ├── contracts/
-│   └── rest-api.md      # :8080 正式契約 + :8090 客戶端契約 + --debug 端點（非契約）
+│   └── rest-api.md      # :18080 正式契約 + :18090 客戶端契約 + --debug 端點（非契約）
 ├── checklists/          # （已存在）
 └── tasks.md             # Phase 2 output（由 /speckit.tasks 產生）
 ```
@@ -157,8 +157,8 @@ services/
 
 產出：
 1. [data-model.md](./data-model.md) — `DroneState` / `FlightState` / `TakeoverCommand` / Scenario YAML schema。
-2. [contracts/rest-api.md](./contracts/rest-api.md) — 正式契約 `POST :8080/command/takeover`、
-   `--debug` 端點、以及 UDS → Map Simulator 客戶端契約 `POST :8090/objects/update`。
+2. [contracts/rest-api.md](./contracts/rest-api.md) — 正式契約 `POST :18080/command/takeover`、
+   `--debug` 端點、以及 UDS → Map Simulator 客戶端契約 `POST :18090/objects/update`。
 3. [quickstart.md](./quickstart.md) — 啟動、YAML、測試指令。
 4. Agent context：`.github/copilot-instructions.md` 的 `<!-- SPECKIT START/END -->` 區塊已指向本 plan.md。
 

@@ -1,13 +1,13 @@
 # Quickstart: Sentrycs Simulator
 
 本文件示範在本機以最少步驟啟動 Sentrycs Simulator、驗證完整的偵測 → 接管 → 制壓流程。假設 Map Simulator
-（:8090）與 UDS（:8080）已依 `specs/001-uds/quickstart.md`、`specs/002-map-sim/quickstart.md` 啟動。
+（:18090）與 UDS（:18080）已依 `specs/001-uds/quickstart.md`、`specs/002-map-sim/quickstart.md` 啟動。
 
 ## 0. 前置
 
 - Python 3.11+
 - 已切到 feature branch：`004-sentrycs-sim`
-- Map Sim 跑在 `localhost:8090`，UDS 跑在 `localhost:8080`
+- Map Sim 跑在 `localhost:18090`，UDS 跑在 `localhost:18080`
 - 本服務原始碼位於 `services/sentrycs-sim/`
 
 ## 1. 安裝
@@ -27,8 +27,8 @@ sensor_lon: 121.5654
 
 # 以下皆為預設值，可省略
 poll_interval_s: 0.5
-map_sim_url: http://localhost:8090
-uds_url: http://localhost:8080
+map_sim_url: http://localhost:18090
+uds_url: http://localhost:18080
 api_host: 0.0.0.0
 api_port: 7070
 neutralized_hold_s: 30.0
@@ -73,14 +73,14 @@ sentrycs-sim --scenario config/local.yaml --verbose
 ### 4.1 Ready probe（啟動 < 2 s）
 
 ```bash
-curl -s localhost:7070/health | jq
+curl -s localhost:17070/health | jq
 # {"status":"ok","uptime_s":1.3,"tracked_drones":0,"map_sim_reachable":true}
 ```
 
 ### 4.2 IDLE（t < 5 s）
 
 ```bash
-curl -s localhost:7070/detections | jq
+curl -s localhost:17070/detections | jq
 # []
 ```
 
@@ -90,7 +90,7 @@ curl -s localhost:7070/detections | jq
 直接注入）：
 
 ```bash
-curl -s -X POST localhost:8090/objects/update -H 'content-type: application/json' -d '{
+curl -s -X POST localhost:18090/objects/update -H 'content-type: application/json' -d '{
   "drone_id": "TRK-001",
   "lat": 25.0430, "lon": 121.5700, "alt_m": 120.0,
   "speed_ms": 12.0, "heading_deg": 180.0,
@@ -102,7 +102,7 @@ curl -s -X POST localhost:8090/objects/update -H 'content-type: application/json
 於 t≈6 s 輪詢：
 
 ```bash
-curl -s localhost:7070/detections | jq '.[] | {uid, detection_status, is_landed, operator_lat, operator_lon}'
+curl -s localhost:17070/detections | jq '.[] | {uid, detection_status, is_landed, operator_lat, operator_lon}'
 # {
 #   "uid": "TRK-001",
 #   "detection_status": "DETECTED",
@@ -125,7 +125,7 @@ curl -s localhost:7070/detections | jq '.[] | {uid, detection_status, is_landed,
 ```
 
 ```bash
-curl -s localhost:7070/detection/TRK-001 | jq '.detection_status, .is_landed'
+curl -s localhost:17070/detection/TRK-001 | jq '.detection_status, .is_landed'
 # "MITIGATING"
 # false
 ```
@@ -135,7 +135,7 @@ curl -s localhost:7070/detection/TRK-001 | jq '.detection_status, .is_landed'
 模擬 UDS 將目標落地（或直接用 `/objects/update` 送 `status=LANDED`）：
 
 ```bash
-curl -s -X POST localhost:8090/objects/update -H 'content-type: application/json' -d '{
+curl -s -X POST localhost:18090/objects/update -H 'content-type: application/json' -d '{
   "drone_id": "TRK-001",
   "lat": 25.0430, "lon": 121.5700, "alt_m": 0.0,
   "speed_ms": 0.0, "heading_deg": 0.0,
@@ -147,7 +147,7 @@ curl -s -X POST localhost:8090/objects/update -H 'content-type: application/json
 下一次輪詢（≤ 1 s 後）：
 
 ```bash
-curl -s localhost:7070/detection/TRK-001 | jq '.detection_status, .is_landed'
+curl -s localhost:17070/detection/TRK-001 | jq '.detection_status, .is_landed'
 # "NEUTRALIZED"
 # true
 ```
@@ -156,7 +156,7 @@ curl -s localhost:7070/detection/TRK-001 | jq '.detection_status, .is_landed'
 
 ```bash
 sleep 31
-curl -s localhost:7070/detection/TRK-001 -o /dev/null -w '%{http_code}\n'
+curl -s localhost:17070/detection/TRK-001 -o /dev/null -w '%{http_code}\n'
 # 404
 ```
 
@@ -164,7 +164,7 @@ curl -s localhost:7070/detection/TRK-001 -o /dev/null -w '%{http_code}\n'
 
 ```bash
 for i in $(seq 1 10); do
-  curl -s localhost:7070/detection/TRK-001 | jq -c '{ol: .operator_lat, on: .operator_lon}'
+  curl -s localhost:17070/detection/TRK-001 | jq -c '{ol: .operator_lat, on: .operator_lon}'
   sleep 1
 done
 # 10 行 output 完全相同（SC-SC-004 抖動 = 0）
@@ -176,7 +176,7 @@ done
 請求回 409。Sentrycs 對同一目標只發一次，不會再打 UDS；若某一目標因網路錯誤失敗，**其他目標不受影響**：
 
 ```bash
-curl -s localhost:7070/detections | jq 'map(.uid)'
+curl -s localhost:17070/detections | jq 'map(.uid)'
 # ["TRK-001", "TRK-002"]   # 兩機獨立推進
 ```
 
@@ -184,7 +184,7 @@ curl -s localhost:7070/detections | jq 'map(.uid)'
 
 ```bash
 # 停掉 Map Sim 後
-curl -s localhost:7070/detections | jq 'length'
+curl -s localhost:17070/detections | jq 'length'
 # 仍回最後一次快照；不崩潰（SC-SC-007）
 # 日誌每退避週期 1 筆：
 # {"event": "mapsim_unavailable", "error": "connection refused", "retry_in_s": 1.0}

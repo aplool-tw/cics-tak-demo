@@ -11,7 +11,7 @@
 
 ## 1. 端點與基本設定
 
-- **目標端點**：`POST {uds_url}/command/takeover`，其中 `uds_url` 由 scenario YAML / CLI 提供，預設 `http://localhost:8080`。
+- **目標端點**：`POST {uds_url}/command/takeover`，其中 `uds_url` 由 scenario YAML / CLI 提供，預設 `http://localhost:18080`。
 - **Timeout**：scenario YAML `uds_timeout_s`，預設 `3.0` 秒（FR-SC-012）。逾時視為 `FAILED_TRANSPORT`。
 - **Headers**：`Content-Type: application/json`。
 - **Client**：共用一個 `aiohttp.ClientSession`，隨程序生命週期開關；關閉時須 `await session.close()`（FR-SC-025）。

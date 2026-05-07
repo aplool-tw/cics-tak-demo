@@ -23,7 +23,7 @@ unchanged in name, type, and position.
 
 ```
 GET /tracks HTTP/1.1
-Host: <gateway-host>:8092
+Host: <gateway-host>:18092
 Cache-Control: no-store
 ```
 

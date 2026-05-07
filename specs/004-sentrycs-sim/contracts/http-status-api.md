@@ -1,11 +1,11 @@
 # Contract: Sentrycs HTTP Status API
 
-本檔定義 Sentrycs Simulator 對 CoT Gateway `SentrycsAdapter` 提供的 **HTTP JSON Status API**（:7070）契約。
+本檔定義 Sentrycs Simulator 對 CoT Gateway `SentrycsAdapter` 提供的 **HTTP JSON Status API**（:17070）契約。
 **正式契約（normative）**：§2.1 `GET /detections`、§2.2 `GET /detection/{uid}`、§2.3 `GET /health` 三個端點。
 `tests/contract/test_detections_schema.py` 與 `tests/contract/test_detection_by_uid.py` 必須完整覆蓋
 §2 的所有回應行為。
 
-**監聽**：`http://0.0.0.0:7070`（CLI `--api-port` 或 scenario YAML `api_port` 可覆寫）。
+**監聽**：`http://0.0.0.0:17070`（CLI `--api-port` 或 scenario YAML `api_port` 可覆寫）。
 
 ---
 

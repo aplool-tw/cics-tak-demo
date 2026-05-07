@@ -202,8 +202,8 @@ T### [P] [US?] Description — file/path
   sensor_lat: 24.725806   # SP — Sentrycs RF 感測器位於戰略要點
   sensor_lon: 121.033750
   poll_interval_s: 0.5
-  map_sim_url: http://localhost:8090   # dev-launcher 覆寫
-  uds_url: http://localhost:8080       # dev-launcher 覆寫
+  map_sim_url: http://localhost:18090   # dev-launcher 覆寫
+  uds_url: http://localhost:18080       # dev-launcher 覆寫
   api_host: 0.0.0.0
   api_port: 7070
   neutralized_hold_s: 30.0
@@ -227,8 +227,8 @@ T### [P] [US?] Description — file/path
   sensor_lat: 24.725806   # SP
   sensor_lon: 121.033750
   poll_interval_s: 0.5
-  map_sim_url: http://localhost:8090
-  uds_url: http://localhost:8080
+  map_sim_url: http://localhost:18090
+  uds_url: http://localhost:18080
   api_host: 0.0.0.0
   api_port: 7070
   neutralized_hold_s: 30.0

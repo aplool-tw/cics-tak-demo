@@ -234,7 +234,7 @@ sensor_lat: 24.725806
 sensor_lon: 121.033750
 poll_interval_s: 0.5
 detection_radius_m: 2000.0           # RC4: was 8000.0
-map_sim_url: http://127.0.0.1:8090
+map_sim_url: http://127.0.0.1:18090
 uds_url: http://127.0.0.1:18080
 api_host: 0.0.0.0
 api_port: 7070

@@ -55,7 +55,7 @@ services/map-sim/
 cd services/map-sim
 pip install -e ".[dev]"
 python3 -m pytest               # 102 passed (~3s)
-python3 -m map_sim --port 8090  # 啟動 http://127.0.0.1:8090
+python3 -m map_sim --port 18090  # 啟動 http://127.0.0.1:18090
 ```
 
 ## 七、下游介面契約（003 / 004 會呼叫）

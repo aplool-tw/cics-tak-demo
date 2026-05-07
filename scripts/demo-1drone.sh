@@ -18,9 +18,9 @@ PID_DIR="${ROOT_DIR}/.dev-runtime/pids"
 
 SERVICES=(map-sim uds echoshield-sim sentrycs-sim cot-gateway tak-relay tak-client-sim)
 URLS=(
-    "http://127.0.0.1:8090/map"
-    "http://127.0.0.1:8092/map"
-    "http://127.0.0.1:8093/map"
+    "http://127.0.0.1:18090/map"
+    "http://127.0.0.1:18092/map"
+    "http://127.0.0.1:18093/map"
 )
 
 RED=$'\033[0;31m'
@@ -190,7 +190,7 @@ preflight() {
     mkdir -p "${LOG_DIR}" "${PID_DIR}"
 
     local port=""
-    for port in 8089 8090 8092 8093 18080 7070; do
+    for port in 18089 18090 18092 18093 18080 17070; do
         check_port_free "${port}"
     done
 }
@@ -240,13 +240,13 @@ wait_for_health() {
         relay_ok=false
         tak_ok=false
 
-        curl -sf "http://127.0.0.1:8090/health" -o /dev/null 2>/dev/null && map_ok=true || true
-        curl -sf "http://127.0.0.1:9001/info" -o /dev/null 2>/dev/null && echo_ok=true || true
-        curl -sf "http://127.0.0.1:7070/health" -o /dev/null 2>/dev/null && sntr_ok=true || true
-        curl -sf "http://127.0.0.1:8092/health" -o /dev/null 2>/dev/null && gw_ok=true || true
-        curl -sf "http://127.0.0.1:8093/health" -o /dev/null 2>/dev/null && tak_ok=true || true
+        curl -sf "http://127.0.0.1:18090/health" -o /dev/null 2>/dev/null && map_ok=true || true
+        curl -sf "http://127.0.0.1:19001/info" -o /dev/null 2>/dev/null && echo_ok=true || true
+        curl -sf "http://127.0.0.1:17070/health" -o /dev/null 2>/dev/null && sntr_ok=true || true
+        curl -sf "http://127.0.0.1:18092/health" -o /dev/null 2>/dev/null && gw_ok=true || true
+        curl -sf "http://127.0.0.1:18093/health" -o /dev/null 2>/dev/null && tak_ok=true || true
         tcp_ready 18080 && uds_ok=true || true
-        tcp_ready 8089 && relay_ok=true || true
+        tcp_ready 18089 && relay_ok=true || true
 
         if [[ "${map_ok}" == "true" && "${uds_ok}" == "true" && "${echo_ok}" == "true" && "${sntr_ok}" == "true" && "${gw_ok}" == "true" && "${relay_ok}" == "true" && "${tak_ok}" == "true" ]]; then
             printf '\n'
@@ -291,37 +291,37 @@ print_banner() {
 }
 
 launch_services() {
-    log "Starting map-sim on :8090..."
-    (cd "${ROOT_DIR}/services/map-sim" && exec python3 -m map_sim --port 8090) >>"${LOG_DIR}/map-sim.log" 2>&1 &
+    log "Starting map-sim on :18090..."
+    (cd "${ROOT_DIR}/services/map-sim" && exec python3 -m map_sim --port 18090) >>"${LOG_DIR}/map-sim.log" 2>&1 &
     MAPSIM_PID=$!
     write_pid "map-sim" "${MAPSIM_PID}"
 
     log "Starting uds on :18080..."
-    (cd "${ROOT_DIR}/services/uds" && exec python3 -m uds --scenario "${UDS_SCENARIO}" --api-port 18080 --map-sim-url "http://127.0.0.1:8090") >>"${LOG_DIR}/uds.log" 2>&1 &
+    (cd "${ROOT_DIR}/services/uds" && exec python3 -m uds --scenario "${UDS_SCENARIO}" --api-port 18080 --map-sim-url "http://127.0.0.1:18090") >>"${LOG_DIR}/uds.log" 2>&1 &
     UDS_PID=$!
     write_pid "uds" "${UDS_PID}"
 
-    log "Starting echoshield-sim (:9000 / :9001)..."
+    log "Starting echoshield-sim (:19000 / :19001)..."
     (cd "${ROOT_DIR}/services/echoshield-sim" && exec python3 -m echoshield_sim --config "${ECHO_CONFIG}") >>"${LOG_DIR}/echoshield-sim.log" 2>&1 &
     ECHO_PID=$!
     write_pid "echoshield-sim" "${ECHO_PID}"
 
-    log "Starting sentrycs-sim on :7070..."
+    log "Starting sentrycs-sim on :17070..."
     (cd "${ROOT_DIR}/services/sentrycs-sim" && exec python3 -m sentrycs_sim --scenario "${SNTR_CONFIG}") >>"${LOG_DIR}/sentrycs-sim.log" 2>&1 &
     SNTR_PID=$!
     write_pid "sentrycs-sim" "${SNTR_PID}"
 
-    log "Starting cot-gateway on :8092..."
+    log "Starting cot-gateway on :18092..."
     (cd "${ROOT_DIR}/services/cot-gateway" && exec python3 -m cot_gateway --config "${GW_CONFIG}") >>"${LOG_DIR}/cot-gateway.log" 2>&1 &
     GW_PID=$!
     write_pid "cot-gateway" "${GW_PID}"
 
-    log "Starting tak-relay on :8089..."
-    (cd "${ROOT_DIR}" && exec python3 "${ROOT_DIR}/scripts/tak_relay.py" --port 8089) >>"${LOG_DIR}/tak-relay.log" 2>&1 &
+    log "Starting tak-relay on :18089..."
+    (cd "${ROOT_DIR}" && exec python3 "${ROOT_DIR}/scripts/tak_relay.py" --port 18089) >>"${LOG_DIR}/tak-relay.log" 2>&1 &
     RELAY_PID=$!
     write_pid "tak-relay" "${RELAY_PID}"
 
-    log "Starting tak-client-sim on :8093..."
+    log "Starting tak-client-sim on :18093..."
     (cd "${ROOT_DIR}/services/tak-client-sim" && exec python3 -m tak_client_sim --config "${TAK_CLIENT_CONFIG}") >>"${LOG_DIR}/tak-client-sim.log" 2>&1 &
     TAK_CLIENT_PID=$!
     write_pid "tak-client-sim" "${TAK_CLIENT_PID}"

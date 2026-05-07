@@ -7,7 +7,7 @@
 
 ## Summary
 
-`tak-client-sim` 是輕量 Python 服務，扮演被動 TAK 客戶端角色，以 `asyncio` TCP+SSL 連線至 TAK Server `:8089`，逐行讀取 Newline-delimited CoT XML，使用標準庫 `xml.etree.ElementTree` 解析並輸出人讀格式至 stdout，同時以 `structlog` JSON 並行記錄至 stderr/log-file。連線中斷時指數退避重連；收到 SIGINT/SIGTERM 後優雅關閉並列印 session_summary。無任何持久化（G6），替代實體 ATAK 裝置完成 PoC 端對端驗收。
+`tak-client-sim` 是輕量 Python 服務，扮演被動 TAK 客戶端角色，以 `asyncio` TCP+SSL 連線至 TAK Server `:18089`，逐行讀取 Newline-delimited CoT XML，使用標準庫 `xml.etree.ElementTree` 解析並輸出人讀格式至 stdout，同時以 `structlog` JSON 並行記錄至 stderr/log-file。連線中斷時指數退避重連；收到 SIGINT/SIGTERM 後優雅關閉並列印 session_summary。無任何持久化（G6），替代實體 ATAK 裝置完成 PoC 端對端驗收。
 
 ---
 
@@ -48,7 +48,7 @@
 ### 系統脈絡
 
 ```
-CoT Gateway ──CoT XML NDJSON──▶ TAK Server :8089 ──TCP+SSL──▶ tak-client-sim
+CoT Gateway ──CoT XML NDJSON──▶ TAK Server :18089 ──TCP+SSL──▶ tak-client-sim
                                                                       │
                                                         stdout ──▶ console（human-readable）
                                                         stderr ──▶ structlog JSON

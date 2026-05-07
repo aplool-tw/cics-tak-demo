@@ -43,35 +43,35 @@ The `viewBox="-12 -12 24 24"` and `iconSize: [24, 24]` are preserved from the or
 
 ### 3. TAK relay vs TAK stub server
 
-The demo scripts use `scripts/tak_relay.py` (plaintext TCP broadcast relay on `:8089`), **not** `infra/tak-server/stub_server.py` (a TLS-only ingestion server). The distinction matters because:
+The demo scripts use `scripts/tak_relay.py` (plaintext TCP broadcast relay on `:18089`), **not** `infra/tak-server/stub_server.py` (a TLS-only ingestion server). The distinction matters because:
 
-- `cot-gateway/config/demo.yaml` has `use_ssl: false` — CoT Gateway connects to `:8089` in plaintext.
+- `cot-gateway/config/demo.yaml` has `use_ssl: false` — CoT Gateway connects to `:18089` in plaintext.
 - `tak_relay.py` broadcasts every received CoT XML line to all connected subscribers.
 - `stub_server.py` accepts TLS + logs CoT XML but does NOT relay to downstream clients.
 
 ### 4. Demo script architecture (7-service pipeline)
 
 ```
-UDS(:18080) → Map Sim(:8090) ← EchoShield Sim(:9000/9001)
-              Map Sim         ← Sentrycs Sim(:7070)
-                                EchoShield Sim → CoT Gateway(:8092) → TAK Relay(:8089)
+UDS(:18080) → Map Sim(:18090) ← EchoShield Sim(:19000/9001)
+              Map Sim         ← Sentrycs Sim(:17070)
+                                EchoShield Sim → CoT Gateway(:18092) → TAK Relay(:18089)
                                 Sentrycs Sim   → CoT Gateway         ↑
-                                                                TAK Client Sim(:8093)
+                                                                TAK Client Sim(:18093)
 ```
 
 Startup order (enforced by health-check loop before opening browser):
-1. `map-sim` — `:8090/health`
+1. `map-sim` — `:18090/health`
 2. `uds` — TCP `:18080`
-3. `echoshield-sim` — `:9001/info`
-4. `sentrycs-sim` — `:7070/health`
-5. `cot-gateway` — `:8092/health`
-6. `tak-relay` — TCP `:8089`
-7. `tak-client-sim` — `:8093/health`
+3. `echoshield-sim` — `:19001/info`
+4. `sentrycs-sim` — `:17070/health`
+5. `cot-gateway` — `:18092/health`
+6. `tak-relay` — TCP `:18089`
+7. `tak-client-sim` — `:18093/health`
 
 Browser tabs opened (after health checks pass):
-- `http://127.0.0.1:8090/map` — Map Sim tactical map
-- `http://127.0.0.1:8092/map` — CoT Gateway tactical map
-- `http://127.0.0.1:8093/map` — TAK Client Sim tactical map
+- `http://127.0.0.1:18090/map` — Map Sim tactical map
+- `http://127.0.0.1:18092/map` — CoT Gateway tactical map
+- `http://127.0.0.1:18093/map` — TAK Client Sim tactical map
 
 ---
 
@@ -97,7 +97,7 @@ Browser tabs opened (after health checks pass):
 
 ### CoT Gateway `demo.yaml` does not forward CoT to TAK relay by default
 
-The `cot-gateway/config/demo.yaml` must have `tak.enabled: true` pointing to `:8089` for data to flow from cot-gateway → tak_relay → tak-client-sim. Verify this before running the demo. If tak-client-sim shows no data, check cot-gateway logs for `tak_uplink_connected`.
+The `cot-gateway/config/demo.yaml` must have `tak.enabled: true` pointing to `:18089` for data to flow from cot-gateway → tak_relay → tak-client-sim. Verify this before running the demo. If tak-client-sim shows no data, check cot-gateway logs for `tak_uplink_connected`.
 
 ### `tak_relay.py` TCP health check
 
@@ -154,9 +154,9 @@ scripts/demo-3drone.sh --stop
 
 | Map | URL | Content |
 |-----|-----|---------|
-| Map Sim | http://127.0.0.1:8090/map | Map Sim tactical map |
-| CoT Gateway | http://127.0.0.1:8092/map | Correlated EchoShield + Sentrycs tracks |
-| TAK Client Sim | http://127.0.0.1:8093/map | CoT XML received from TAK relay (MIL-STD-2525C icons) |
+| Map Sim | http://127.0.0.1:18090/map | Map Sim tactical map |
+| CoT Gateway | http://127.0.0.1:18092/map | Correlated EchoShield + Sentrycs tracks |
+| TAK Client Sim | http://127.0.0.1:18093/map | CoT XML received from TAK relay (MIL-STD-2525C icons) |
 
 ---
 

@@ -4,13 +4,13 @@
 
 echoshield:
   host: 127.0.0.1
-  port: 9000
+  port: 19000
   reconnect_interval_s: 5.0
 
 sentrycs:
   enabled: true
   host: 127.0.0.1
-  port: 7070
+  port: 17070
   poll_interval_s: 1.0
   timeout_s: 2.0
 
@@ -23,7 +23,7 @@ correlator:
 
 tak_server:
   host: 127.0.0.1
-  port: 8089
+  port: 18089
   use_ssl: false
   use_ssl_verify: false
   cert_file: "config/certs/gateway.p12"  # not loaded (use_ssl: false)
@@ -39,10 +39,10 @@ logging:
 web:
   enabled: true
   host: 0.0.0.0
-  port: 8092
+  port: 18092
   sites_file: "config/sites.yaml"
-  echoshield_info_url: "http://127.0.0.1:9001/info"
-  sentrycs_sensor_url: "http://127.0.0.1:7070/sensor-info"
+  echoshield_info_url: "http://127.0.0.1:19001/info"
+  sentrycs_sensor_url: "http://127.0.0.1:17070/sensor-info"
   sp_lat: 24.725806
   sp_lon: 121.033750
 

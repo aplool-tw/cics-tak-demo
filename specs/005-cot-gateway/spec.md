@@ -3,7 +3,7 @@
 **Feature Branch**: `005-cot-gateway`
 **Created**: 2026-04-24
 **Status**: Draft
-**Input**: User description: "CoT Gateway — 整合 EchoShield 雷達（TCP JSON :9000）與 Sentrycs C-UAS（HTTP :7070），以 50m 距離閾值融合航跡，產生 MIL-STD-2525C CoT XML，並透過 TCP SSL :8089 推送至 TAK Server，供 ATAK 顯示為敵對無人機圖示。"
+**Input**: User description: "CoT Gateway — 整合 EchoShield 雷達（TCP JSON :19000）與 Sentrycs C-UAS（HTTP :17070），以 50m 距離閾值融合航跡，產生 MIL-STD-2525C CoT XML，並透過 TCP SSL :18089 推送至 TAK Server，供 ATAK 顯示為敵對無人機圖示。"
 
 ---
 
@@ -21,18 +21,18 @@
 
 ### User Story 1 — 雷達單源端對端：EchoShield 偵測立即上 TAK (Priority: P1)
 
-場景操作員啟動 EchoShield Simulator 與 CoT Gateway（Sentrycs 暫不啟用）。Gateway 的 EchodyneAdapter 連線到 `echoshield-sim:9000`，以 10 Hz 的頻率接收 newline-delimited JSON 航跡，每筆解析為統一 `Track` 物件（`source=ECHOSHIELD`）後，直接由 CotGenerator 產生 `a-u-A-M-F-Q-r`（Unknown，灰色）CoT XML，並經 TakTransmitter 透過 TCP SSL 推送到 TAK Server `:8089`。ATAK 客戶端在地圖上看到灰色未識別空中目標，位置持續更新。
+場景操作員啟動 EchoShield Simulator 與 CoT Gateway（Sentrycs 暫不啟用）。Gateway 的 EchodyneAdapter 連線到 `echoshield-sim:19000`，以 10 Hz 的頻率接收 newline-delimited JSON 航跡，每筆解析為統一 `Track` 物件（`source=ECHOSHIELD`）後，直接由 CotGenerator 產生 `a-u-A-M-F-Q-r`（Unknown，灰色）CoT XML，並經 TakTransmitter 透過 TCP SSL 推送到 TAK Server `:18089`。ATAK 客戶端在地圖上看到灰色未識別空中目標，位置持續更新。
 
 **Why this priority**：這是整個系統「看得見任何東西」的最小可行路徑。沒有這條鏈路，Demo 無法在 ATAK 上顯示任何目標；而一旦這條路徑打通，即可單獨驗證 TCP JSON 解析、Track 建模、CoT XML 結構合法性、TAK Server SSL 憑證與 ATAK 顯示鏈路。Sentrycs 融合與失效處理都建立在這條骨幹之上。
 
 **Independent Test**：僅啟動 EchoShield Simulator、TAK Server 與 Gateway（不啟動 Sentrycs）。以一架場景無人機飛行約 60 秒，觀察：
-1. Gateway 日誌可見「Connected to echoshield-sim:9000」與持續的 Track 接收紀錄；
+1. Gateway 日誌可見「Connected to echoshield-sim:19000」與持續的 Track 接收紀錄；
 2. TAK Server CoT log（或 ATAK 客戶端）收到 uid 為 `ECHO-TRK-001`、type=`a-u-A-M-F-Q-r` 的事件，`<point>` 座標與 EchoShield JSON 一致；
 3. 同一 `track_id` 持續以 `track_status=Active` 回報時，Gateway 以相同 uid 持續更新 CoT（首見/後續更新由 Gateway 內部 uid 旗標判斷，非來自 wire），ATAK 上的灰色圖示平滑移動。
 
 **Acceptance Scenarios**:
 
-1. **Given** EchoShield Simulator 正以 10 Hz 廣播 `{"track_id":"TRK-001", "lat":25.0598, "lon":121.5654, "altitude_m":101.0, "track_status":"Active", "classification":"DRONE", ...}`，**When** Gateway 啟動並成功連上 `:9000`，**Then** 在 500ms 內 TAK Server 收到對應 `uid=ECHO-TRK-001`、`type=a-u-A-M-F-Q-r`、`<point lat="25.0598..." lon="121.5654..." hae="101.0">` 的 CoT XML。
+1. **Given** EchoShield Simulator 正以 10 Hz 廣播 `{"track_id":"TRK-001", "lat":25.0598, "lon":121.5654, "altitude_m":101.0, "track_status":"Active", "classification":"DRONE", ...}`，**When** Gateway 啟動並成功連上 `:19000`，**Then** 在 500ms 內 TAK Server 收到對應 `uid=ECHO-TRK-001`、`type=a-u-A-M-F-Q-r`、`<point lat="25.0598..." lon="121.5654..." hae="101.0">` 的 CoT XML。
 2. **Given** 同一 `track_id` 持續以 `track_status=Active` 回報，**When** Gateway 連續處理 30 秒，**Then** TAK Server 收到的所有事件使用同一 uid `ECHO-TRK-001`，而非每筆都產生新 uid；且 `<event time>` 單調遞增、`<event stale>` = `time + 11s`（依 FR-GW-017 規則 (c)）。Gateway 以內部 uid 首見旗標判斷首次出現（用於日誌 INFO `track first seen`），不從 wire 欄位讀取。
 3. **Given** EchoShield JSON 中 `altitude_m=100.8`，**When** CoT 生成，**Then** 輸出 `<point hae="100.8">`（完成 `altitude_m → alt_m → hae` 的命名對齊），且 `<track speed="{velocity_ms}" course="{azimuth_deg}">` 數值一致。
 4. **Given** EchoShield 送出一筆 `"track_status":"Lost"` 事件，**When** Gateway 處理該筆，**Then** 對該 uid 發送最終 CoT（`track_status=Lost`、`stale = time` 立即過期）並從活躍表移除，使 ATAK 在下一個 refresh 週期即自動移除圖示，且後續不再為該 `track_id` 產生新事件。
@@ -41,7 +41,7 @@
 
 ### User Story 2 — 雷達 + RF 融合：以 50m 閾值關聯並升級為敵對目標 (Priority: P1)
 
-場景操作員同時啟動 EchoShield Simulator、Sentrycs Simulator 與 Gateway。EchodyneAdapter 與 SentrycsAdapter（`sentrycs-sim:7070`，1 Hz 輪詢 `GET /detections`）各自把 Track 放入同一個內部 queue，由 source 欄位區分。TrackCorrelator 每次收到雷達 Track 時，對現有 Sentrycs Track 以 Haversine 距離 ≤ 50m 且時間差 ≤ 3s 尋找最近匹配；若成功，建立 `FUSED` Track（位置/速度 取雷達、型號/狀態 取 Sentrycs），uid 升級為 `FUSED-{sentrycs_drone_id}`（例 `FUSED-DRN-001`），同時對原本的 `ECHO-{radar_track_id}` 舊 uid 推送一筆立即過期的 stale CoT 讓 ATAK 清除舊圖示；CoT type 升級為 `a-h-A-M-F-Q-r`（Hostile，紅色，此後 FUSED 生命週期內固定）。當 Sentrycs 狀態在 `DETECTED / MITIGATING / NEUTRALIZED` 之間切換時，type 不變，改由 `<remarks>` 的 `Status:` 段與 `<event stale>`（NEUTRALIZED → +30s；其餘 → +11s；Lost → =time）表達狀態差異。
+場景操作員同時啟動 EchoShield Simulator、Sentrycs Simulator 與 Gateway。EchodyneAdapter 與 SentrycsAdapter（`sentrycs-sim:17070`，1 Hz 輪詢 `GET /detections`）各自把 Track 放入同一個內部 queue，由 source 欄位區分。TrackCorrelator 每次收到雷達 Track 時，對現有 Sentrycs Track 以 Haversine 距離 ≤ 50m 且時間差 ≤ 3s 尋找最近匹配；若成功，建立 `FUSED` Track（位置/速度 取雷達、型號/狀態 取 Sentrycs），uid 升級為 `FUSED-{sentrycs_drone_id}`（例 `FUSED-DRN-001`），同時對原本的 `ECHO-{radar_track_id}` 舊 uid 推送一筆立即過期的 stale CoT 讓 ATAK 清除舊圖示；CoT type 升級為 `a-h-A-M-F-Q-r`（Hostile，紅色，此後 FUSED 生命週期內固定）。當 Sentrycs 狀態在 `DETECTED / MITIGATING / NEUTRALIZED` 之間切換時，type 不變，改由 `<remarks>` 的 `Status:` 段與 `<event stale>`（NEUTRALIZED → +30s；其餘 → +11s；Lost → =time）表達狀態差異。
 
 **Why this priority**：融合是本 Demo 的差異化價值——雷達只能畫出「有東西」，RF 才能補上「是哪一型、誰在操作、現在是否被制壓」。沒有這個故事，Demo 只是單純雷達顯示，失去 C-UAS 的敘事張力。與 Story 1 並列 P1，但實作必須在 Story 1 之後。
 
@@ -70,7 +70,7 @@ Demo 現場網路/服務不穩是常態：TAK Server 重啟、EchoShield Simulat
 
 **Independent Test**：在 Story 1/2 已通過的基礎上，執行以下三個干擾腳本並觀察 Gateway 不崩潰且能復原：
 1. 場景中途 `docker stop echoshield-sim` 5 秒後再 `docker start`，Gateway 應在日誌中出現 `connection lost` 與重連成功紀錄，期間不退出程序，重連後新的 Track 能重新送上 TAK。
-2. `iptables` 暫時阻斷 TAK Server `:8089` 連線 3 秒，觀察 TakTransmitter 的指數退避重連與 CoT queue 滿時的 WARNING 日誌（丟棄策略符合規格）。
+2. `iptables` 暫時阻斷 TAK Server `:18089` 連線 3 秒，觀察 TakTransmitter 的指數退避重連與 CoT queue 滿時的 WARNING 日誌（丟棄策略符合規格）。
 3. 雷達失去某架無人機訊號 > 10s（模擬飛出範圍），觀察 Gateway 於下一個 TTL 掃描週期對該 uid 推送一筆 `track_status=Lost`、`stale = time` 的最終 CoT，ATAK 於下一個 refresh 週期即移除對應圖示。
 
 **Acceptance Scenarios**:
@@ -104,14 +104,14 @@ Demo 現場網路/服務不穩是常態：TAK Server 重啟、EchoShield Simulat
 
 **EchodyneAdapter（雷達輸入）**
 
-- **FR-GW-001**: Gateway MUST 以 TCP Client 身份連線到設定檔指定的 EchoShield 端點（預設 `echoshield-sim:9000`），讀取以 `\n` (0x0A) 為分隔符的 UTF-8 newline-delimited JSON 串流。
+- **FR-GW-001**: Gateway MUST 以 TCP Client 身份連線到設定檔指定的 EchoShield 端點（預設 `echoshield-sim:19000`），讀取以 `\n` (0x0A) 為分隔符的 UTF-8 newline-delimited JSON 串流。
 - **FR-GW-002**: EchodyneAdapter MUST 對每筆 JSON 驗證必填欄位（`track_id`, `lat`, `lon`, `altitude_m`, `velocity_ms`, `azimuth_deg`, `elevation_deg`, `timestamp`, `track_status`, `classification`）與值域（lat ∈ [-90, 90]、lon ∈ [-180, 180]、`track_status ∈ {Active, Lost}`）；違反者記錄 WARNING/ERROR 並跳過單筆，不中止串流。Adapter MUST NOT 嘗試從 wire 判斷「首見 vs 後續更新」——該職責由 Gateway 主程序以內部 uid 首見旗標（如 `seen_uids: set[str]`）管理。
 - **FR-GW-003**: EchodyneAdapter MUST 將合法 JSON 轉為內部 `Track(source=ECHOSHIELD)` 物件，其中 `alt_m` 取自 JSON `altitude_m`，`timestamp` 為 UTC aware datetime，並放入共用的 `track_queue`（容量 1000）。
 - **FR-GW-004**: EchodyneAdapter MUST 在 TCP 連線失敗（ConnectionRefusedError/OSError/EOF）時記錄 WARNING、等待固定 5 秒後自動重連，採無限重試直到 Gateway 關閉；Gateway 主程序不因此退出。
 
 **SentrycsAdapter（RF 輸入）**
 
-- **FR-GW-005**: Gateway MUST 以 HTTP Client 身份每 1 秒一次（1 Hz）對設定檔指定端點（預設 `sentrycs-sim:7070`）執行 `GET /detections`，解析回傳的 JSON 陣列。
+- **FR-GW-005**: Gateway MUST 以 HTTP Client 身份每 1 秒一次（1 Hz）對設定檔指定端點（預設 `sentrycs-sim:17070`）執行 `GET /detections`，解析回傳的 JSON 陣列。
 - **FR-GW-006**: SentrycsAdapter MUST 將每筆偵測轉為 `Track(source=SENTRYCS)` 物件，其中 `alt_m` 取自 JSON `alt_m`、`detection_status` 取自 `status`（`DETECTED`/`MITIGATING`/`NEUTRALIZED`）、`drone_model` 取自 `model`、`operator_lat/operator_lon` 隨附；並放入相同的 `track_queue`。
 - **FR-GW-007**: SentrycsAdapter MUST 在 HTTP 錯誤（連線逾時、5xx、JSON 解析失敗）時記錄 WARNING 並跳過本次輪詢；下一個 1 Hz 週期正常重試，不影響 EchoShield 資料流。
 - **FR-GW-008**: SentrycsAdapter MUST 在回傳為空陣列時視為「無新 RF 偵測」，不清除既有 `rf_tracks`（老化交由 TTL 處理）。
@@ -134,7 +134,7 @@ Demo 現場網路/服務不穩是常態：TAK Server 重啟、EchoShield Simulat
 
 **TakTransmitter（TAK Server 輸出）**
 
-- **FR-GW-019**: TakTransmitter MUST 以 TCP SSL 連線至設定檔指定的 TAK Server（預設 `tak-server:8089`），使用 `gateway.p12` 客戶端憑證建立連線；PoC 模式允許 `verify_mode=CERT_NONE`（須以設定檔明示）。
+- **FR-GW-019**: TakTransmitter MUST 以 TCP SSL 連線至設定檔指定的 TAK Server（預設 `tak-server:18089`），使用 `gateway.p12` 客戶端憑證建立連線；PoC 模式允許 `verify_mode=CERT_NONE`（須以設定檔明示）。
 - **FR-GW-020**: TakTransmitter MUST 以「CoT XML + `\n`」格式傳送（與 ICD-003 一致的 newline-delimited），不使用 length-prefix；每筆 CoT 經 `_cot_queue`（容量 500）非同步發送。
 - **FR-GW-021**: TakTransmitter MUST 在連線錯誤時以指數退避重連（1s → 2s → 4s → … 封頂 60s），最多 `max_retries=5` 次；達上限後拋出 ConnectionError，Gateway 以非 0 exit code 終止並明確記錄。
 - **FR-GW-022**: 當 `_cot_queue` 滿載（500）時，TakTransmitter MUST 記錄 WARNING 並丟棄新進訊息（drop-newest），不阻塞 CotGenerator 與主處理迴圈。
@@ -170,7 +170,7 @@ Demo 現場網路/服務不穩是常態：TAK Server 重啟、EchoShield Simulat
 - **SC-GW-004**：以一架無人機在 50m 關聯視窗內運動 60 秒，雷達 + RF 的融合命中率 ≥ 95%（命中定義：該週期產出 `source=FUSED` 的 CoT）；兩架相距 > 200m 的無人機在 60 秒測試中交叉關聯次數 = 0。
 - **SC-GW-005**：Demo 期間 TAK Server 對單一 uid 的 CoT 更新頻率穩定 ≥ 5 Hz（對應雷達 10 Hz 的至少 50% 處理率），ATAK 上的圖示移動視覺連續無卡頓。
 - **SC-GW-006**：EchoShield Simulator 被停機 5 秒再恢復的測試中，Gateway 不退出、不拋未捕捉例外，重連後 10 秒內重新產出該無人機 CoT。
-- **SC-GW-007**：TAK Server `:8089` 不可達 30 秒的測試中，TakTransmitter 完成至少 1 次指數退避序列並在服務恢復後繼續送出 CoT；期間 Gateway 主程序未終止。
+- **SC-GW-007**：TAK Server `:18089` 不可達 30 秒的測試中，TakTransmitter 完成至少 1 次指數退避序列並在服務恢復後繼續送出 CoT；期間 Gateway 主程序未終止。
 - **SC-GW-008**：TTL 清理的準確性——凡雷達 Track 超過 10 秒未更新，Gateway 在下一個秒級 tick（最晚 11 秒內）對其 uid 發送一筆 `track_status=Lost`、`stale = time` 的最終 CoT，ATAK 於下一個 refresh 週期（≤ 3s）內移除對應圖示。
 - **SC-GW-009**：CoT XML 格式合法性——針對 100 筆任意場景產出的 CoT，以 XML schema 驗證（`<event>` 必備屬性齊全、`<point>` 數值在值域內）通過率 100%；uid 唯一性：同一無人機在同一 source 的生命週期內只出現一個 uid（前綴 `ECHO-*` / `SENTRYCS-*` / `FUSED-*` 其一），source 切換時舊 uid 先收到 `stale=now` 的最終 CoT 後才出現新 uid，不會同時存在兩個 uid 指向同一實體。
 - **SC-GW-010**：對於非法輸入（缺欄位、超範圍、非 JSON 文本）的魯棒性——Gateway 在連續注入 1,000 筆異常資料後仍正常處理合法資料，且異常筆數全數有 WARNING/ERROR 日誌、不產生對應 CoT。
@@ -190,4 +190,4 @@ Demo 現場網路/服務不穩是常態：TAK Server 重啟、EchoShield Simulat
 - 所有對外時間一律使用 UTC；`datetime.now(timezone.utc)` 為 Gateway 產生 CoT 的時間基準，sensor `timestamp` 僅用於關聯時間窗比對，不作為 CoT `time` 屬性。
 - Python 3.11+、asyncio 為基礎；runtime 必要相依 `aiohttp`（Sentrycs HTTP client）、`pydantic`（config / Track 驗證）、`structlog`（FR-GW-026 結構化 JSON 日誌）、`PyYAML`（載入 `gateway.yaml`）、`cryptography`（p12 → PEM）。明確不使用 `geopy`（Haversine 手寫）與 `lxml`（CoT 以 stdlib `xml.etree.ElementTree` 組裝）。
 - 本 Feature 聚焦「Gateway 本體」，不負責啟動/停止 Simulator 與 TAK Server（由 Docker Compose 統籌）；也不提供對外管理/監控介面（不開 HTTP 埠）。
-- Sentrycs Simulator（Feature 004）已實作並符合 08-api-icd.md §3；EchoShield Simulator（Feature 003）已實作並符合 08-api-icd.md §2；TAK Server（Feature 001 基礎設施）已可在 `:8089` 接受 TCP SSL CoT。
+- Sentrycs Simulator（Feature 004）已實作並符合 08-api-icd.md §3；EchoShield Simulator（Feature 003）已實作並符合 08-api-icd.md §2；TAK Server（Feature 001 基礎設施）已可在 `:18089` 接受 TCP SSL CoT。

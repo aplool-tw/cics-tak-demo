@@ -20,19 +20,19 @@ def test_defaults_when_no_cli_no_scenario():
     s = Settings.from_args_and_scenario(
         scenario_path="/x.yaml",
         cli_api_port=None, cli_hz=None,
-        map_sim_url="http://127.0.0.1:8090",
+        map_sim_url="http://127.0.0.1:18090",
         verbose=False, debug=False,
         scenario=None,
     )
     assert s.hz == 10
-    assert s.api_port == 8080
+    assert s.api_port == 18080
 
 
 def test_scenario_overrides_default():
     s = Settings.from_args_and_scenario(
         scenario_path="/x.yaml",
         cli_api_port=None, cli_hz=None,
-        map_sim_url="http://127.0.0.1:8090",
+        map_sim_url="http://127.0.0.1:18090",
         verbose=False, debug=False,
         scenario=FakeScenario(hz=5, port=9090),
     )
@@ -44,7 +44,7 @@ def test_cli_overrides_scenario():
     s = Settings.from_args_and_scenario(
         scenario_path="/x.yaml",
         cli_api_port=12345, cli_hz=7,
-        map_sim_url="http://127.0.0.1:8090",
+        map_sim_url="http://127.0.0.1:18090",
         verbose=False, debug=False,
         scenario=FakeScenario(hz=5, port=9090),
     )
@@ -57,7 +57,7 @@ def test_invalid_hz_fails_fast():
         Settings.from_args_and_scenario(
             scenario_path="/x.yaml",
             cli_api_port=None, cli_hz=99,
-            map_sim_url="http://127.0.0.1:8090",
+            map_sim_url="http://127.0.0.1:18090",
             verbose=False, debug=False,
             scenario=None,
         )
@@ -68,7 +68,7 @@ def test_invalid_port_fails_fast():
         Settings.from_args_and_scenario(
             scenario_path="/x.yaml",
             cli_api_port=70000, cli_hz=None,
-            map_sim_url="http://127.0.0.1:8090",
+            map_sim_url="http://127.0.0.1:18090",
             verbose=False, debug=False,
             scenario=None,
         )

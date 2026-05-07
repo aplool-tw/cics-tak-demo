@@ -190,7 +190,7 @@ cd services/sentrycs-sim && python -m sentrycs_sim --config config/demo.yaml
 
 # Verify:
 # 1. Structured log shows perimeter_breach event with dist_m < 1000
-# 2. Drone icon turns orange on map at http://localhost:8092/map
+# 2. Drone icon turns orange on map at http://localhost:18092/map
 # 3. Side panel shows [TAKEOVER] badge
 # 4. No UDS calls in sentrycs-sim logs
 ```

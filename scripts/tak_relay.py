@@ -59,7 +59,7 @@ async def _main(host: str, port: int) -> None:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Minimal TCP broadcast relay for CoT XML")
     ap.add_argument("--host", default="127.0.0.1", help="Listen address (default: 127.0.0.1)")
-    ap.add_argument("--port", type=int, default=8089, help="Listen port (default: 8089)")
+    ap.add_argument("--port", type=int, default=18089, help="Listen port (default: 18089)")
     args = ap.parse_args()
     try:
         asyncio.run(_main(args.host, args.port))

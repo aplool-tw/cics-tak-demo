@@ -7,7 +7,7 @@
 ## Summary
 
 Map Simulator（Map Sim）是反無人機 TAK PoC 感測層的**物件狀態中央登錄表**。以單一 asyncio 行程承載：
-(1) aiohttp REST Server（`:8090`），提供 `POST /objects/update` 接收 UDS 每 tick per-drone 推送
+(1) aiohttp REST Server（`:18090`），提供 `POST /objects/update` 接收 UDS 每 tick per-drone 推送
 （對齊 `specs/001-uds/contracts/rest-api.md` §3.2 的 8 欄位 payload）；
 (2) `GET /objects?lat=&lon=&radius_m=&include_lost=` 地理範圍查詢端點（Haversine 排序、回傳 `distance_m` / `last_seen_s` / `is_lost`，下游 EchoShield 4800 m / Sentrycs 8000 m 共用）；
 (3) `GET /objects/all` / `DELETE /objects/{drone_id}` / `GET /health` 除錯與運維端點；
@@ -38,7 +38,7 @@ Map Simulator（Map Sim）是反無人機 TAK PoC 感測層的**物件狀態中�
 **Testing**: `pytest` ≥ 8.0、`pytest-asyncio` ≥ 0.23（`asyncio_mode = "auto"`）、
 `aiohttp.test_utils`（契約測試）、`freezegun` ≥ 1.4（TTL 時序測試；不依賴真實 sleep 避免 CI flake）
 
-**Target Platform**: Linux / macOS；PoC 本機綁 `127.0.0.1:8090`
+**Target Platform**: Linux / macOS；PoC 本機綁 `127.0.0.1:18090`
 
 **Project Type**: asyncio HTTP service（server-only；不主動呼叫其他服務）
 
@@ -94,7 +94,7 @@ specs/002-map-sim/
 ├── data-model.md        # Phase 1 — DroneObject / ObjectRegistry / Query Response schema
 ├── quickstart.md        # Phase 1 — 啟動、curl 範例、測試指令
 ├── contracts/
-│   └── rest-api.md      # :8090 正式契約（POST /objects/update、GET /objects、GET /health）+ 除錯端點
+│   └── rest-api.md      # :18090 正式契約（POST /objects/update、GET /objects、GET /health）+ 除錯端點
 ├── checklists/          # （已存在）
 └── tasks.md             # Phase 2 output（由 /speckit.tasks 產生；本 plan 不產出）
 ```

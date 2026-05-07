@@ -37,7 +37,7 @@ cd services/cot-gateway
 python -m cot_gateway
 ```
 
-Open the tactical map: **http://localhost:8080/map**
+Open the tactical map: **http://localhost:18080/map**
 
 ---
 

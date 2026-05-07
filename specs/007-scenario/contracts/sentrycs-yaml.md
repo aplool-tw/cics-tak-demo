@@ -22,8 +22,8 @@ Sentrycs Simulator (`sentrycs-sim`) 的設定 YAML 定義感測器位置、服�
 sensor_lat: ...         # float   必填
 sensor_lon: ...         # float   必填
 poll_interval_s: ...    # float   選填（預設 0.5）
-map_sim_url: ...        # string  選填（預設 http://localhost:8090）
-uds_url: ...            # string  選填（預設 http://localhost:8080）
+map_sim_url: ...        # string  選填（預設 http://localhost:18090）
+uds_url: ...            # string  選填（預設 http://localhost:18080）
 api_host: ...           # string  選填（預設 0.0.0.0）
 api_port: ...           # int     選填（預設 7070）
 neutralized_hold_s: ... # float   選填（預設 30.0）
@@ -50,8 +50,8 @@ drones:
 | `sensor_lat` | `float` | ✅ | — | 感測器緯度（WGS-84）；範圍 [-90, 90]。**e2e 劇本設定為 SP: 24.725806** |
 | `sensor_lon` | `float` | ✅ | — | 感測器經度（WGS-84）；範圍 [-180, 180]。**e2e 劇本設定為 SP: 121.033750** |
 | `poll_interval_s` | `float` | ❌ | `0.5` | 輪詢 map-sim 的間隔（秒）；> 0 |
-| `map_sim_url` | `string` | ❌ | `http://localhost:8090` | Map Sim 基礎 URL；由 dev-launcher 覆寫 |
-| `uds_url` | `string` | ❌ | `http://localhost:8080` | UDS REST API URL（用於 POST /command/takeover）；由 dev-launcher 覆寫 |
+| `map_sim_url` | `string` | ❌ | `http://localhost:18090` | Map Sim 基礎 URL；由 dev-launcher 覆寫 |
+| `uds_url` | `string` | ❌ | `http://localhost:18080` | UDS REST API URL（用於 POST /command/takeover）；由 dev-launcher 覆寫 |
 | `api_host` | `string` | ❌ | `0.0.0.0` | Sentrycs HTTP API 監聽位址 |
 | `api_port` | `int` | ❌ | `7070` | Sentrycs HTTP API 監聽端口；範圍 [1024, 65535] |
 | `neutralized_hold_s` | `float` | ❌ | `30.0` | NEUTRALIZED 狀態保留秒數，之後從 `/detections` 列表移除；> 0 |
@@ -148,8 +148,8 @@ sensor_lon: 121.033750  # SP
 
 # 以下為預設值，dev-launcher 啟動時可覆寫
 poll_interval_s: 0.5
-map_sim_url: http://localhost:8090
-uds_url: http://localhost:8080
+map_sim_url: http://localhost:18090
+uds_url: http://localhost:18080
 api_host: 0.0.0.0
 api_port: 7070
 neutralized_hold_s: 30.0
@@ -175,8 +175,8 @@ sensor_lat: 24.725806   # SP
 sensor_lon: 121.033750  # SP
 
 poll_interval_s: 0.5
-map_sim_url: http://localhost:8090
-uds_url: http://localhost:8080
+map_sim_url: http://localhost:18090
+uds_url: http://localhost:18080
 api_host: 0.0.0.0
 api_port: 7070
 neutralized_hold_s: 30.0

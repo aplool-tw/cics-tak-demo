@@ -26,7 +26,7 @@ from uds.scenario.loader import build_initial_drones, load_scenario
 def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="uds", description="Unified Drone Simulator")
     p.add_argument("--scenario", required=True, help="Path to scenario YAML")
-    p.add_argument("--api-port", type=int, default=None, help="REST API port (default 8080)")
+    p.add_argument("--api-port", type=int, default=None, help="REST API port (default 18080)")
     p.add_argument(
         "--map-sim-url",
         default="http://127.0.0.1:8090",

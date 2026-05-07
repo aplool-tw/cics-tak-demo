@@ -30,8 +30,8 @@ The Taiwan anti-drone TAK PoC scenario operates around two fixed ground sites de
 | SP   | Strategic Point — collocated radar site (EchoShield + Sentrycs) | Origin of all drone detections; has three defense-ring radii (1 km / 2 km / 3 km) |
 | HP   | Holding / Landing Point — designated drone intercept landing zone | Destination assigned to a neutralised drone |
 
-Today, the web-map viewer (`:8092`) renders both sites in the browser, but real TAK clients
-(**ATAK**, **WinTAK**) that connect directly to the TAK Server (`:8089`) receive **no** SP / HP
+Today, the web-map viewer (`:18092`) renders both sites in the browser, but real TAK clients
+(**ATAK**, **WinTAK**) that connect directly to the TAK Server (`:18089`) receive **no** SP / HP
 CoT events.  Operators using field devices therefore see drone tracks arriving without any map
 context — they cannot identify the radar site, the defense perimeter rings, or the intended
 landing zone.

@@ -50,7 +50,7 @@ description: "Task list for feature 013-tak-client-sim-webmap"
 - [X] T005 Add `use_ssl: bool = True` field immediately after `port` field in `ClientConfig` (preserves backward compatibility — omitting field in YAML defaults to True) in `services/tak-client-sim/src/tak_client_sim/config.py`
 - [X] T006 Add `--ssl` (`action="store_true"`, `dest="ssl"`) and `--no-ssl` (`action="store_true"`, `dest="no_ssl"`) arguments to `_build_parser()`, and add `getattr(args, "ssl", None)` / `getattr(args, "no_ssl", False)` override block in `load_config()` in `services/tak-client-sim/src/tak_client_sim/__main__.py`
 - [X] T007 Replace `ssl_ctx = build_ssl_context(config)` with `ssl_ctx = build_ssl_context(config) if config.use_ssl else None` in `connect_with_retry()` in `services/tak-client-sim/src/tak_client_sim/connection.py`
-- [X] T008 Add `use_ssl: false  # connects to tak_relay.py (plaintext TCP on :8089)` line after `use_ssl_verify` in `services/tak-client-sim/config/demo.yaml`
+- [X] T008 Add `use_ssl: false  # connects to tak_relay.py (plaintext TCP on :18089)` line after `use_ssl_verify` in `services/tak-client-sim/config/demo.yaml`
 
 **Checkpoint**: Run `pytest services/tak-client-sim/tests/unit/test_config_use_ssl.py` — all T002–T004 tests must now be GREEN.
 
@@ -60,7 +60,7 @@ description: "Task list for feature 013-tak-client-sim-webmap"
 
 **Goal**: Replace the plain filled-circle markers in `_MAP_HTML_TEMPLATE` with MIL-STD-2525C-compliant SVG icons: grey circle+cross for Unknown (`a-u-*`), red diamond for Hostile (`a-h-*`), opacity-dimmed for stale, course arrow for speed > 0.3 m/s.
 
-**Independent Test**: Start `scripts/tak_relay.py --port 8089`, then start `tak-client-sim` with `config/demo.yaml`. Inject a synthetic `a-u-A-M-F-Q-r` and `a-h-A-M-F-Q-r` CoT XML event via the relay. Open `:8093/map` and confirm the icon shapes match the MIL-STD-2525C specification.
+**Independent Test**: Start `scripts/tak_relay.py --port 8089`, then start `tak-client-sim` with `config/demo.yaml`. Inject a synthetic `a-u-A-M-F-Q-r` and `a-h-A-M-F-Q-r` CoT XML event via the relay. Open `:18093/map` and confirm the icon shapes match the MIL-STD-2525C specification.
 
 **⚠️ CRITICAL**: Complete all tests (T009–T013) and confirm they FAIL before beginning T014–T018.
 
@@ -90,7 +90,7 @@ description: "Task list for feature 013-tak-client-sim-webmap"
 
 **Goal**: Deliver `scripts/demo-1drone.sh` that starts all 7 pipeline services in order, health-checks them, opens 3 browser tabs, and cleans up on `Ctrl-C` or `--stop`.
 
-**Independent Test**: Run `scripts/demo-1drone.sh` from repo root; confirm all 7 services start, health checks pass, 3 tabs open, drone track appears on `:8093/map` at t≈9s, and `Ctrl-C` leaves no orphan processes.
+**Independent Test**: Run `scripts/demo-1drone.sh` from repo root; confirm all 7 services start, health checks pass, 3 tabs open, drone track appears on `:18093/map` at t≈9s, and `Ctrl-C` leaves no orphan processes.
 
 **⚠️ CRITICAL**: Complete all tests (T020–T021) and confirm they FAIL before beginning T022–T029.
 
@@ -105,8 +105,8 @@ description: "Task list for feature 013-tak-client-sim-webmap"
 - [X] T023 [US2] Add pre-flight checks to `scripts/demo-1drone.sh`: (1) `command -v python3`, (2) `command -v curl` (required for health-check loop), (3) existence of all 5 config files, (4) Python module importability for `map_sim`, `uds`, `echoshield_sim`, `sentrycs_sim`, `cot_gateway`, `tak_client_sim` using `python3 -c "import <module>"`, (5) `[[ -f scripts/tak_relay.py ]]` file-existence check in `scripts/demo-1drone.sh`
 - [X] T024 [US2] Add `check_port_free()` helper (using `/dev/tcp` bash built-in) and pre-flight port conflict detection for ports 8089, 8090, 8092, 8093, 18080, 7070 — all checked before first service launch in `scripts/demo-1drone.sh`
 - [X] T025 [US2] Add 7-service launch block in correct startup order (map-sim → uds → echoshield-sim → sentrycs-sim → cot-gateway → tak-relay → tak-client-sim): each launched via `python3 -m <module>` (or `python3 scripts/tak_relay.py`) with `&`, PID captured to `<SVC>_PID`, and PID written to `.dev-runtime/pids/<svc-name>.pid` in `scripts/demo-1drone.sh`
-- [X] T026 [US2] Add health-check loop (30 s timeout, 1 s poll): HTTP checks via `curl -sf` for `:8090/health`, `:9001/info`, `:7070/health`, `:8092/health`, `:8093/health`; TCP checks via `/dev/tcp` for `:18080` and `:8089`; progress ticker `map:· uds:· echo:· sntr:· gw:· relay:· tak:·`; dead-process detection (PID no longer running triggers `die()`) in `scripts/demo-1drone.sh`
-- [X] T027 [US2] Add scenario banner output (single-drone TRK-E01 timeline) and browser-open loop for 3 URLs (`http://127.0.0.1:8090/objects`, `http://127.0.0.1:8092/map`, `http://127.0.0.1:8093/map`) using `xdg-open "$url" 2>/dev/null || open "$url" 2>/dev/null || echo "Open manually: $url"` in `scripts/demo-1drone.sh`
+- [X] T026 [US2] Add health-check loop (30 s timeout, 1 s poll): HTTP checks via `curl -sf` for `:18090/health`, `:19001/info`, `:17070/health`, `:18092/health`, `:18093/health`; TCP checks via `/dev/tcp` for `:18080` and `:18089`; progress ticker `map:· uds:· echo:· sntr:· gw:· relay:· tak:·`; dead-process detection (PID no longer running triggers `die()`) in `scripts/demo-1drone.sh`
+- [X] T027 [US2] Add scenario banner output (single-drone TRK-E01 timeline) and browser-open loop for 3 URLs (`http://127.0.0.1:18090/objects`, `http://127.0.0.1:18092/map`, `http://127.0.0.1:18093/map`) using `xdg-open "$url" 2>/dev/null || open "$url" 2>/dev/null || echo "Open manually: $url"` in `scripts/demo-1drone.sh`
 - [X] T028 [US2] Add `cleanup()` function (SIGTERM all PIDs → `sleep 1` → SIGKILL, remove all 7 PID files from `.dev-runtime/pids/`) and `trap cleanup INT TERM EXIT`; add `--stop` flag handler (reads PID files, sends SIGTERM, removes files, graceful if PID file missing) in `scripts/demo-1drone.sh`
 - [X] T029 [US2] Set executable bit and run `shellcheck -S warning scripts/demo-1drone.sh` — fix all reported warnings before proceeding in `scripts/demo-1drone.sh`
 
@@ -118,7 +118,7 @@ description: "Task list for feature 013-tak-client-sim-webmap"
 
 **Goal**: Deliver `scripts/demo-3drone.sh` — structurally identical to `demo-1drone.sh` but using the three-drone scenario config files.
 
-**Independent Test**: Run `scripts/demo-3drone.sh`; confirm three distinct track UIDs appear on `:8093/map` and the script stops cleanly.
+**Independent Test**: Run `scripts/demo-3drone.sh`; confirm three distinct track UIDs appear on `:18093/map` and the script stops cleanly.
 
 **⚠️ CRITICAL**: Confirm T021 (scenario-path assertion) is RED before beginning T030.
 
@@ -182,6 +182,6 @@ T001 (baseline)
 | Story | Test Criteria | Minimum Dependencies |
 |-------|--------------|---------------------|
 | Foundational | `pytest test_config_use_ssl.py` → 3 tests GREEN | T005–T008 |
-| US-001 | `pytest test_web_icon_logic.py` → 5 tests GREEN; hard-refresh `:8093/map` shows correct shapes | T014–T019 |
+| US-001 | `pytest test_web_icon_logic.py` → 5 tests GREEN; hard-refresh `:18093/map` shows correct shapes | T014–T019 |
 | US-002 | `shellcheck demo-1drone.sh` exits 0; missing-config test GREEN; end-to-end run opens 3 tabs | T022–T029 |
 | US-003 | Scenario-paths test GREEN; `shellcheck demo-3drone.sh` exits 0 | T030–T031 |

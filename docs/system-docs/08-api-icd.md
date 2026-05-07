@@ -192,7 +192,7 @@
 | 項目 | 規格 |
 |------|------|
 | 協定 | TCP（明文，無 SSL）|
-| 角色 | Sentrycs Simulator 為 HTTP Server（:7070），SentrycsAdapter 為 HTTP Client（輪詢）|
+| 角色 | Sentrycs Simulator 為 HTTP Server（:17070），SentrycsAdapter 為 HTTP Client（輪詢）|
 | Port | 7070 |
 | Server 位址 | `127.0.0.1`（本機，不需跨網段）|
 | 加密 | 無（本機通訊，不需 SSL）|
@@ -421,11 +421,11 @@ def track_from_echoshield_json(data: dict) -> Track:
 
 Sentrycs 數據現在透過 CoT Gateway 融合：
 
-1. Sentrycs Simulator → HTTP JSON Status API（HTTP :7070，aiohttp Server）
+1. Sentrycs Simulator → HTTP JSON Status API（HTTP :17070，aiohttp Server）
 2. SentrycsAdapter → 接收 → 轉換為 `Track(source=SENTRYCS, drone_model="DJI Mavic 3", detection_status="DETECTED")`
 3. TrackCorrelator → 與 EchoShield Track 距離≤50m 時融合 → `Track(source=FUSED)`
 4. CotGenerator → `a-h-A-M-F-Q-r`（紅色）/ `a-u-A-M-F-Q-r`（灰色，純雷達）
-5. TakTransmitter → TCP SSL :8089 → TAK Server → ATAK
+5. TakTransmitter → TCP SSL :18089 → TAK Server → ATAK
 
 ### 6.1 完整轉換範例：EchoShield JSON → Track → CoT XML
 

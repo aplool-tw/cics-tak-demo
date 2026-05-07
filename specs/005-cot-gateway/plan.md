@@ -6,12 +6,12 @@
 ## Summary
 
 CoT Gateway 是 PoC 的融合與出站樞紐：以 asyncio 單進程同時 (a) 作為 TCP client 連線 EchoShield
-Simulator `:9000`，逐行消費 newline-delimited JSON 航跡（10 Hz）；(b) 作為 HTTP client 以 1 Hz 輪詢
-Sentrycs Simulator `:7070` 的 `GET /detections`；(c) 在記憶體內以 Haversine 距離 ≤ 50 m 且時間差 ≤ 3 s
+Simulator `:19000`，逐行消費 newline-delimited JSON 航跡（10 Hz）；(b) 作為 HTTP client 以 1 Hz 輪詢
+Sentrycs Simulator `:17070` 的 `GET /detections`；(c) 在記憶體內以 Haversine 距離 ≤ 50 m 且時間差 ≤ 3 s
 的規則將雷達與 RF 航跡關聯為 `FUSED` Track（並以 Sentrycs `drone_id` 為融合主鍵）；(d) 依 Track
 source 與狀態產生 MIL-STD-2525C / CoT 2.0 XML（`a-u-A-M-F-Q-r` 未識別灰色、`a-h-A-M-F-Q-r` 敵對紅色；
 stale 三段式 0 s / 30 s / 11 s）；(e) 最後以 TCP SSL + gateway.p12（PoC `CERT_NONE`）推送至
-TAK Server `:8089`，供 ATAK 顯示。Gateway 另負責 TTL 10 s 的航跡老化（下發 `stale=time` 最終 CoT）、
+TAK Server `:18089`，供 ATAK 顯示。Gateway 另負責 TTL 10 s 的航跡老化（下發 `stale=time` 最終 CoT）、
 source 切換時以「舊 uid stale=now + 新 uid 首筆」的雙訊息交接，以及所有上下游斷線的韌性（無限重試雷達、
 指數退避 1→60 s 最多 5 次 TAK、每秒補嘗試 Sentrycs）。
 
@@ -33,7 +33,7 @@ dataclass 驗證）、`structlog`（結構化日誌）。測試 `pytest + pytest
     ttl_loop / tak_sender；signal handler）
   - `aiohttp>=3.9`（**僅 HTTP client**；輪詢 Sentrycs `GET /detections`；不起 HTTP server——Gateway 不對外
     開 HTTP 埠）
-  - `ssl`（stdlib；載入 `gateway.p12` 客戶端憑證，PoC 以 `verify_mode=CERT_NONE` 連 TAK `:8089`）
+  - `ssl`（stdlib；載入 `gateway.p12` 客戶端憑證，PoC 以 `verify_mode=CERT_NONE` 連 TAK `:18089`）
   - `xml.etree.ElementTree`（stdlib；CoT XML 組裝 — 手動控制 `time` / `stale` ISO 8601 毫秒格式與屬性順序；
     避免 lxml 依賴）
   - `pydantic>=2.6`（`GatewayConfig` YAML schema + `Track` 內部資料類；`extra="forbid"`）
@@ -44,8 +44,8 @@ dataclass 驗證）、`structlog`（結構化日誌）。測試 `pytest + pytest
 - dev：
   - `pytest>=8.0`、`pytest-asyncio>=0.23`（`asyncio_mode=auto`）
   - `freezegun>=1.4`（凍結 `datetime.now(timezone.utc)` → 斷言 CoT `time` / `stale` 毫秒字串）
-  - `aiohttp`（test stub server，mock Sentrycs :7070）
-  - `pytest`-based 自建 TCP stub（mock EchoShield :9000 newline-delimited JSON feeder；mock TAK :8089 SSL
+  - `aiohttp`（test stub server，mock Sentrycs :17070）
+  - `pytest`-based 自建 TCP stub（mock EchoShield :19000 newline-delimited JSON feeder；mock TAK :18089 SSL
     接收端以明文 TCP 取代便於斷言）
   - `ruff>=0.4`、`black>=24.3`
 
@@ -131,7 +131,7 @@ specs/005-cot-gateway/
 │   ├── cot-xml.md             # 對外：CoT 2.0 XML schema（event/point/detail/remarks/track）+ uid/type/stale 政策
 │   ├── echodyne-wire.md       # 上游 caller：EchoShield TCP newline-delimited JSON（reuse 003 contract）
 │   ├── sentrycs-poller.md     # 上游 caller：Sentrycs HTTP GET /detections 輪詢（reuse 004 contract）
-│   └── tak-uplink.md          # 下游 caller：TAK Server :8089 TCP+SSL + newline-delimited CoT XML
+│   └── tak-uplink.md          # 下游 caller：TAK Server :18089 TCP+SSL + newline-delimited CoT XML
 ├── checklists/                # 既有 /speckit.checklist 產物（若有）
 └── tasks.md                   # Phase 2 產物（/speckit.tasks 產生，非本命令）
 ```
@@ -239,7 +239,7 @@ services/cot-gateway/
   `specs/003-echoshield-sim/contracts/` 為權威，僅新增 Gateway 側「首見旗標由 Gateway 管理」的消費規則）。
 - [`contracts/sentrycs-poller.md`](./contracts/sentrycs-poller.md)：上游 Sentrycs HTTP 輪詢契約（引用
   `specs/004-sentrycs-sim/contracts/http-status-api.md`；Gateway 側僅定義輪詢頻率、錯誤處理、欄位對應）。
-- [`contracts/tak-uplink.md`](./contracts/tak-uplink.md)：下游 TAK Server `:8089` TCP+SSL +
+- [`contracts/tak-uplink.md`](./contracts/tak-uplink.md)：下游 TAK Server `:18089` TCP+SSL +
   newline-delimited CoT 契約，含指數退避、queue 滿策略、憑證載入。
 - [`quickstart.md`](./quickstart.md)：Docker Compose 拉起 4 服務 → `python -m cot_gateway` → `openssl
   s_client` 驗證 TAK 出站 → ATAK 截圖斷言；含三種失效演練腳本（US3）。

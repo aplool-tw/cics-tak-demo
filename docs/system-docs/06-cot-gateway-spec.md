@@ -16,7 +16,7 @@
 
 CoT Gateway 是本系統的指管層核心，負責：
 
-1. **接收** EchoShield 雷達的 TCP JSON 資料流（透過 EchodyneAdapter）並輪詢 Sentrycs Simulator HTTP :7070（透過 SentrycsAdapter）
+1. **接收** EchoShield 雷達的 TCP JSON 資料流（透過 EchodyneAdapter）並輪詢 Sentrycs Simulator HTTP :17070（透過 SentrycsAdapter）
 2. **轉換** 為統一的 Track 物件
 3. **關聯** 雷達航跡與 RF 航跡（TrackCorrelator）
 4. **生成** 符合 MIL-STD-2525C 的 CoT XML（CotGenerator）
@@ -37,8 +37,8 @@ flowchart TD
         GM["GatewayMain\n(asyncio 主迴圈)"]
 
         subgraph ADAPTERS["Adapter 層"]
-            EA["EchodyneAdapter\n(TCP Client :9000 → Track)"]
-            SC_A["SentrycsAdapter\n(HTTP Poll :7070 → Track 物件)"]
+            EA["EchodyneAdapter\n(TCP Client :19000 → Track)"]
+            SC_A["SentrycsAdapter\n(HTTP Poll :17070 → Track 物件)"]
         end
 
         subgraph CORE["核心處理層"]
@@ -51,9 +51,9 @@ flowchart TD
         end
     end
 
-    ES_SIM["EchoShield Simulator\n(TCP Feed :9000)"]
-    SC_SIM["Sentrycs Simulator\n:7070 HTTP"] -->|HTTP JSON :7070| SC_A
-    TAK["TAK Server\n:8089 SSL"]
+    ES_SIM["EchoShield Simulator\n(TCP Feed :19000)"]
+    SC_SIM["Sentrycs Simulator\n:17070 HTTP"] -->|HTTP JSON :17070| SC_A
+    TAK["TAK Server\n:18089 SSL"]
 
     ES_SIM -->|"TCP JSON stream (10 Hz)"| EA
     SC_A -->|Track 物件（SENTRYCS）| TC
@@ -70,8 +70,8 @@ flowchart TD
 
 GatewayMain 使用 asyncio 事件迴圈，各模組以獨立 coroutine 並行運行：
 
-- **EchodyneAdapter coroutine**：持續讀取 EchoShield Simulator TCP JSON 資料流（:9000），非同步放入 Queue；PoC 與生產模式連線目標不同，格式完全相同
-- **SentrycsAdapter coroutine**：以 1 Hz 輪詢 Sentrycs Simulator HTTP :7070（GET /detections），解析 JSON，轉換為 Track（source=SENTRYCS），放入同一 Queue
+- **EchodyneAdapter coroutine**：持續讀取 EchoShield Simulator TCP JSON 資料流（:19000），非同步放入 Queue；PoC 與生產模式連線目標不同，格式完全相同
+- **SentrycsAdapter coroutine**：以 1 Hz 輪詢 Sentrycs Simulator HTTP :17070（GET /detections），解析 JSON，轉換為 Track（source=SENTRYCS），放入同一 Queue
 - **TrackCorrelator TTL task**：每秒執行一次，清除過期航跡
 - **TakTransmitter send loop**：消費 CoT Queue，非同步發送至 TAK Server
 - **Graceful shutdown**：收到 SIGINT/SIGTERM 後優雅關閉所有 coroutine
@@ -886,7 +886,7 @@ gateway:
 %(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s
 
 範例：
-2025-07-10 08:00:01.234 | INFO     | EchodyneAdapter     | Connected to 127.0.0.1:9000
+2025-07-10 08:00:01.234 | INFO     | EchodyneAdapter     | Connected to 127.0.0.1:19000
 2025-07-10 08:00:01.334 | DEBUG    | EchodyneAdapter     | Received track: TRK-001 at (25.0330, 121.5654)
 2025-07-10 08:00:01.340 | INFO     | TrackCorrelator     | Fused track: FUSED-TRK-001 (radar=TRK-001, rf=RF-001, dist=23.5m)
 2025-07-10 08:00:01.342 | DEBUG    | CotGenerator        | Generated CoT for FUSED-TRK-001 (type=a-h-A-M-F-Q-r)

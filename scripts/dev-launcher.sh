@@ -33,12 +33,12 @@ SERVICES_CSV="all"
 
 BIND_HOST="127.0.0.1"
 
-UDS_PORT="8080"
-MAP_SIM_PORT="8090"
-ECHOSHIELD_PORT="9000"
-SENTRYCS_PORT="7070"
+UDS_PORT="18080"
+MAP_SIM_PORT="18090"
+ECHOSHIELD_PORT="19000"
+SENTRYCS_PORT="17070"
 TAK_HOST="127.0.0.1"
-TAK_PORT="8089"
+TAK_PORT="18089"
 TAK_USE_SSL="false"
 TAK_CERT_DIR=""              # empty = "${ROOT_DIR}/infra/certs"
 TAK_P12_PASSWORD_OVERRIDE="" # empty = use $TAK_P12_PASSWORD env or "takpoc"
@@ -120,12 +120,12 @@ Service selection
 
 Bind / per-service ports
   --bind-host <host>         Host the services bind to. Default: 127.0.0.1
-  --uds-port <port>          Default 8080
-  --map-sim-port <port>      Default 8090
-  --echoshield-port <port>   Default 9000  (TCP feed)
-  --sentrycs-port <port>     Default 7070
+  --uds-port <port>          Default 18080
+  --map-sim-port <port>      Default 18090
+  --echoshield-port <port>   Default 19000  (TCP feed)
+  --sentrycs-port <port>     Default 17070
   --tak-host <host>          External TAK Server host. Default: 127.0.0.1
-  --tak-port <port>          External TAK Server port. Default: 8089
+  --tak-port <port>          External TAK Server port. Default: 18089
   --tak-use-ssl              Enable SSL for TAK uplink (requires p12). Off by default.
   --tak-cert-dir <dir>       Directory containing gateway.p12 + truststore.pem
                              when --tak-use-ssl is on. Default: <repo>/infra/certs

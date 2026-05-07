@@ -25,7 +25,7 @@ Unified Drone Simulator
         │
         │ POST /objects/update（每秒 push）
         ↓
-  Map Simulator（Port :8090）
+  Map Simulator（Port :18090）
   物件狀態登錄表
    ┌────────────────────────────────────────┐
    │ drone_id / lat / lon / alt_m          │
@@ -430,7 +430,7 @@ class MapSimulator:
 
 ```bash
 python map_simulator.py \
-  --port 8090 \
+  --port 18090 \
   --ttl-warn-s 5.0 \
   --ttl-remove-s 10.0 \
   --verbose
@@ -476,16 +476,16 @@ async def _push_to_map_simulator(self, map_sim_url: str) -> None:
 ```bash
 # 建議啟動順序：
 # 1. 啟動 Map Simulator（先啟動，讓後續元件可以連線）
-python map_simulator.py --port 8090
+python map_simulator.py --port 18090
 
 # 2. 啟動 Unified Drone Simulator（開始 push 狀態到 Map Sim）
-python unified_drone_simulator.py --scenario scenarios/single_drone.yaml --map-sim-url http://localhost:8090
+python unified_drone_simulator.py --scenario scenarios/single_drone.yaml --map-sim-url http://localhost:18090
 
 # 3. 啟動 EchoShield Simulator（向 Map Sim 查詢物件）
-python echoshield_simulator.py --map-sim-url http://localhost:8090 --radar-lat 25.0330 --radar-lon 121.5654 --radar-range-m 4800
+python echoshield_simulator.py --map-sim-url http://localhost:18090 --radar-lat 25.0330 --radar-lon 121.5654 --radar-range-m 4800
 
 # 4. 啟動 Sentrycs Simulator（向 Map Sim 查詢物件）
-python sentrycs_simulator.py --map-sim-url http://localhost:8090 --uds-url http://localhost:8080
+python sentrycs_simulator.py --map-sim-url http://localhost:18090 --uds-url http://localhost:8080
 
 # 5. 啟動 CoT Gateway
 python gateway_main.py --config gateway_config.yaml

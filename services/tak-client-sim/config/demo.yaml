@@ -9,14 +9,14 @@
 #   4. open http://127.0.0.1:8093/map
 
 host: 127.0.0.1
-port: 8089
+port: 18089
 use_ssl_verify: false
 use_ssl: false  # connects to tak_relay.py (plaintext TCP on :8089)
 max_retries: 9999             # retry indefinitely — keeps running without TAK server
 
 web_enabled: true
 web_host: 0.0.0.0
-web_port: 8093                # separate from cot-gateway (:8092) to avoid conflict
+web_port: 18093                # separate from cot-gateway (:8092) to avoid conflict
 
 # SP and HP coordinates are received dynamically from the TAK Server as CoT messages
 # broadcast by cot-gateway (feature 014). No static coordinates needed here.

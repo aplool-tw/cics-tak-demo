@@ -6,12 +6,12 @@
 ## Summary
 
 Sentrycs Simulator 取代真實 Sentrycs C-UAS（被動 RF 偵測）硬體，作為 PoC 的第二顆感測器兼主動接管
-觸發者。它以 2 Hz（0.5s 週期）向 Map Simulator（`GET /objects`，:8090）查詢感測器安裝點 8000 m 半徑
+觸發者。它以 2 Hz（0.5s 週期）向 Map Simulator（`GET /objects`，:18090）查詢感測器安裝點 8000 m 半徑
 內的無人機，依場景 YAML 預排的時序（`detected_at_s / mitigating_at_s / neutralized_at_s`）推進每架目標
 的 `IDLE → DETECTED → MITIGATING → NEUTRALIZED → IDLE` 狀態機；在 `DETECTED → MITIGATING`
-轉移的那一刻對 UDS（`POST /command/takeover`，:8080）發出**且僅發出一次**接管請求，並將下游回覆
+轉移的那一刻對 UDS（`POST /command/takeover`，:18080）發出**且僅發出一次**接管請求，並將下游回覆
 （200 / 409=視為成功、400/404=失敗保留 DETECTED）編入狀態。對外則以 aiohttp.web 起一個 HTTP
-JSON Status API（:7070），提供 `GET /detections`、`GET /detection/{uid}`、`GET /health`
+JSON Status API（:17070），提供 `GET /detections`、`GET /detection/{uid}`、`GET /health`
 三個端點，供 CoT Gateway 的 SentrycsAdapter 以 1 Hz 輪詢取用；每筆偵測 JSON 內含無人機位置、型號、
 狀態、`is_landed`，以及由場景 YAML（`operator_bearing_deg` + `operator_distance_m`，200–500m）
 一次性以 WGS84 大地距離公式推算並**永久鎖定**的操控者地面位置（`operator_lat/lon`），整個場景期間
@@ -30,7 +30,7 @@ unit 三層測試。服務目錄 `services/sentrycs-sim/`，模組與測試布�
 **Primary Dependencies**:
 
 - runtime：
-  - `aiohttp>=3.9`（雙用：作為 HTTP client 查 Map Sim `GET /objects` 與呼叫 UDS `POST /command/takeover`，以及 `aiohttp.web` 起 :7070 JSON Status API server）
+  - `aiohttp>=3.9`（雙用：作為 HTTP client 查 Map Sim `GET /objects` 與呼叫 UDS `POST /command/takeover`，以及 `aiohttp.web` 起 :17070 JSON Status API server）
   - `asyncio`（stdlib，主迴圈、per-drone async task、signal handler）
   - `pydantic>=2.6`（`SentrycsConfig` + `DroneScenario` YAML schema；`DetectionResponse` wire schema）
   - `structlog>=24.1`（JSON 結構化日誌）
@@ -112,7 +112,7 @@ specs/004-sentrycs-sim/
 ├── data-model.md              # Phase 1 產物
 ├── quickstart.md              # Phase 1 產物
 ├── contracts/
-│   ├── http-status-api.md     # 對外 :7070 JSON Status API（GET /detections、/detection/{uid}、/health）
+│   ├── http-status-api.md     # 對外 :17070 JSON Status API（GET /detections、/detection/{uid}、/health）
 │   └── takeover-caller.md     # Sentrycs 作為 Client 呼叫 UDS POST /command/takeover 的呼叫端契約
 └── tasks.md                   # Phase 2 產物（/speckit.tasks 產生，非本命令）
 ```
@@ -153,7 +153,7 @@ services/sentrycs-sim/
 │       │   └── machine.py                # StateMachine：IDLE/DETECTED/MITIGATING/NEUTRALIZED 轉移規則與副作用
 │       ├── api/
 │       │   ├── __init__.py
-│       │   └── server.py                 # aiohttp.web :7070；GET /detections、/detection/{uid}、/health
+│       │   └── server.py                 # aiohttp.web :17070；GET /detections、/detection/{uid}、/health
 │       └── loop.py                       # 2 Hz 主迴圈 + per-drone 時序 task + signal handler + graceful shutdown
 └── tests/
     ├── __init__.py

@@ -5,7 +5,7 @@
 
 ---
 
-## 1. 正式契約（Normative）— `POST :8080/command/takeover`
+## 1. 正式契約（Normative）— `POST :18080/command/takeover`
 
 **唯一正式契約端點**（Clarification Q3 / FR-UDS-003）。契約測試 `tests/contract/test_takeover_contract.py`
 必須完整覆蓋 §1 的所有行為；`spec.md` User Story 2 的 Acceptance Scenarios 1–8 各對一個 case。
@@ -167,7 +167,7 @@ Body：
 
 ---
 
-## 3. Client 契約 — UDS → Map Simulator `POST :8090/objects/update`
+## 3. Client 契約 — UDS → Map Simulator `POST :18090/objects/update`
 
 UDS 作為 HTTP **Client** 呼叫 Map Simulator 的端點。介面由 `03-map-simulator-spec.md` §3.1 定義；
 本節以 **UDS 的使用義務（SHALL / MUST）** 切面描述，確保 UDS 實作與 Map Simulator 端規格對齊。
@@ -180,7 +180,7 @@ UDS 作為 HTTP **Client** 呼叫 Map Simulator 的端點。介面由 `03-map-si
 
 ### 3.2 Request
 
-- Method / Path：`POST {map-sim-url}/objects/update`（預設 `http://127.0.0.1:8090`，由 `--map-sim-url` 覆寫）。
+- Method / Path：`POST {map-sim-url}/objects/update`（預設 `http://127.0.0.1:18090`，由 `--map-sim-url` 覆寫）。
 - Headers：`Content-Type: application/json`。
 - Body schema（JSON；對齊 Map Simulator §3.1）：
 

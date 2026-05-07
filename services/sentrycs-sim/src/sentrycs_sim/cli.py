@@ -16,7 +16,7 @@ from .loop import run
 def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="sentrycs-sim", description="Sentrycs Simulator")
     p.add_argument("--scenario", required=True, help="Path to scenario YAML")
-    p.add_argument("--api-port", type=int, default=None, help="Override API port (default 7070)")
+    p.add_argument("--api-port", type=int, default=None, help="Override API port (default 17070)")
     p.add_argument("--verbose", action="store_true", help="Enable DEBUG structured logging")
     return p.parse_args(argv)
 

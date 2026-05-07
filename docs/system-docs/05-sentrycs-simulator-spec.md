@@ -30,7 +30,7 @@ Sentrycs C-UAS 是完全被動式 RF 偵測系統，採用製造商通訊協議�
 Unified Drone Simulator (:8080 REST API)
          ↑ GET /status/{drone_id}    ↑ POST /command/takeover
          └────── Sentrycs Simulator ─┘
-                       │ HTTP JSON Status API (:7070)
+                       │ HTTP JSON Status API (:17070)
                        ▼
                CoT Gateway (SentrycsAdapter)
                        │ 融合後 CoT XML
@@ -50,7 +50,7 @@ Sentrycs 模擬器仍負責：
 - 在 MITIGATING 時呼叫 `POST /command/takeover` 觸發接管
 - 監測 `is_landed` 狀態，轉換為 NEUTRALIZED
 
-差異：過去直接生成 CoT XML 推送 TAK Server，現在提供 HTTP JSON Status API（:7070），由 CoT Gateway 負責後續的 CoT 生成與推送。
+差異：過去直接生成 CoT XML 推送 TAK Server，現在提供 HTTP JSON Status API（:17070），由 CoT Gateway 負責後續的 CoT 生成與推送。
 
 ### 1.4 與 Map Simulator 的關係
 
@@ -58,8 +58,8 @@ Sentrycs Simulator 改向 Map Simulator 查詢物件位置，而非直接呼叫 
 
 | 操作 | 舊架構（直接查 UDS）| 新架構（透過 Map Simulator）|
 |------|-------------------|-----------------------------|
-| 查詢無人機位置 | `GET /status/{drone_id}` @ UDS :8080 | `GET /objects?lat=&lon=&radius_m=8000` @ Map Sim :8090 |
-| 取得無人機列表 | `GET /drones` @ UDS :8080 | `GET /objects/all` @ Map Sim :8090（或 GET /objects）|
+| 查詢無人機位置 | `GET /status/{drone_id}` @ UDS :8080 | `GET /objects?lat=&lon=&radius_m=8000` @ Map Sim :18090 |
+| 取得無人機列表 | `GET /drones` @ UDS :8080 | `GET /objects/all` @ Map Sim :18090（或 GET /objects）|
 | 發送接管指令 | `POST /command/takeover` @ UDS :8080 | **不變**，仍呼叫 UDS :8080 |
 | 落地偵測 | UDS `is_landed: true` | Map Sim `status: LANDED`（UDS push 狀態到 Map Sim）|
 
@@ -106,7 +106,7 @@ flowchart TD
     DD["DroneDetection\n(偵測狀態物件)"]
     OL["OperatorLocation\n(操控者位置計算)"]
     UDS_C["UnifiedSimulatorClient\n(HTTP Client → UDS :8080)"]
-    API_SVR["SentrycsStatusApiServer\n(aiohttp HTTP Server :7070)"]
+    API_SVR["SentrycsStatusApiServer\n(aiohttp HTTP Server :17070)"]
     GW["CoT Gateway\n(SentrycsAdapter Poll)"]
 
     CLI --> SL
@@ -503,7 +503,7 @@ scenario:
 ```bash
 python sentrycs_sim.py \
   --scenario scenarios/dji_mavic3.yaml \
-  --api-port 7070 \
+  --api-port 17070 \
   --verbose
 ```
 
@@ -519,7 +519,7 @@ python sentrycs_sim.py \
 
 ```bash
 # 執行 DJI Mavic 3 攔截場景
-python sentrycs_sim.py --scenario scenarios/dji_mavic3.yaml --api-port 7070 --verbose
+python sentrycs_sim.py --scenario scenarios/dji_mavic3.yaml --api-port 17070 --verbose
 ```
 
 ---
@@ -819,7 +819,7 @@ sentrycs_simulator/
 │   ├── drone_detection.py       # DroneDetection, DetectionStatus
 │   ├── operator_location.py     # calculate_operator_position
 │   ├── unified_simulator_client.py  # UnifiedSimulatorClient (HTTP → UDS :8080)
-│   └── status_api_server.py     # SentrycsStatusApiServer (aiohttp :7070)
+│   └── status_api_server.py     # SentrycsStatusApiServer (aiohttp :17070)
 ├── scenarios/
 │   ├── dji_mavic3.yaml
 │   └── multi_drone.yaml

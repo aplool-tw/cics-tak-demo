@@ -1,6 +1,6 @@
 # Contract: TAK Server Downlink（tak-client-sim 接收端）
 
-本契約定義 `tak-client-sim` 如何從 TAK Server `:8089` 接收 CoT XML 下行流。  
+本契約定義 `tak-client-sim` 如何從 TAK Server `:18089` 接收 CoT XML 下行流。  
 與上行契約 `specs/005-cot-gateway/contracts/tak-uplink.md` 互補：上行由 CoT Gateway 送出，本契約描述接收側語意。
 
 ---
@@ -10,7 +10,7 @@
 | 項目 | 值 |
 |------|-----|
 | 協議 | TCP + TLS（SSL）單向；TAK Server → tak-client-sim（純接收，無反向訊息） |
-| 端點 | 設定檔 `host:port`，預設 `tak-server:8089` |
+| 端點 | 設定檔 `host:port`，預設 `tak-server:18089` |
 | 框架 | Newline-delimited CoT XML；UTF-8；每筆後接 `\n`（0x0A）；**無** length-prefix |
 | 客戶端憑證 | **不需要**（接收端無需 client cert；PoC 環境為 `CERT_NONE`） |
 | 憑證驗證（PoC） | `verify_mode=CERT_NONE`、`check_hostname=False`（`use_ssl_verify=false`） |

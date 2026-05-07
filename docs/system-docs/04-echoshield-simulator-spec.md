@@ -21,14 +21,14 @@ EchoShield Simulator 是 EchoShield® Multi-Mission 4D Radar（Ku-band 15.4–16
 **在完整感測層中的位置**：
 
 ```
-Map Simulator（:8090）
+Map Simulator（:18090）
         │ GET /objects?lat=&lon=&radius_m=4800（HTTP, 10 Hz）
         ↓
 EchoShield Simulator
  ├─ 取得無人機精確位置
  ├─ 模擬雷達誤差（位置噪點、速度噪點）
  ├─ 計算方位角（azimuth）與仰角（elevation）
- └─ 輸出 EchoShield JSON TCP Feed（:9000）
+ └─ 輸出 EchoShield JSON TCP Feed（:19000）
         │
         ↓
 CoT Gateway（EchodyneAdapter）
@@ -52,7 +52,7 @@ CoT Gateway（EchodyneAdapter）
 | FR-ES-003 | 雷達誤差模擬：位置噪點 ±5m（Gaussian noise, σ=5m）、速度噪點 ±0.5 m/s（Gaussian noise, σ=0.5）| 必要 |
 | FR-ES-004 | 計算方位角（azimuth_deg）與仰角（elevation_deg）：以雷達安裝位置（lat/lon/alt_m）為參考，計算至目標的 bearing 與垂直角 | 必要 |
 | FR-ES-005 | 偵測距離限制：僅回報雷達最大偵測範圍內的目標（Group 1: ≤4.8km、Group 2: ≤6.4km、Group 3: ≤11.4km，由設定檔選擇）| 必要 |
-| FR-ES-006 | 以 asyncio TCP Server 提供 EchoShield JSON TCP Feed（Port :9000），支援多個並行 Client 連線（EchodyneAdapter）| 必要 |
+| FR-ES-006 | 以 asyncio TCP Server 提供 EchoShield JSON TCP Feed（Port :19000），支援多個並行 Client 連線（EchodyneAdapter）| 必要 |
 | FR-ES-007 | `track_status` 邏輯：目標進入偵測範圍 → `"Active"`；目標離開範圍或 Map Simulator TTL 到期 → `"Lost"`（推送最後一筆 Lost 後移除）| 必要 |
 | FR-ES-008 | `classification` 固定回報 `"UAV"`（EchoShield 硬體無型號識別能力）| 必要 |
 | FR-ES-009 | 支援多目標同時追蹤（場景二：3 架無人機並行）| 必要 |
@@ -67,9 +67,9 @@ CoT Gateway（EchodyneAdapter）
 
 EchoShield Simulator 採用 Python asyncio 實作，包含三個主要元件：
 
-1. **`MapSimulatorClient`**：HTTP Client，以 10 Hz 向 Map Simulator（:8090）查詢偵測範圍內物件
+1. **`MapSimulatorClient`**：HTTP Client，以 10 Hz 向 Map Simulator（:18090）查詢偵測範圍內物件
 2. **`RadarProcessor`**：對查詢結果加入雷達誤差模擬，計算 azimuth/elevation，轉換為 EchoShield Track 格式
-3. **`EchoShieldFeedServer`**：asyncio TCP Server（:9000），廣播 JSON Track 給所有已連線的 EchodyneAdapter
+3. **`EchoShieldFeedServer`**：asyncio TCP Server（:19000），廣播 JSON Track 給所有已連線的 EchodyneAdapter
 
 ### 3.2 模組結構圖
 
@@ -80,8 +80,8 @@ flowchart TD
     SIM["EchoShieldSimulator\n(主協調，10 Hz 主迴圈)"]
     MSC["MapSimulatorClient\n(GET /objects?lat=&lon=&radius_m=)"]
     RP["RadarProcessor\n(誤差模擬 + 角度計算)"]
-    FS["EchoShieldFeedServer\n(asyncio TCP Server :9000)"]
-    MS["Map Simulator\n(:8090)"]
+    FS["EchoShieldFeedServer\n(asyncio TCP Server :19000)"]
+    MS["Map Simulator\n(:18090)"]
     GW["CoT Gateway\n(EchodyneAdapter)"]
 
     CLI --> CFG
@@ -92,7 +92,7 @@ flowchart TD
     MS -->|"JSON 物件列表"| MSC
     MSC --> RP
     RP --> FS
-    FS -->|"JSON Track (newline)\nTCP :9000 (10 Hz)"| GW
+    FS -->|"JSON Track (newline)\nTCP :19000 (10 Hz)"| GW
 ```
 
 ### 3.3 主要類別
@@ -102,7 +102,7 @@ flowchart TD
 | `RadarConfig` | dataclass，儲存雷達設定參數（位置、偵測距離、更新率、噪點參數）|
 | `MapSimulatorClient` | aiohttp HTTP Client，查詢 Map Simulator GET /objects，解析回傳的物件列表 |
 | `RadarProcessor` | 將 Map Simulator 物件轉換為 EchoShield Track：加入位置/速度噪點，計算 azimuth/elevation |
-| `EchoShieldFeedServer` | asyncio TCP Server（:9000），維護已連線 Client 列表，廣播 JSON Track |
+| `EchoShieldFeedServer` | asyncio TCP Server（:19000），維護已連線 Client 列表，廣播 JSON Track |
 | `EchoShieldSimulator` | 主協調類別，整合以上元件，驅動 10 Hz 主迴圈 |
 
 ---
@@ -273,7 +273,7 @@ class EchoShieldTrack:
 class MapSimulatorClient:
     """向 Map Simulator REST API 查詢偵測範圍內物件"""
 
-    def __init__(self, base_url: str = "http://localhost:8090"):
+    def __init__(self, base_url: str = "http://localhost:18090"):
         self.base_url = base_url
 
     async def query_objects(
@@ -376,7 +376,7 @@ class RadarProcessor:
 # ─────────────────────────── Feed Server ───────────────────────────
 
 class EchoShieldFeedServer:
-    """asyncio TCP Server（:9000），廣播 EchoShield JSON Track 給所有 Client"""
+    """asyncio TCP Server（:19000），廣播 EchoShield JSON Track 給所有 Client"""
 
     def __init__(self, host: str = "0.0.0.0", port: int = 9000):
         self.host = host
@@ -421,7 +421,7 @@ class EchoShieldSimulator:
     """EchoShield Simulator 主類別"""
 
     def __init__(self, config: RadarConfig,
-                 map_sim_url: str = "http://localhost:8090",
+                 map_sim_url: str = "http://localhost:18090",
                  feed_host: str = "0.0.0.0",
                  feed_port: int = 9000):
         self.config = config
@@ -510,7 +510,7 @@ radar:
   velocity_noise_ms: 0.5 # 速度噪點 1-sigma（m/s）
 
 map_simulator:
-  url: "http://localhost:8090"
+  url: "http://localhost:18090"
 
 feed_server:
   host: "0.0.0.0"
@@ -553,8 +553,8 @@ python echoshield_simulator.py --config echoshield_config.yaml --verbose
 
 ```
 2026-04-23 10:00:00 | INFO  | EchoShieldSimulator | 雷達位置: (24.0000, 121.0000) alt=10.0m
-2026-04-23 10:00:00 | INFO  | EchoShieldFeedServer | TCP Feed 已啟動 0.0.0.0:9000
-2026-04-23 10:00:00 | INFO  | MapSimulatorClient  | 連接 Map Simulator: http://localhost:8090
+2026-04-23 10:00:00 | INFO  | EchoShieldFeedServer | TCP Feed 已啟動 0.0.0.0:19000
+2026-04-23 10:00:00 | INFO  | MapSimulatorClient  | 連接 Map Simulator: http://localhost:18090
 2026-04-23 10:00:00.100 | INFO | EchoShieldSimulator | 偵測到 1 個目標，已廣播
 2026-04-23 10:00:00.200 | INFO | EchoShieldSimulator | 偵測到 1 個目標，已廣播
 ...

@@ -15,7 +15,7 @@ class ClientConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     host: str = "tak-server"
-    port: int = Field(default=8089, ge=1, le=65535)
+    port: int = Field(default=18089, ge=1, le=65535)
     use_ssl: bool = True
     use_ssl_verify: bool = False
     ca_bundle: Optional[str] = None
@@ -28,7 +28,7 @@ class ClientConfig(BaseModel):
     # Web map server (opt-in)
     web_enabled: bool = False
     web_host: str = "127.0.0.1"
-    web_port: int = Field(default=8091, ge=1, le=65535)
+    web_port: int = Field(default=18091, ge=1, le=65535)
 
     @field_validator("filter_prefix", mode="before")
     @classmethod

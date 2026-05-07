@@ -10,7 +10,7 @@
 TAK Client Simulator（`tak-client-sim`）是一個輕量 Python 服務，扮演真實 Android TAK（ATAK）客戶端的替代角色，用於端對端驗證整條 PoC 資料鏈：
 
 ```
-EchoShield Sim → CoT Gateway → TAK Server :8089 → [TAK Client Sim]
+EchoShield Sim → CoT Gateway → TAK Server :18089 → [TAK Client Sim]
 Sentrycs Sim  ↗
 ```
 
@@ -121,7 +121,7 @@ Demo 期間 TAK Server 可能因環境問題短暫不可用。`tak-client-sim` �
 
 #### 連線管理
 
-- **FR-TCS-001**: 服務 MUST 以 asyncio TCP+SSL 連線至 TAK Server，端點由設定檔驅動（預設 `tak-server:8089`）
+- **FR-TCS-001**: 服務 MUST 以 asyncio TCP+SSL 連線至 TAK Server，端點由設定檔驅動（預設 `tak-server:18089`）
 - **FR-TCS-002**: 服務 MUST 支援 PoC 模式（`use_ssl_verify=false`）：`verify_mode=CERT_NONE`、`check_hostname=False`，無需客戶端憑證
 - **FR-TCS-003**: 服務 MUST 支援正式憑證模式（`use_ssl_verify=true`）：可從設定檔指定 CA bundle 路徑
 - **FR-TCS-004**: 服務 MUST 在連線失敗或連線中斷時執行指數退避重連，初始延遲 1s，倍增至上限 60s

@@ -3,7 +3,7 @@ scenario:
   description: "三架無人機從不同方向、不同距離與速度向 SP(24.725806N,121.033750E) 逼近，依序進入偵測圈與防禦半徑（示範用）"
   update_hz: 10
   servers:
-    command_api_port: 8080
+    command_api_port: 18080
   drones:
     - drone_id: "TRK-E01"
       model: "DJI Mavic 3"

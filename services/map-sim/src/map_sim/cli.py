@@ -14,7 +14,7 @@ from .logging import get_logger, setup_logging
 
 def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="map-sim", description="Map Simulator")
-    p.add_argument("--port", type=int, default=8090, help="HTTP port (default 8090)")
+    p.add_argument("--port", type=int, default=18090, help="HTTP port (default 18090)")
     p.add_argument("--ttl-warn-s", type=float, default=5.0, help="Warn TTL seconds (default 5.0)")
     p.add_argument(
         "--ttl-remove-s", type=float, default=10.0, help="Remove TTL seconds (default 10.0)"

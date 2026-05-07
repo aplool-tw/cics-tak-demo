@@ -120,14 +120,14 @@ Specify → Clarify → Plan → Tasks → Analyze → Implement → Test → Do
 
 `{drone_id, target_lat, target_lon, target_alt_m}`；200 / 400 / 404 / 409；**409 視為成功**。
 
-### EchoShield TCP :9000 NDJSON
+### EchoShield TCP :19000 NDJSON
 
 `track_status ∈ {"Active", "Lost"}`（**不是** NEW/UPDATED/LOST）；
 `track_id = drone_id`（例如 `TRK-E01`；**不含** `ECHO-` 前綴，前綴由 CoT Gateway 加）；
 `latitude/longitude/altitude_m`（注意命名：底層 wire 用全名，內部模型用 `lat/lon/alt_m`，CoT XML 用 `lat/lon/hae`）。
 2 秒 grace window 內 drone_id 重現沿用同一 `track_id`（= drone_id，行為不變）。
 
-### Sentrycs HTTP :7070 /detections
+### Sentrycs HTTP :17070 /detections
 
 14 欄位 item；status `DETECTED/MITIGATING/NEUTRALIZED`；NEUTRALIZED 保留 30s 後移除；`/health` 200 = ready 就緒。
 
@@ -136,7 +136,7 @@ Specify → Clarify → Plan → Tasks → Analyze → Implement → Test → Do
 - type：`a-u-A-M-F-Q-r`（單源灰色）/ `a-h-A-M-F-Q-r`（融合敵對紅色）—— **不依狀態切換 type**
 - stale：`Lost=time`、`NEUTRALIZED=time+30s`、其他 `time+11s`
 - 狀態以 `<remarks>` 字串表達
-- TAK uplink：TCP+SSL `:8089`，NDJSON framing（每筆 CoT 後接 `\n`）
+- TAK uplink：TCP+SSL `:18089`，NDJSON framing（每筆 CoT 後接 `\n`）
 
 詳見 [`specs/005-cot-gateway/contracts/cot-xml.md`](specs/005-cot-gateway/contracts/cot-xml.md)。
 

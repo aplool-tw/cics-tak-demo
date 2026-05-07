@@ -37,7 +37,7 @@ research.md §2 與 quickstart.md §5.3）。
   `black>=24.3`；`[project.scripts]` `map-sim = "map_sim.cli:main"`；`[tool.pytest.ini_options]`
   `asyncio_mode = "auto"`、`testpaths = ["tests"]`（對齊 `services/uds/pyproject.toml`）。
 - [X] T003 [P] 撰寫 `services/map-sim/README.md`：一段描述 + 指向 `specs/002-map-sim/spec.md` 與
-  `specs/002-map-sim/quickstart.md`；標註 `:8090` 預設 port 與 CLI 參數列表。
+  `specs/002-map-sim/quickstart.md`；標註 `:18090` 預設 port 與 CLI 參數列表。
 - [X] T004 [P] 於 `services/map-sim/pyproject.toml` 加入 `[tool.ruff]` / `[tool.black]` 設定（line-length
   100、target-version py311），與 `services/uds/` 一致。
 - [X] T005 建立 `services/map-sim/tests/conftest.py`：提供 (a) `registry` fixture（獨立 `ObjectRegistry`
@@ -491,7 +491,7 @@ Task: "handlers_admin.py (health / objects_all / delete)"
 | FR-MS-010 (GET /health) | T030, T031, T062 |
 | FR-MS-011 (容量 20 drones) | T044 (registry), T040 (併發 smoke) |
 | FR-MS-012 (CLI 旗標) | T066 |
-| FR-MS-013 (aiohttp 127.0.0.1:8090) | T054, T066 |
+| FR-MS-013 (aiohttp 127.0.0.1:18090) | T054, T066 |
 | FR-MS-014 (LANDED 收尾可見) | T013, T037 |
 | FR-MS-015 (副作用隔離) | T009, T014, T055, T057, T069 |
 

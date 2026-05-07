@@ -9,7 +9,7 @@
 
 - Python 3.11+ （建議 3.12）
 - `pip`（或 `pip3`）
-- TAK Server 已在 `:8089` 執行（或使用下方 stub 進行本機測試）
+- TAK Server 已在 `:18089` 執行（或使用下方 stub 進行本機測試）
 
 ---
 
@@ -178,7 +178,7 @@ async def handle(reader, writer):
 
 async def main():
     server = await asyncio.start_server(handle, "127.0.0.1", 8089)
-    print("Stub server on :8089 (no SSL)")
+    print("Stub server on :18089 (no SSL)")
     async with server:
         await server.serve_forever()
 

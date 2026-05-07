@@ -9,7 +9,7 @@
 
 ## 一、範圍
 
-感測層 RF 反制設備模擬器。2 Hz 查詢 Map Sim `GET /objects`、以場景 YAML 驅動狀態機（DETECTED → MITIGATING → NEUTRALIZED）、MITIGATING 時呼叫 UDS `POST /command/takeover`、對外提供 HTTP JSON Status API :7070 供 CoT Gateway 輪詢。
+感測層 RF 反制設備模擬器。2 Hz 查詢 Map Sim `GET /objects`、以場景 YAML 驅動狀態機（DETECTED → MITIGATING → NEUTRALIZED）、MITIGATING 時呼叫 UDS `POST /command/takeover`、對外提供 HTTP JSON Status API :17070 供 CoT Gateway 輪詢。
 
 實作位置：`services/sentrycs-sim/`。
 
@@ -24,7 +24,7 @@
 
 ## 四、契約（對外凍結）
 
-### HTTP Status API :7070
+### HTTP Status API :17070
 
 | 端點 | 說明 |
 |------|------|
@@ -80,7 +80,7 @@ DETECTED --(t≥mitigating_at_s)--> [call UDS takeover]
 
 ```yaml
 mapsim:
-  base_url: "http://localhost:8090"
+  base_url: "http://localhost:18090"
   query_center: {lat: 25.0330, lon: 121.5654}
   radius_m: 8000
 uds:
@@ -147,7 +147,7 @@ SC-SC-005 驗證：15 個 tick 內 operator 欄位與首次鎖定值 bit-identic
 ## 十、下游介面（供 Feature 005 CoT Gateway）
 
 CoT Gateway 的 **SentrycsAdapter** 將：
-1. 以 HTTP client 輪詢 `http://sentrycs-sim:7070/detections`（建議 1 Hz）
+1. 以 HTTP client 輪詢 `http://sentrycs-sim:17070/detections`（建議 1 Hz）
 2. 依 `uid` 為 key 比對前次快照，判定 CoT NEW/UPDATED/REMOVED
 3. `model` + `operator_lat/lon` 為 Sentrycs 獨有欄位，將與 EchoShield 雷達資料（高精度位置）在 TrackCorrelator 融合
 4. `status ∈ {DETECTED, MITIGATING, NEUTRALIZED}` 對應 CoT 事件類型或自訂 detail 欄位

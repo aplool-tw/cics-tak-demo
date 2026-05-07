@@ -1,12 +1,12 @@
 echoshield:
   host: echoshield-sim
-  port: 9000
+  port: 19000
   reconnect_interval_s: 5.0
 
 sentrycs:
   enabled: true
   host: sentrycs-sim
-  port: 7070
+  port: 17070
   poll_interval_s: 1.0
   timeout_s: 2.0
 
@@ -17,7 +17,7 @@ correlator:
 
 tak_server:
   host: tak-server
-  port: 8089
+  port: 18089
   use_ssl: true
   use_ssl_verify: false
   cert_file: config/certs/gateway.p12

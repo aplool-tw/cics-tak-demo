@@ -89,10 +89,10 @@ docker compose up cot-gateway           # 前景執行看日誌；-d 背景
 
 ## 4. 驗證 User Story 1（雷達單源 → ATAK 灰色）
 
-1. 在 ATAK client（或連到 TAK Server `:8089` 的 `ncat --ssl` sink）觀察：
+1. 在 ATAK client（或連到 TAK Server `:18089` 的 `ncat --ssl` sink）觀察：
    ```bash
    # 臨時以 openssl 作為 TCP+SSL sniffer 旁觀 TAK 上送（需先停掉真 Gateway 並以此假冒，僅 debug 用）
-   openssl s_client -connect tak-server:8089 -cert gateway.crt -key gateway.key
+   openssl s_client -connect tak-server:18089 -cert gateway.crt -key gateway.key
    ```
 2. 預期每 100 ms 左右出現一筆以 `\n` 分隔的 CoT XML，uid=`ECHO-TRK-001`、type=`a-u-A-M-F-Q-r`、
    `<point lat lon hae>` 數值貼近 EchoShield Simulator JSON。

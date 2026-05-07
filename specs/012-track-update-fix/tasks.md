@@ -49,7 +49,7 @@ respective test tasks are done.
 
 **Goal**: Fix RC3 (missing `uid` field in `/tracks` payload) and RC1 (destructive `clearLayers()` in JS) so the drone marker advances smoothly in the browser with no freeze, snap, or blink during the EchoShield-only phase of the demo.
 
-**Independent Test**: With only EchoShield Simulator running, observe the drone icon on `http://localhost:8092/map` for 30 seconds. The icon must advance continuously with no freeze or blink. Each `/tracks` JSON entry must include a `uid` field. `grep -n "clearLayers" services/cot-gateway/src/cot_gateway/web/server.py` must show no match inside `refreshTracks()`.
+**Independent Test**: With only EchoShield Simulator running, observe the drone icon on `http://localhost:18092/map` for 30 seconds. The icon must advance continuously with no freeze or blink. Each `/tracks` JSON entry must include a `uid` field. `grep -n "clearLayers" services/cot-gateway/src/cot_gateway/web/server.py` must show no match inside `refreshTracks()`.
 
 ### Tests for User Story 1
 

@@ -1,6 +1,6 @@
 # Contract: TAK Server Uplink（Gateway 下游送出端）
 
-本契約定義 CoT Gateway 的 `TakTransmitter` 如何將 CoT XML 以 TCP+SSL 推送至 TAK Server `:8089`。
+本契約定義 CoT Gateway 的 `TakTransmitter` 如何將 CoT XML 以 TCP+SSL 推送至 TAK Server `:18089`。
 
 ---
 
@@ -9,7 +9,7 @@
 | 項目 | 值 |
 | --- | --- |
 | 協議 | TCP + TLS（SSL）單向；Gateway → TAK Server（無反向訊息需消費） |
-| 端點 | 設定檔 `tak_server.host:port`，預設 `tak-server:8089` |
+| 端點 | 設定檔 `tak_server.host:port`，預設 `tak-server:18089` |
 | 框架 | Newline-delimited CoT XML；UTF-8；每筆後接 `\n` (0x0A)；**無** length-prefix（FR-GW-020） |
 | 客戶端憑證 | `tak_server.cert_file`（預設 `gateway.p12`）；密碼來自 `tak_server.cert_password` 或環境變數 |
 | 憑證驗證 | PoC：`verify_mode=CERT_NONE`、`check_hostname=False`（設定檔 `use_ssl_verify=false`）；正式部署應 `true` + 載入 TAK CA |

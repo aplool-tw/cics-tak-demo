@@ -3,7 +3,7 @@ scenario:
   description: "單架 DJI Mavic 3 從北方入侵，Sentrycs 識別並接管"
   update_hz: 10
   servers:
-    command_api_port: 8080
+    command_api_port: 18080
 
   drones:
     - drone_id: "TRK-001"

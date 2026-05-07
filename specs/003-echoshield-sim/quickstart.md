@@ -11,7 +11,7 @@ Feed 格式正確的 PoC 開發者 / demo 操作者。
 | 項目                   | 要求                                                                       |
 | ---------------------- | -------------------------------------------------------------------------- |
 | Python                 | 3.11+                                                                      |
-| Map Simulator (`:8090`)| 已跑起來（`services/map-sim/`，參照 `specs/002-map-sim/quickstart.md`）     |
+| Map Simulator (`:18090`)| 已跑起來（`services/map-sim/`，參照 `specs/002-map-sim/quickstart.md`）     |
 | UDS 上游（可選）       | 若要看到動態 track，最簡單是跑 `services/uds/scenarios/` 內任一情境        |
 | 工具                   | `nc`（netcat）、`curl`、`jq`（方便觀察）                                   |
 
@@ -43,7 +43,7 @@ velocity_noise_ms: 0.5
 
 noise_seed: null   # 或填整數以求可重現（CLI --seed 會覆寫此值）
 
-map_sim_url: http://localhost:8090
+map_sim_url: http://localhost:18090
 feed_host: 0.0.0.0
 feed_port: 9000
 ```
@@ -59,8 +59,8 @@ python -m echoshield_sim --config config/local.yaml
 預期 stdout（structlog JSON）：
 
 ```json
-{"event":"startup","map_sim_url":"http://localhost:8090","feed":"0.0.0.0:9000","seed":null,"level":"info"}
-{"event":"tcp_server_listening","host":"0.0.0.0","port":9000,"level":"info"}
+{"event":"startup","map_sim_url":"http://localhost:18090","feed":"0.0.0.0:19000","seed":null,"level":"info"}
+{"event":"tcp_server_listening","host":"0.0.0.0","port":19000,"level":"info"}
 {"event":"tick","tick_id":0,"latency_ms":3.1,"count":0,"level":"debug"}
 ```
 
@@ -99,7 +99,7 @@ cd services/map-sim && python -m map_sim --config config/local.yaml
 ### 3b. 推一架無人機 → 看到 Active
 
 ```bash
-curl -X POST http://localhost:8090/drones/DR-001 \
+curl -X POST http://localhost:18090/drones/DR-001 \
   -H 'Content-Type: application/json' \
   -d '{
     "drone_id":"DR-001","lat":24.002,"lon":121.0,"alt_m":100,
@@ -167,7 +167,7 @@ diff /tmp/c1.ndjson /tmp/c2.ndjson
 
 ```bash
 # 在 Simulator 運行時：
-pkill -f "map_sim"   # 或 iptables DROP :8090
+pkill -f "map_sim"   # 或 iptables DROP :18090
 
 # Simulator 不崩潰、不關連線；log 會看到（每秒最多 1 行）：
 # {"event":"map_sim_unavailable","reason":"ConnectionRefusedError","level":"warning"}
@@ -199,8 +199,8 @@ pytest -q -k "lifecycle_grace"         # grace window 2s 行為
 
 | 症狀                                           | 可能原因                          | 處理                                                                 |
 | ---------------------------------------------- | --------------------------------- | -------------------------------------------------------------------- |
-| `nc localhost 9000` 連得上但完全沒資料         | Map Sim 回應 `count=0`（正常）    | 先 `curl http://localhost:8090/objects?lat=24&lon=121&radius_m=4800` 確認 |
-| log 連續出現 `map_sim_unavailable`             | Map Sim 沒起 / 埠不通             | 啟動 Map Sim 或 `curl` 自檢 :8090                                     |
+| `nc localhost 9000` 連得上但完全沒資料         | Map Sim 回應 `count=0`（正常）    | 先 `curl http://localhost:18090/objects?lat=24&lon=121&radius_m=4800` 確認 |
+| log 連續出現 `map_sim_unavailable`             | Map Sim 沒起 / 埠不通             | 啟動 Map Sim 或 `curl` 自檢 :18090                                     |
 | JSON 行含 `"track_status":"Lost"` 卻一直不清除 | （不會發生）Lost 後 drone_id 再出現 | Lost 會分配**新** track_id，不是同一個                                 |
 | `nc` 收到的 JSON 行有多行縮排                  | 不符合契約                         | 本契約固定為 compact + `\n`，應回報 bug                                |
 | 多 Client 收到不同行數（差 > 1）               | 中間有 Client 被 drain 失敗踢出   | 檢查 log `client_disconnected` + 該 Client 的 socket 設定             |

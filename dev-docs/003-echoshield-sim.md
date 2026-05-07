@@ -9,7 +9,7 @@
 
 ## 一、範圍
 
-感測層雷達模擬器。10 Hz 查詢 Map Sim `GET /objects`、加入高斯雷達誤差、計算方位/俯仰、透過 TCP :9000 以 newline-delimited JSON 廣播給 CoT Gateway。
+感測層雷達模擬器。10 Hz 查詢 Map Sim `GET /objects`、加入高斯雷達誤差、計算方位/俯仰、透過 TCP :19000 以 newline-delimited JSON 廣播給 CoT Gateway。
 
 實作位置：`services/echoshield-sim/`。
 
@@ -25,7 +25,7 @@
 
 ## 四、契約（對外凍結）
 
-### TCP Feed :9000 — newline-delimited JSON
+### TCP Feed :19000 — newline-delimited JSON
 
 ```json
 {
@@ -50,7 +50,7 @@
 
 ### 上游依賴
 
-- Map Sim `GET /objects?lat=&lon=&radius_m=`（:8090）
+- Map Sim `GET /objects?lat=&lon=&radius_m=`（:18090）
   - `radius_m = radar.max_range_m`（預設 8000）
   - 過濾 `is_lost=true`
   - 逾時 1s，HTTP/network 錯誤 → 當 tick 空結果（觸發 grace）、log 節流
@@ -100,7 +100,7 @@ radar:
   velocity_noise_ms: 1.5
   noise_seed: null       # null=隨機；CLI --seed 可覆蓋（model_copy）
 mapsim:
-  base_url: "http://localhost:8090"
+  base_url: "http://localhost:18090"
   timeout_sec: 1.0
 tcp_feed:
   host: "0.0.0.0"
@@ -127,7 +127,7 @@ CLI：`python3 -m echoshield_sim --config config/local.yaml [--seed INT] [--verb
 | event | 節流 | 說明 |
 |-------|------|------|
 | `cli_start` / `startup` | — | 啟動 |
-| `tcp_server_listening` | — | TCP :9000 就緒 |
+| `tcp_server_listening` | — | TCP :19000 就緒 |
 | `client_connected` / `client_disconnected` | — | client 生命週期 |
 | `tick_completed` | — | 每 tick 統計（track 數、延遲） |
 | `map_sim_unavailable` | 每 key 1s | Map Sim HTTP/timeout 錯誤 |
@@ -137,7 +137,7 @@ CLI：`python3 -m echoshield_sim --config config/local.yaml [--seed INT] [--verb
 ## 十、下游介面（供 Feature 005 CoT Gateway）
 
 CoT Gateway 的 **EchodyneAdapter** 將：
-1. 以 TCP client 連線 `echoshield-sim:9000`。
+1. 以 TCP client 連線 `echoshield-sim:19000`。
 2. 逐行讀取 UTF-8 JSON（`\n` framing）。
 3. 將 `track_status: "Active"` 映射至 CoT `a-n-A`（NEW 或 UPDATED 依 TrackCorrelator 狀態決定），`"Lost"` 觸發移除。
 4. `track_id` 格式穩定 `ECHO-\d{6}`，可直接當 CoT uid 前綴。

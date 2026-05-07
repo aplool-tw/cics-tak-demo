@@ -27,9 +27,9 @@ lost_grace_sec: 2.0
 position_noise_m: 5.0
 velocity_noise_ms: 0.5
 noise_seed: 42
-map_sim_url: http://localhost:8090
+map_sim_url: http://localhost:18090
 feed_host: 0.0.0.0
-feed_port: 9000
+feed_port: 19000
 """
 
 
@@ -37,8 +37,8 @@ def test_load_config_happy(tmp_path):
     cfg = load_config(_write(tmp_path, BASE_YAML))
     assert cfg.sensor_lat == 24.0
     assert cfg.noise_seed == 42
-    assert cfg.feed_port == 9000
-    assert cfg.map_sim_url == "http://localhost:8090"
+    assert cfg.feed_port == 19000
+    assert cfg.map_sim_url == "http://localhost:18090"
 
 
 def test_config_is_frozen(tmp_path):
@@ -86,13 +86,13 @@ def test_noise_seed_null_yaml(tmp_path):
 def test_defaults_applied(tmp_path):
     minimal = "sensor_lat: 24.0\nsensor_lon: 121.0\n"
     cfg = load_config(_write(tmp_path, minimal))
-    assert cfg.feed_port == 9000
+    assert cfg.feed_port == 19000
     assert cfg.lost_grace_sec == 2.0
     assert cfg.update_rate_hz == 10.0
 
 
 def test_bad_url(tmp_path):
-    bad = BASE_YAML.replace("http://localhost:8090", "ftp://x")
+    bad = BASE_YAML.replace("http://localhost:18090", "ftp://x")
     with pytest.raises(ValidationError):
         load_config(_write(tmp_path, bad))
 

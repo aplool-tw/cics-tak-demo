@@ -22,7 +22,7 @@
 | `position_noise_m` | `float`          | `5.0`                | `≥ 0`                                     | YAML                        |
 | `velocity_noise_ms`| `float`          | `0.5`                | `≥ 0`                                     | YAML                        |
 | `noise_seed`       | `int \| None`    | `None`               | —                                         | YAML `noise_seed`（flat key）+ CLI `--seed`（CLI 優先） |
-| `map_sim_url`      | `str`            | `http://localhost:8090` | URL shape                              | YAML                        |
+| `map_sim_url`      | `str`            | `http://localhost:18090` | URL shape                              | YAML                        |
 | `feed_host`        | `str`            | `0.0.0.0`            | —                                         | YAML                        |
 | `feed_port`        | `int`            | `9000`               | `1 ≤ x ≤ 65535`                           | YAML                        |
 

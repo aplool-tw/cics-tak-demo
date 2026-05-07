@@ -266,10 +266,10 @@ python specs/007-scenario/scripts/validate_scenario.py \
 
 ```bash
 # 確認 sentrycs-sim 運行
-curl http://localhost:7070/health
+curl http://localhost:17070/health
 
 # 確認 UDS 接受接管
-curl http://localhost:8080/objects  # 確認 TRK-E01 存在
+curl http://localhost:18080/objects  # 確認 TRK-E01 存在
 ```
 
 ---
