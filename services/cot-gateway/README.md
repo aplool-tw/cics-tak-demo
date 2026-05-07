@@ -59,6 +59,12 @@ Place `gateway.p12` at `config/certs/gateway.p12` (password via `TAK_P12_PASSWOR
 Alternative: offline convert to PEM with `openssl pkcs12 -in gateway.p12 -out gateway.pem -nodes`
 and point `cert_file` at the `.pem`. See `config/certs/README.md`.
 
+## Shared Library Dependencies
+
+`tak/ssl_context.py` is now a thin wrapper over `libs/tak-connection`.
+`TakServerConfig` keeps its existing YAML field names and composes a `TakConnectionConfig`
+instance before delegating to `build_ssl_context`; there is no inheritance-based schema change.
+
 ## Troubleshooting
 
 - `ValidationError` on startup → check `config/gateway.yaml` (missing field / bad value / cert file
@@ -70,8 +76,10 @@ and point `cert_file` at the `.pem`. See `config/certs/README.md`.
 
 ## Connecting to a Real TAK Server
 
-Use `config/remote-tak.yaml` as the config template when connecting to a real TAK server
-(FreeTAKServer, TAK Server CE, WinTAK, ATAK).
+Use the repo-root `config/remote-tak.yaml` when connecting to a real TAK server
+(FreeTAKServer, TAK Server CE, WinTAK, ATAK). The remote demo scripts merge that file's
+`tak_server` block with `services/cot-gateway/config/demo.yaml`, so local sensor/web settings stay
+unchanged while the TAK connection settings come from one shared source of truth.
 
 ### Certificate placement
 
@@ -82,26 +90,14 @@ config/certs/ca-bundle.pem    # CA bundle PEM (only if use_ssl_verify: true)
 
 Run `scripts/gen-certs.sh` to generate a self-signed cert for testing.
 
-### CLI flag overrides
+### Demo workflow
 
 ```bash
-# Override TAK host/port at runtime (without editing the YAML):
-python3 -m cot_gateway --config config/remote-tak.yaml \
-    --tak-host 192.168.1.100 \
-    --tak-port 8089
-
-# Disable SSL for plaintext connections:
-python3 -m cot_gateway --config config/remote-tak.yaml \
-    --tak-host 192.168.1.100 --no-ssl
+# 1. Edit repo-root config/remote-tak.yaml
+# 2. Place certs under config/certs/
+# 3. Start the remote demo
+scripts/demo-1drone-remote-tak.sh
 ```
-
-Available TAK-related flags:
-
-| Flag | Description |
-|------|-------------|
-| `--tak-host HOST` | Override `tak_server.host` |
-| `--tak-port PORT` | Override `tak_server.port` |
-| `--no-ssl` | Set `tak_server.use_ssl = false` (plaintext TCP) |
 
 ### xml_declaration
 
