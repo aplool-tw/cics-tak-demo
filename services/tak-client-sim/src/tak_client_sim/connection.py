@@ -5,6 +5,8 @@ import ssl
 import sys
 
 import structlog
+from tak_connection.config import TakConnectionConfig
+from tak_connection.ssl_context import build_ssl_context as _build
 
 from tak_client_sim.config import ClientConfig
 from tak_client_sim.models import ConnectionStats
@@ -14,16 +16,15 @@ log = structlog.get_logger(__name__)
 
 def build_ssl_context(config: ClientConfig) -> ssl.SSLContext:
     """Build an SSL context for connecting to TAK Server."""
-    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    if not config.use_ssl_verify:
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-    else:
-        ctx.verify_mode = ssl.CERT_REQUIRED
-        ctx.check_hostname = True
-        if config.ca_bundle:
-            ctx.load_verify_locations(cafile=config.ca_bundle)
-    return ctx
+    tak_cfg = TakConnectionConfig(
+        host=config.host,
+        port=config.port,
+        use_ssl=config.use_ssl,
+        use_ssl_verify=config.use_ssl_verify,
+        ca_bundle=config.ca_bundle,
+        cert_file=None,
+    )
+    return _build(tak_cfg)
 
 
 async def connect_with_retry(
