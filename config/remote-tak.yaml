@@ -1,0 +1,47 @@
+# Remote TAK server configuration.
+# Absence of this file = local demo mode (tak-relay started locally).
+#
+# Operator usage:
+#   1. Set tak_server.host to your TAK server IP/hostname
+#   2. Place your P12 client certificate at config/certs/gateway.p12
+#   3. Place your CA bundle PEM at config/certs/ca-bundle.pem (if use_ssl_verify: true)
+#   4. Run: scripts/demo-1drone-remote-tak.sh
+
+tak_server:
+  # TAK server IP address or hostname (required for remote mode)
+  host: "192.168.1.100"
+
+  # TAK server TCP port (default: 8089 for SSL, 8087 for plain TCP)
+  port: 8089
+
+  # Enable TLS/SSL for the connection (recommended: true)
+  use_ssl: true
+
+  # Verify the TAK server's TLS certificate against ca_bundle (set false for self-signed certs)
+  use_ssl_verify: false
+
+  # Path to client P12 certificate for mutual TLS (relative to repo root)
+  # Place your P12 client certificate at config/certs/gateway.p12
+  cert_file: "config/certs/gateway.p12"
+
+  # Password for the P12 certificate (null if unencrypted or no client cert required)
+  cert_password: null
+
+  # Path to CA bundle PEM for server cert verification (null to use system trust store)
+  # Place your CA bundle PEM at config/certs/ca-bundle.pem (if use_ssl_verify: true)
+  ca_bundle: null
+
+  # Include XML declaration in CoT messages (<?xml version="1.0"?>)
+  xml_declaration: true
+
+  # Maximum retry attempts before giving up (0 = unlimited)
+  max_retries: 10
+
+  # Initial exponential backoff delay in seconds
+  backoff_initial_s: 2.0
+
+  # Maximum backoff cap in seconds
+  backoff_cap_s: 60.0
+
+  # Maximum CoT messages queued before dropping oldest
+  queue_maxsize: 500

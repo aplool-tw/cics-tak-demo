@@ -25,3 +25,7 @@ infra/certs/
 
 # Personal dev-launcher config (copy from scripts/dev-launcher.example.conf)
 scripts/dev-launcher.conf
+
+# Root remote TAK certs (keep placeholder only)
+config/certs/*
+!config/certs/.gitkeep

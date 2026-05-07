@@ -117,16 +117,25 @@ cot_store.py (asyncio lock-based store, auto-evicts stale+60s events)
 
 See [`specs/006-006-tak-client-sim/`](../../specs/006-006-tak-client-sim/) for full specification.
 
+## Shared Library Dependencies
+
+`connection.py` now delegates TLS setup to `libs/tak-connection`.
+The public `ClientConfig` schema is unchanged; it composes a `TakConnectionConfig` with
+`cert_file=None`, which is intentional because tak-client-sim is a CA-only subscriber and does not
+present a client certificate.
+
 ## Connecting to a Real TAK Server
 
-Use `config/remote-tak.yaml` as the config template when connecting to a real TAK server
-(FreeTAKServer, TAK Server CE, WinTAK, ATAK) to receive and display CoT tracks.
+Use the repo-root `config/remote-tak.yaml` together with `scripts/demo-1drone-remote-tak.sh` or
+`scripts/demo-3drone-remote-tak.sh` when connecting to a real TAK server (FreeTAKServer, TAK Server
+CE, WinTAK, ATAK) to receive and display CoT tracks.
 
 ### Quick start
 
 ```bash
-# Set TAK_HOST to your TAK server's IP or hostname, then run:
-TAK_HOST=192.168.1.100 python3 -m tak_client_sim --config config/remote-tak.yaml
+# 1. Edit repo-root config/remote-tak.yaml
+# 2. Start a remote demo script from repo root
+scripts/demo-1drone-remote-tak.sh
 ```
 
 Open `http://localhost:8093/map` to view the received tracks on a live Leaflet map.
@@ -136,11 +145,12 @@ Open `http://localhost:8093/map` to view the received tracks on a live Leaflet m
 To enable CA-verified TLS, edit `config/remote-tak.yaml`:
 
 ```yaml
-use_ssl_verify: true
-ca_bundle: "certs/ca-bundle.pem"
+tak_server:
+  use_ssl_verify: true
+  ca_bundle: "config/certs/ca-bundle.pem"
 ```
 
-Place your CA bundle PEM at `certs/ca-bundle.pem`.
+Place your CA bundle PEM at `config/certs/ca-bundle.pem`.
 
 > ⚠️ **Log format ≠ wire format**: Service logs are structured JSON (structlog) written to stderr.
 > The bytes received on the TCP socket are CoT XML. These are independent formats — do not confuse
