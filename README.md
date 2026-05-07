@@ -115,13 +115,24 @@ Demo 腳本會依序啟動 7 個服務（map-sim → uds → echoshield-sim → 
 
 ### Remote TAK Server
 
-若要改接正式 TAK Server，不再需要設定 `TAK_HOST` / `TAK_PORT` / `TAK_USE_SSL` 環境變數：
+若要改接正式 TAK Server，使用互動式向導設定連線參數：
 
-1. 編輯 repo root 的 `config/remote-tak.yaml`
-2. 將憑證放到 `config/certs/gateway.p12`（需要 CA 驗證時再加入 `config/certs/ca-bundle.pem`）
-3. 執行 `scripts/demo-1drone-remote-tak.sh` 或 `scripts/demo-3drone-remote-tak.sh`
+```bash
+# 啟動逐步設定向導（產生 config/remote-tak.yaml）
+bash scripts/setup-remote-tak.sh
 
-更完整的操作範例請見 [`specs/016-tak-shared-connection/quickstart.md`](specs/016-tak-shared-connection/quickstart.md)。
+# 驗證設定正確
+bash scripts/setup-remote-tak.sh --check
+
+# 啟動遠端模式 demo
+bash scripts/demo-1drone-remote-tak.sh
+bash scripts/demo-3drone-remote-tak.sh
+```
+
+向導涵蓋：TAK Server IP/port → TLS 設定 → 客戶端 P12 憑證 → CA bundle → 進階參數。
+
+如需手動編輯，可參考 `config/remote-tak.example.yaml`（含所有欄位說明）。  
+完整 demo 腳本使用手冊：[`docs/demo-scripts-guide.md`](docs/demo-scripts-guide.md)。
 
 ### 開發用多服務啟動
 
@@ -303,6 +314,9 @@ cics-tak-demo/
 │   ├── dev-launcher.sh       ← 多服務啟動腳本（含 --echoshield-config）
 │   ├── demo-1drone.sh        ← 單機無人機 demo（7 服務 + 3 browser tabs）
 │   ├── demo-3drone.sh        ← 三機無人機 demo（7 服務 + 3 browser tabs）
+│   ├── demo-1drone-remote-tak.sh ← 單機 + 可接遠端 TAK Server
+│   ├── demo-3drone-remote-tak.sh ← 三機 + 可接遠端 TAK Server
+│   ├── setup-remote-tak.sh   ← 互動式設定向導（生成 config/remote-tak.yaml）
 │   ├── tak_relay.py          ← TAK plaintext TCP broadcast relay（demo 用）
 │   └── gen-certs.sh          ← 自簽 PKI 產生工具
 └── .specify/                 ← Speckit 工具與模板
@@ -448,6 +462,7 @@ artifacts 落於 `specs/00X-*/`，開發紀錄落於 `dev-docs/00X-*.md`。
 - 規格權威：[`docs/system-docs/00-index.md`](docs/system-docs/00-index.md)
 - 各 feature spec：[`specs/00X-*/spec.md`](specs/)
 - 各 feature 開發紀錄：[`dev-docs/`](dev-docs/)
+- **Demo 腳本使用手冊**：[`docs/demo-scripts-guide.md`](docs/demo-scripts-guide.md)
 - E2E 情境快速入門：[`specs/007-scenario/quickstart.md`](specs/007-scenario/quickstart.md)
 - AI agent 守則：[`AGENTS.md`](AGENTS.md)
 

@@ -29,3 +29,8 @@ scripts/dev-launcher.conf
 # Root remote TAK certs (keep placeholder only)
 config/certs/*
 !config/certs/.gitkeep
+
+# Actual remote TAK config (may contain real IPs/credentials).
+# Use config/remote-tak.example.yaml as the template or run:
+#   bash scripts/setup-remote-tak.sh
+config/remote-tak.yaml

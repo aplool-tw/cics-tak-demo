@@ -1,11 +1,28 @@
-# Remote TAK server configuration.
-# Absence of this file = local demo mode (tak-relay started locally).
+# remote-tak.example.yaml — Remote TAK server configuration TEMPLATE.
 #
-# Operator usage:
-#   1. Set tak_server.host to your TAK server IP/hostname
-#   2. Place your P12 client certificate at config/certs/gateway.p12
-#   3. Place your CA bundle PEM at config/certs/ca-bundle.pem (if use_ssl_verify: true)
-#   4. Run: scripts/demo-1drone-remote-tak.sh
+# This is an annotated example. Copy it to config/remote-tak.yaml and fill in
+# your actual values, OR run the interactive wizard:
+#
+#   bash scripts/setup-remote-tak.sh
+#
+# The wizard guides you step by step and writes config/remote-tak.yaml for you.
+#
+# --- HOW REMOTE MODE WORKS ---
+# • If config/remote-tak.yaml exists AND tak_server.host is NOT 127.0.0.1 /
+#   localhost, the demo scripts (demo-1drone-remote-tak.sh and
+#   demo-3drone-remote-tak.sh) automatically switch to REMOTE MODE:
+#     - tak-relay is NOT started locally
+#     - cot-gateway connects directly to your TAK server
+#     - tak-client-sim connects to your TAK server as a monitoring client
+# • If the file is absent or host is localhost, LOCAL MODE is used (tak-relay
+#   started locally — no external connectivity required).
+#
+# Operator quick-start:
+#   1. Copy this file:  cp config/remote-tak.example.yaml config/remote-tak.yaml
+#   2. Edit host/port/cert settings below
+#   3. Place your P12 client certificate at config/certs/gateway.p12
+#   4. (Optional) Place CA bundle PEM at config/certs/ca-bundle.pem
+#   5. Run: scripts/demo-1drone-remote-tak.sh
 
 tak_server:
   # TAK server IP address or hostname (required for remote mode)
