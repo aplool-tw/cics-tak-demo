@@ -50,6 +50,8 @@ class TakServerConfig(BaseModel):
     use_ssl_verify: bool = False
     cert_file: str = "config/certs/gateway.p12"
     cert_password: str | None = None
+    ca_bundle: str | None = None
+    xml_declaration: bool = False
     max_retries: int = Field(default=5, ge=1)
     backoff_initial_s: float = Field(default=1.0, gt=0.0)
     backoff_cap_s: float = Field(default=60.0, gt=0.0)

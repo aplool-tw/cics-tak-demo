@@ -9,7 +9,7 @@
 
 - 字元集：UTF-8（無 BOM）。
 - 每筆 CoT XML 後接 `\n`（0x0A）分隔符，無 length-prefix（FR-GW-020）。
-- 單筆事件結構：單一 `<event>` root，**不含** `<?xml?>` 宣告頭（TAK Server 不需要且對部分 parser 更簡潔）。
+- 單筆事件結構：單一 `<event>` root；是否含 `<?xml?>` 宣告頭由 `tak_server.xml_declaration` 設定控制（預設 `false` = 無宣告頭，較簡潔；設為 `true` 則前綴 `<?xml version='1.0' encoding='UTF-8' standalone='yes'?>` 以符合 ATAK/WinTAK 等真實 TAK Server 的期望）。
 
 ---
 
@@ -25,6 +25,7 @@
        how="m-g">
   <point lat="{LAT}" lon="{LON}" hae="{HAE}" ce="10.0" le="5.0"/>
   <detail>
+    <uid Droid="{UID}"/>
     <contact callsign="{UID}"/>
     <remarks>{REMARKS_STRING}</remarks>
     <track speed="{VELOCITY_MS}" course="{AZIMUTH_DEG}"/>
@@ -37,7 +38,7 @@
 | 屬性 / 節點 | 型別 | 規則 |
 | --- | --- | --- |
 | `version` | 字串 | 固定 `"2.0"` |
-| `uid` | 字串 | 依 §3；與 `<contact callsign>` 相同（簡化 ATAK 顯示） |
+| `uid` | 字串 | 依 §3；與 `<uid Droid>` 及 `<contact callsign>` 相同（ATAK 合規） |
 | `type` | 字串 | 依 §4；同一 source 生命週期固定 |
 | `time` | ISO 8601 UTC 毫秒 | Gateway 產 CoT 當下 `datetime.now(timezone.utc)`，格式 `YYYY-MM-DDTHH:MM:SS.sssZ` |
 | `start` | 同上 | 等於 `time` |
@@ -47,6 +48,7 @@
 | `<point hae>` | float, 1 位小數 | UnifiedTrack.alt_m（FR-GW-003 EchoShield altitude_m → alt_m → hae） |
 | `<point ce>` | 固定 `10.0` | 水平誤差圓（公尺），PoC 統一 |
 | `<point le>` | 固定 `5.0` | 線性誤差（公尺），PoC 統一 |
+| `<uid Droid>` | 字串 | `<detail>` 首子元素；值等於 `event.uid`；ATAK 顯示名稱標準欄位 |
 | `<contact callsign>` | 字串 | 等於 uid |
 | `<remarks>` | 字串 | 依 §6 組合；XML entity escape（`<>&"'`）必須套用 |
 | `<track speed>` | float, 1 位小數 | UnifiedTrack.velocity_ms |
@@ -144,6 +146,7 @@ Contract test (`tests/contract/test_cot_xml_schema.py`) 以此表 parameterize 1
        stale="2026-04-24T12:35:07.789Z" how="m-g">
   <point lat="25.0598" lon="121.5654" hae="101.0" ce="10.0" le="5.0"/>
   <detail>
+    <uid Droid="ECHO-TRK-001"/>
     <contact callsign="ECHO-TRK-001"/>
     <remarks>Source: ECHOSHIELD | Speed: 12.5m/s | Alt: 101m</remarks>
     <track speed="12.5" course="45.0"/>
@@ -159,6 +162,7 @@ Contract test (`tests/contract/test_cot_xml_schema.py`) 以此表 parameterize 1
        stale="2026-04-24T12:35:56.123Z" how="m-g">
   <point lat="25.0601" lon="121.5655" hae="95.0" ce="10.0" le="5.0"/>
   <detail>
+    <uid Droid="FUSED-DRN-001"/>
     <contact callsign="FUSED-DRN-001"/>
     <remarks>Source: FUSED | Model: DJI Mavic 3 | Status: NEUTRALIZED | Speed: 3.2m/s | Alt: 95m</remarks>
     <track speed="3.2" course="180.0"/>
@@ -175,6 +179,7 @@ Contract test (`tests/contract/test_cot_xml_schema.py`) 以此表 parameterize 1
        stale="2026-04-24T12:35:10.456Z" how="m-g">
   <point lat="25.0600" lon="121.5654" hae="98.0" ce="10.0" le="5.0"/>
   <detail>
+    <uid Droid="ECHO-TRK-001"/>
     <contact callsign="ECHO-TRK-001"/>
     <remarks>Source: ECHOSHIELD | Speed: 8.0m/s | Alt: 98m</remarks>
     <track speed="8.0" course="90.0"/>
@@ -187,6 +192,7 @@ Contract test (`tests/contract/test_cot_xml_schema.py`) 以此表 parameterize 1
        stale="2026-04-24T12:35:21.457Z" how="m-g">
   <point lat="25.0600" lon="121.5654" hae="98.0" ce="10.0" le="5.0"/>
   <detail>
+    <uid Droid="FUSED-DRN-001"/>
     <contact callsign="FUSED-DRN-001"/>
     <remarks>Source: FUSED | Model: DJI Mavic 3 | Status: DETECTED | Speed: 8.0m/s | Alt: 98m</remarks>
     <track speed="8.0" course="90.0"/>

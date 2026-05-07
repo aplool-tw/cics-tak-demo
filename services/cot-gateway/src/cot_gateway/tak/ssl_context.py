@@ -14,6 +14,8 @@ def build_ssl_context(cfg: TakServerConfig) -> ssl.SSLContext:
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.check_hostname = cfg.use_ssl_verify
     ctx.verify_mode = ssl.CERT_REQUIRED if cfg.use_ssl_verify else ssl.CERT_NONE
+    if cfg.ca_bundle and cfg.use_ssl_verify:
+        ctx.load_verify_locations(cafile=cfg.ca_bundle)
 
     cert_path = Path(cfg.cert_file)
     if not cert_path.exists():
