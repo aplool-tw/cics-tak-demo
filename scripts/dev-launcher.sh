@@ -73,7 +73,9 @@ TAK_CLIENT_SIM_FILTER=""      # e.g. "FUSED" – empty = show all
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 RUNTIME_DIR="${ROOT_DIR}/.dev-runtime"
-LOG_DIR="${RUNTIME_DIR}/logs"
+# shellcheck source=scripts/_log_utils.sh
+source "${SCRIPT_DIR}/_log_utils.sh"
+init_session_log_dir "dev-launcher"
 PID_DIR="${RUNTIME_DIR}/pids"
 GEN_DIR="${RUNTIME_DIR}/generated"
 

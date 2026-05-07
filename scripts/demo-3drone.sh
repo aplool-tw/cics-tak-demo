@@ -13,7 +13,10 @@ SNTR_CONFIG="${ROOT_DIR}/services/sentrycs-sim/config/demo_three_drones.yaml"
 GW_CONFIG="${ROOT_DIR}/services/cot-gateway/config/demo.yaml"
 TAK_CLIENT_CONFIG="${ROOT_DIR}/services/tak-client-sim/config/demo.yaml"
 
-LOG_DIR="${ROOT_DIR}/.dev-runtime/logs"
+# source session-log helpers and create timestamped session dir
+# shellcheck source=scripts/_log_utils.sh
+source "${SCRIPT_DIR}/_log_utils.sh"
+init_session_log_dir "demo-3drone"
 PID_DIR="${ROOT_DIR}/.dev-runtime/pids"
 
 SERVICES=(map-sim uds echoshield-sim sentrycs-sim cot-gateway tak-relay tak-client-sim)
@@ -187,7 +190,7 @@ preflight() {
             || die "${module} not installed — run: pip install -e services/${module//_/-} --break-system-packages"
     done
 
-    mkdir -p "${LOG_DIR}" "${PID_DIR}"
+    mkdir -p "${PID_DIR}"
 
     local port=""
     for port in 18089 18090 18092 18093 18080 17070; do

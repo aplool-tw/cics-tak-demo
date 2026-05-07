@@ -20,7 +20,10 @@ HEALTH_URL="http://127.0.0.1:18090/health"
 UDS_HEALTH_URL="http://127.0.0.1:18080/health"
 MAP_SIM_PORT="18090"
 UDS_PORT="18080"
-LOG_DIR="${ROOT_DIR}/.dev-runtime/logs"
+# source session-log helpers and create timestamped session dir
+# shellcheck source=scripts/_log_utils.sh
+source "${SCRIPT_DIR}/_log_utils.sh"
+init_session_log_dir "demo-map-viewer"
 PID_DIR="${ROOT_DIR}/.dev-runtime/pids"
 
 # PIDs initialised empty so cleanup() is safe even on early exit
@@ -89,7 +92,7 @@ python3 -c "import map_sim" 2>/dev/null \
 python3 -c "import uds" 2>/dev/null \
     || die "uds not installed -- run: pip install -e services/uds --break-system-packages"
 
-mkdir -p "${LOG_DIR}" "${PID_DIR}"
+mkdir -p "${PID_DIR}"
 
 # --- print scenario summary --------------------------------------------------
 log "Scenario : ${SCENARIO}"

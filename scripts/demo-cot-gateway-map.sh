@@ -38,7 +38,10 @@ MAPSIM_HEALTH="http://127.0.0.1:18090/health"
 SNTR_HEALTH="http://127.0.0.1:17070/health"
 ECHO_INFO="http://127.0.0.1:19001/info"
 
-LOG_DIR="${ROOT_DIR}/.dev-runtime/logs"
+# source session-log helpers and create timestamped session dir
+# shellcheck source=scripts/_log_utils.sh
+source "${SCRIPT_DIR}/_log_utils.sh"
+init_session_log_dir "demo-cot-gateway-map"
 PID_DIR="${ROOT_DIR}/.dev-runtime/pids"
 
 SERVICES=(map-sim uds echoshield-sim sentrycs-sim cot-gateway)
@@ -124,7 +127,7 @@ for mod in map_sim uds echoshield_sim sentrycs_sim cot_gateway; do
         || die "${mod} not installed — run: pip install -e services/${mod//_/-} --break-system-packages"
 done
 
-mkdir -p "${LOG_DIR}" "${PID_DIR}"
+mkdir -p "${PID_DIR}"
 
 # ── scenario summary ───────────────────────────────────────────────────────────
 echo

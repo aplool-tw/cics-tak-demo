@@ -24,7 +24,10 @@ GW_CONFIG="${ROOT_DIR}/services/cot-gateway/config/demo.yaml"
 GW_REMOTE_CONFIG="${ROOT_DIR}/.dev-runtime/cot-gateway-remote.yaml"
 TAK_CLIENT_CONFIG="${ROOT_DIR}/services/tak-client-sim/config/demo.yaml"
 
-LOG_DIR="${ROOT_DIR}/.dev-runtime/logs"
+# source session-log helpers and create timestamped session dir
+# shellcheck source=scripts/_log_utils.sh
+source "${SCRIPT_DIR}/_log_utils.sh"
+init_session_log_dir "demo-3drone-remote-tak"
 PID_DIR="${ROOT_DIR}/.dev-runtime/pids"
 
 # Remote TAK server support: edit config/remote-tak.yaml to activate remote mode.
@@ -224,7 +227,7 @@ preflight() {
             || die "${module} not installed — run: pip install -e services/${module//_/-} --break-system-packages"
     done
 
-    mkdir -p "${LOG_DIR}" "${PID_DIR}"
+    mkdir -p "${PID_DIR}"
 
     local port=""
     for port in 18090 18092 18093 18080 17070; do
