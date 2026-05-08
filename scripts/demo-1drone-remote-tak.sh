@@ -368,7 +368,19 @@ if not isinstance(base, dict) or not isinstance(remote, dict):
     raise SystemExit("config root must be a mapping")
 if not isinstance(remote.get("tak_server"), dict):
     raise SystemExit("tak_server must be a mapping")
-base["tak_server"] = remote["tak_server"]
+
+ts = dict(remote["tak_server"])
+repo_root = Path("${ROOT_DIR}")
+for field in ("cert_file", "ca_bundle"):
+    val = ts.get(field)
+    if val and not Path(val).is_absolute():
+        abs_path = (repo_root / val).resolve()
+        if not abs_path.exists():
+            import sys
+            print(f"[tak-demo] WARNING: {field} not found: {abs_path}", file=sys.stderr)
+        ts[field] = str(abs_path)
+
+base["tak_server"] = ts
 Path("${GW_REMOTE_CONFIG}").write_text(yaml.safe_dump(base, sort_keys=False), encoding="utf-8")
 PY
 }

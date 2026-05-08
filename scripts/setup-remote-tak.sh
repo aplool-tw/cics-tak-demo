@@ -103,16 +103,20 @@ check("use_ssl",        use_ssl,  isinstance(use_ssl, bool))
 check("use_ssl_verify", use_verify, isinstance(use_verify, bool))
 
 if cert_file:
-    abs_cert = (pathlib.Path(sys.argv[1]).parent.parent / cert_file).resolve()
-    check("cert_file",  cert_file, abs_cert.exists(),
-          f"(file not found at {abs_cert})")
+    abs_cert = pathlib.Path(cert_file) if pathlib.Path(cert_file).is_absolute() \
+               else (pathlib.Path(sys.argv[1]).parent.parent / cert_file).resolve()
+    cert_exists = abs_cert.exists()
+    check("cert_file",  cert_file, cert_exists,
+          "" if cert_exists else f"  ← file not found at {abs_cert}")
 else:
     print("  ·  cert_file: null  (no mutual TLS)")
 
 if ca_bundle:
-    abs_ca = (pathlib.Path(sys.argv[1]).parent.parent / ca_bundle).resolve()
-    check("ca_bundle",  ca_bundle, abs_ca.exists(),
-          f"(file not found at {abs_ca})")
+    abs_ca = pathlib.Path(ca_bundle) if pathlib.Path(ca_bundle).is_absolute() \
+             else (pathlib.Path(sys.argv[1]).parent.parent / ca_bundle).resolve()
+    ca_exists = abs_ca.exists()
+    check("ca_bundle",  ca_bundle, ca_exists,
+          "" if ca_exists else f"  ← file not found at {abs_ca}")
 else:
     print("  ·  ca_bundle: null  (using system trust store)")
 
@@ -240,15 +244,19 @@ run_wizard() {
     CERT_FILE="null"
     CERT_PASSWORD="null"
     if ask_yn "Do you have a client P12 certificate?" "y"; then
-        ask "Path to P12 cert (relative to repo root)" "config/certs/gateway.p12"
-        CERT_FILE="${REPLY}"
+        ask "Path to P12 cert (relative to repo root, or absolute)" "config/certs/gateway.p12"
+        CERT_FILE_INPUT="${REPLY}"
+        # Resolve to absolute path so cot-gateway can find the cert regardless of CWD
+        if [[ "${CERT_FILE_INPUT}" = /* ]]; then
+            CERT_FILE="${CERT_FILE_INPUT}"
+        else
+            CERT_FILE="${ROOT_DIR}/${CERT_FILE_INPUT}"
+        fi
 
-        # Validate immediately
-        ABS_CERT="${ROOT_DIR}/${CERT_FILE}"
-        if [[ -f "${ABS_CERT}" ]]; then
+        if [[ -f "${CERT_FILE}" ]]; then
             ok "Found: ${CERT_FILE}"
         else
-            warn "File not found: ${ABS_CERT}"
+            warn "File not found: ${CERT_FILE}"
             warn "You can copy the file there later; setup will continue."
         fi
         echo
@@ -284,13 +292,19 @@ run_wizard() {
         printf '  that was used to sign your TAK server certificate.\n'
         printf '  Place it in  config/certs/  (git-ignored).  Path relative to repo root.\n\n'
         if ask_yn "Do you have a CA bundle PEM?" "y"; then
-            ask "Path to CA bundle PEM" "config/certs/ca-bundle.pem"
-            CA_BUNDLE="\"${REPLY}\""
-            ABS_CA="${ROOT_DIR}/${REPLY}"
-            if [[ -f "${ABS_CA}" ]]; then
-                ok "Found: ${REPLY}"
+            ask "Path to CA bundle PEM (relative to repo root, or absolute)" "config/certs/ca-bundle.pem"
+            CA_INPUT="${REPLY}"
+            # Resolve to absolute path
+            if [[ "${CA_INPUT}" = /* ]]; then
+                CA_ABS="${CA_INPUT}"
             else
-                warn "File not found: ${ABS_CA}"
+                CA_ABS="${ROOT_DIR}/${CA_INPUT}"
+            fi
+            CA_BUNDLE="\"${CA_ABS}\""
+            if [[ -f "${CA_ABS}" ]]; then
+                ok "Found: ${CA_ABS}"
+            else
+                warn "File not found: ${CA_ABS}"
                 warn "You can copy the file there later; setup will continue."
             fi
         else
@@ -384,19 +398,18 @@ YAML
     printf '  CA bundle   : %s\n' "${CA_BUNDLE:-null}"
     echo
 
-    # ── certificate placement reminder ────────────────────────────────────────
+    # ── certificate placement reminder (CERT_FILE is already absolute) ─────────
     if [[ "${CERT_FILE}" != "null" ]]; then
-        ABS_CERT="${ROOT_DIR}/${CERT_FILE}"
-        if [[ ! -f "${ABS_CERT}" ]]; then
+        if [[ ! -f "${CERT_FILE}" ]]; then
             printf '%s  ⚠  ACTION REQUIRED:%s Copy your P12 certificate to:\n' "${YELLOW}" "${RESET}"
-            printf '     %s\n\n' "${ABS_CERT}"
+            printf '     %s\n\n' "${CERT_FILE}"
         fi
     fi
     if [[ "${USE_SSL_VERIFY}" == "true" && "${CA_BUNDLE}" != "null" ]]; then
-        CA_PATH="${ROOT_DIR}/${CA_BUNDLE//\"/}"
-        if [[ ! -f "${CA_PATH}" ]]; then
+        CA_ABS_STRIPPED="${CA_BUNDLE//\"/}"
+        if [[ ! -f "${CA_ABS_STRIPPED}" ]]; then
             printf '%s  ⚠  ACTION REQUIRED:%s Copy your CA bundle PEM to:\n' "${YELLOW}" "${RESET}"
-            printf '     %s\n\n' "${CA_PATH}"
+            printf '     %s\n\n' "${CA_ABS_STRIPPED}"
         fi
     fi
 
