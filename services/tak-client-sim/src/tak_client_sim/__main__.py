@@ -32,6 +32,8 @@ def _build_parser() -> argparse.ArgumentParser:
         "--log-file", default=None, metavar="PATH", help="Write structlog JSON to this file in addition to stderr"
     )
     p.add_argument("--max-retries", type=int, default=None, metavar="N", help="Max reconnect attempts (0 = unlimited)")
+    p.add_argument("--cert-file", default=None, metavar="PATH", help="Client P12/PEM certificate for mutual TLS")
+    p.add_argument("--cert-password", default=None, metavar="PWD", help="Password for the client P12 certificate")
     p.add_argument("--config", default=None, metavar="PATH", help="YAML config file path (CLI args take precedence)")
     p.add_argument("--web", action="store_true", dest="web", help="Enable the web map server (default: off)")
     p.add_argument("--no-web", action="store_true", dest="no_web", help="Disable the web map server")

@@ -19,6 +19,8 @@ class ClientConfig(BaseModel):
     use_ssl: bool = True
     use_ssl_verify: bool = False
     ca_bundle: Optional[str] = None
+    cert_file: Optional[str] = None
+    cert_password: Optional[str] = None
     max_retries: int = Field(default=0, ge=0)
     backoff_initial_s: float = 1.0
     backoff_cap_s: float = 60.0
@@ -83,6 +85,10 @@ def load_config(args: argparse.Namespace) -> ClientConfig:
         base["log_file"] = args.log_file
     if getattr(args, "max_retries", None) is not None:
         base["max_retries"] = args.max_retries
+    if getattr(args, "cert_file", None) is not None:
+        base["cert_file"] = args.cert_file
+    if getattr(args, "cert_password", None) is not None:
+        base["cert_password"] = args.cert_password
     if getattr(args, "web", False):
         base["web_enabled"] = True
     if getattr(args, "no_web", False):

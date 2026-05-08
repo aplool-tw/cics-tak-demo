@@ -36,12 +36,21 @@ REMOTE_TAK_MODE=false
 TAK_HOST=""
 TAK_PORT="18089"
 TAK_USE_SSL="true"
+TAK_CERT_FILE=""
+TAK_CERT_PASSWORD=""
 
 if [[ -f "${REMOTE_CONFIG}" ]]; then
-    TAK_HOST=$(python3 -c "import yaml, sys; cfg=yaml.safe_load(open('${REMOTE_CONFIG}')); print(cfg.get('tak_server',{}).get('host',''))" 2>/dev/null \
-        || { printf '[tak-demo] ERROR: Cannot parse %s — check YAML syntax\n' "${REMOTE_CONFIG}" >&2; exit 1; })
-    TAK_PORT=$(python3 -c "import yaml; cfg=yaml.safe_load(open('${REMOTE_CONFIG}')); print(cfg.get('tak_server',{}).get('port',18089))" 2>/dev/null || echo "18089")
-    TAK_USE_SSL=$(python3 -c "import yaml; cfg=yaml.safe_load(open('${REMOTE_CONFIG}')); print(str(cfg.get('tak_server',{}).get('use_ssl',True)).lower())" 2>/dev/null || echo "true")
+    eval "$(python3 - "${REMOTE_CONFIG}" <<'PY'
+import yaml, sys, json
+cfg = yaml.safe_load(open(sys.argv[1])) or {}
+ts  = cfg.get("tak_server", {})
+print(f"TAK_HOST={ts.get('host','')!r}")
+print(f"TAK_PORT={ts.get('port', 18089)}")
+print(f"TAK_USE_SSL={str(ts.get('use_ssl', True)).lower()!r}")
+print(f"TAK_CERT_FILE={ts.get('cert_file', '') or ''!r}")
+print(f"TAK_CERT_PASSWORD={ts.get('cert_password', '') or ''!r}")
+PY
+    2>/dev/null)" || { printf '[tak-demo] ERROR: Cannot parse %s — check YAML syntax\n' "${REMOTE_CONFIG}" >&2; exit 1; }
     if [[ -n "${TAK_HOST}" && "${TAK_HOST}" != "127.0.0.1" && "${TAK_HOST}" != "localhost" ]]; then
         REMOTE_TAK_MODE=true
     fi
@@ -433,6 +442,12 @@ launch_services() {
         local tak_extra_args=(--host "${TAK_HOST}" --port "${TAK_PORT}" --ssl)
         if [[ "${TAK_USE_SSL}" == "false" ]]; then
             tak_extra_args=(--host "${TAK_HOST}" --port "${TAK_PORT}" --no-ssl)
+        fi
+        if [[ -n "${TAK_CERT_FILE}" ]]; then
+            tak_extra_args+=(--cert-file "${TAK_CERT_FILE}")
+        fi
+        if [[ -n "${TAK_CERT_PASSWORD}" ]]; then
+            tak_extra_args+=(--cert-password "${TAK_CERT_PASSWORD}")
         fi
         (cd "${ROOT_DIR}/services/tak-client-sim" && exec python3 -m tak_client_sim --config "${TAK_CLIENT_CONFIG}" "${tak_extra_args[@]}") >>"${LOG_DIR}/tak-client-sim.log" 2>&1 &
     else

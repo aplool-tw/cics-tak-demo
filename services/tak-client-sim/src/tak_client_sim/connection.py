@@ -22,7 +22,8 @@ def build_ssl_context(config: ClientConfig) -> ssl.SSLContext:
         use_ssl=config.use_ssl,
         use_ssl_verify=config.use_ssl_verify,
         ca_bundle=config.ca_bundle,
-        cert_file=None,
+        cert_file=config.cert_file,
+        cert_password=config.cert_password,
     )
     return _build(tak_cfg)
 
