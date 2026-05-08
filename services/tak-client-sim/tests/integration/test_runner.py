@@ -218,6 +218,42 @@ async def _run_two_connections(config: ClientConfig, stats: ConnectionStats, sto
             writer.close()
 
 
+async def test_concatenated_xml_no_newlines() -> None:
+    """Real TAK server framing: multiple <event>...</event> sent without newline delimiters."""
+    cots = [
+        _make_cot_xml("ECHO-TRK-001"),
+        _make_cot_xml("FUSED-DRN-001", cot_type="a-h-A-M-F-Q-r"),
+        _make_cot_xml("SENTRYCS-DRN-001"),
+    ]
+
+    async def _handle_concat(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        # Send all events concatenated with NO newlines — real TAK server style
+        writer.write("".join(cots).encode())
+        await writer.drain()
+        writer.close()
+
+    server = await asyncio.start_server(_handle_concat, "127.0.0.1", 0)
+    host, port = server.sockets[0].getsockname()
+
+    async with server:
+        config = ClientConfig(host=host, port=port, use_ssl_verify=False, max_retries=1)
+        stats = ConnectionStats()
+        stop = asyncio.Event()
+
+        configure_logging(None)
+
+        reader, writer = await asyncio.open_connection(host, port)
+        try:
+            await asyncio.wait_for(receive_loop(reader, config, stats, stop), timeout=5.0)
+        except (asyncio.IncompleteReadError, ConnectionResetError, OSError, asyncio.TimeoutError):
+            pass
+        finally:
+            writer.close()
+
+    assert stats.total_received == 3
+    assert stats.total_parse_errors == 0
+
+
 async def test_50_ups_no_backlog() -> None:
     """50 CoT events delivered at once; all received with no parse errors (SC-TCS-005)."""
     cots = [_make_cot_xml(f"ECHO-TRK-{i:03d}") for i in range(50)]

@@ -77,54 +77,80 @@ async def receive_loop(
     stop: asyncio.Event,
     store: CotStore | None = None,
 ) -> None:
-    """Read newline-delimited CoT XML from TAK Server and process each event."""
+    """Read streaming CoT XML from TAK Server and process each complete <event>.
+
+    Handles both newline-delimited framing (local tak-relay) and raw concatenated
+    XML framing (real TAK servers that send multiple <event>...</event> blocks
+    back-to-back without newline separators).
+    """
+    _EVENT_END = b"</event>"
+    buf = b""
+
     while not stop.is_set():
         try:
-            raw_bytes = await reader.readuntil(b"\n")
-        except asyncio.LimitOverrunError:
-            partial = await reader.read(65536)
-            _log.warning("cot_oversized", bytes_seen=65536 + len(partial))
-            stats.total_oversized += 1
+            chunk = await asyncio.wait_for(reader.read(65536), timeout=0.5)
+        except asyncio.TimeoutError:
             continue
         except (asyncio.IncompleteReadError, ConnectionResetError, OSError) as exc:
             _log.warning("tak_disconnected", error=str(exc))
             raise
 
-        raw = raw_bytes.decode("utf-8", errors="replace").strip()
-        if not raw:
-            continue
+        if not chunk:
+            raise ConnectionResetError("connection closed by server")
 
-        event = parse_cot_xml(raw)
-        if event is None:
-            stats.total_parse_errors += 1
-            continue
+        buf += chunk
 
-        filtered = _is_filtered(event.uid, config.filter_prefix)
-        stats.record_event(event, filtered)
+        while _EVENT_END in buf:
+            end_pos = buf.index(_EVENT_END) + len(_EVENT_END)
+            start_pos = buf.find(b"<event")
+            if start_pos == -1:
+                buf = buf[end_pos:]
+                continue
 
-        _log.info(
-            "cot_received",
-            uid=event.uid,
-            source=event.source,
-            color=event.color,
-            type=event.cot_type,
-            time=event.time.isoformat(),
-            stale=event.stale.isoformat(),
-            lat=event.lat,
-            lon=event.lon,
-            hae=event.hae,
-            delta_s=event.delta_s,
-            speed=event.speed,
-            course=event.course,
-            remarks=event.remarks,
-            filtered=filtered,
-        )
+            raw_bytes = buf[start_pos:end_pos]
+            buf = buf[end_pos:]
 
-        if store is not None:
-            await store.upsert(event)
+            if len(raw_bytes) > 65536:
+                _log.warning("cot_oversized", bytes_seen=len(raw_bytes))
+                stats.total_oversized += 1
+                continue
 
-        if not filtered:
-            print_event(event)
+            raw = raw_bytes.decode("utf-8", errors="replace").strip()
+            if not raw:
+                continue
+
+            event = parse_cot_xml(raw)
+            if event is None:
+                _log.warning("cot_parse_error", raw_preview=raw[:200])
+                stats.total_parse_errors += 1
+                continue
+
+            filtered = _is_filtered(event.uid, config.filter_prefix)
+            stats.record_event(event, filtered)
+
+            _log.info(
+                "cot_received",
+                uid=event.uid,
+                source=event.source,
+                color=event.color,
+                type=event.cot_type,
+                time=event.time.isoformat(),
+                stale=event.stale.isoformat(),
+                lat=event.lat,
+                lon=event.lon,
+                hae=event.hae,
+                delta_s=event.delta_s,
+                speed=event.speed,
+                course=event.course,
+                remarks=event.remarks,
+                filtered=filtered,
+            )
+
+            if store is not None:
+                await store.upsert(event)
+
+            if not filtered:
+                print_event(event)
 
 
 async def main(config: ClientConfig) -> None:

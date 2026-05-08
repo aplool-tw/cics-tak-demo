@@ -31,12 +31,12 @@ def _make_event(uid: str = "ECHO-TRK-001") -> CotEvent:
 
 
 async def test_cot_oversized_handling() -> None:
-    """LimitOverrunError increments total_oversized and logs cot_oversized; loop continues."""
+    """Event >65536 bytes increments total_oversized and logs cot_oversized; loop continues."""
     config = ClientConfig(host="127.0.0.1", port=8089, use_ssl_verify=False)
     stats = ConnectionStats()
     stop = asyncio.Event()
 
-    # Build a valid CoT XML line to deliver after the oversized one
+    # Valid CoT XML delivered after the oversized one
     valid_xml = (
         '<event version="2.0" uid="ECHO-TRK-001" type="a-u-A-M-F-Q-r" '
         'time="2026-04-29T11:00:00.000Z" start="2026-04-29T11:00:00.000Z" '
@@ -46,23 +46,28 @@ async def test_cot_oversized_handling() -> None:
         "</event>"
     )
 
+    # Oversized event: pad <remarks> to push total bytes beyond 65536
+    oversized_xml = (
+        '<event version="2.0" uid="HUGE" type="a-u-A-M-F-Q-r" '
+        'time="2026-04-29T11:00:00.000Z" start="2026-04-29T11:00:00.000Z" '
+        'stale="2026-04-29T11:00:11.000Z" how="m-g">'
+        '<point lat="25.06" lon="121.56" hae="100.0" ce="10.0" le="5.0"/>'
+        "<detail><remarks>" + "x" * 70000 + "</remarks></detail>"
+        "</event>"
+    )
+
     call_count = 0
 
-    async def _mock_readuntil(sep: bytes, limit: int = 65536) -> bytes:
+    async def _mock_read(n: int) -> bytes:
         nonlocal call_count
         call_count += 1
         if call_count == 1:
-            raise asyncio.LimitOverrunError("too long", 65536)
-        if call_count == 2:
-            stop.set()  # stop after delivering valid CoT
-            return (valid_xml + "\n").encode()
+            # Return oversized + valid concatenated in one chunk; set stop so loop exits after
+            stop.set()
+            return (oversized_xml + valid_xml).encode()
         raise asyncio.IncompleteReadError(b"", None)
 
-    async def _mock_read(n: int) -> bytes:
-        return b"x" * min(n, 100)
-
     mock_reader = MagicMock(spec=asyncio.StreamReader)
-    mock_reader.readuntil = _mock_readuntil
     mock_reader.read = _mock_read
 
     with patch("tak_client_sim.runner._log") as mock_log:
