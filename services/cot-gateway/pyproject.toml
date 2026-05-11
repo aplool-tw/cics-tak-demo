@@ -15,7 +15,7 @@ dependencies = [
     "structlog>=24.1",
     "pyyaml",
     "cryptography",
-    "tak-connection @ file:///home/longtai/works/cics/cics-tak-demo/libs/tak-connection",
+    "tak-connection",
 ]
 
 [project.optional-dependencies]

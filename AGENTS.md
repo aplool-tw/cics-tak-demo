@@ -218,8 +218,10 @@ python3 specs/007-scenario/scripts/validate_scenario.py \
 # Lint 檢查單一服務
 ( cd services/cot-gateway && ruff check . && black --check src tests )
 
-# 安裝（以 PoC 為例，需 --break-system-packages）
+# 安裝（需 --break-system-packages；libs/tak-connection 必須先裝）
+pip install -e libs/tak-connection --break-system-packages
 pip install -e "services/cot-gateway[dev]" --break-system-packages
+pip install -e "services/tak-client-sim[dev]" --break-system-packages
 ```
 
 ---

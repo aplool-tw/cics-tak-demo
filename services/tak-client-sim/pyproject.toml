@@ -12,7 +12,7 @@ dependencies = [
     "pydantic>=2.6",
     "structlog>=24.1",
     "pyyaml",
-    "tak-connection @ file:///home/longtai/works/cics/cics-tak-demo/libs/tak-connection",
+    "tak-connection",
     "cryptography",
 ]
 
