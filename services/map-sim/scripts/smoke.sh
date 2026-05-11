@@ -3,7 +3,7 @@
 # Usage: scripts/smoke.sh [host:port]
 set -euo pipefail
 
-HOST="${1:-127.0.0.1:8090}"
+HOST="${1:-127.0.0.1:18090}"
 BASE="http://${HOST}"
 
 echo "==> POST valid payload"

@@ -10,7 +10,7 @@ for end-to-end setup.
 ## Endpoints
 
 - **Upstream**: `GET {map_sim_url}/objects?lat=&lon=&radius_m=` — defaults to
-  `http://localhost:8090`.
+  `http://localhost:18090`.
 - **Downstream**: `tcp://{feed_host}:{feed_port}` NDJSON — defaults to `0.0.0.0:9000`;
   see [`contracts/tcp-feed.md`](../../specs/003-echoshield-sim/contracts/tcp-feed.md).
 

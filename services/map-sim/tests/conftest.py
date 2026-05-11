@@ -21,7 +21,7 @@ def make_app(
     registry: ObjectRegistry | None = None,
 ) -> web.Application:
     settings = Settings(
-        port=8090,
+        port=18090,
         ttl_warn_s=ttl_warn_s,
         ttl_remove_s=ttl_remove_s,
         cleanup_period_s=cleanup_period_s,

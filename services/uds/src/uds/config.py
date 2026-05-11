@@ -3,7 +3,7 @@
 Precedence (FR-UDS-009, FR-UDS-011):
 
 * ``hz``       : CLI ``--hz`` > ``scenario.update_hz`` > 10
-* ``api_port`` : CLI ``--api-port`` > ``scenario.servers.command_api_port`` > 8080
+* ``api_port`` : CLI ``--api-port`` > ``scenario.servers.command_api_port`` > 18080
 * ``map_sim_url``, ``verbose``, ``debug``: CLI only (no scenario-level knob).
 """
 from __future__ import annotations

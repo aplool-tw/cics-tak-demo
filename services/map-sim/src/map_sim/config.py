@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Settings:
-    port: int = 8090
+    port: int = 18090
     ttl_warn_s: float = 5.0
     ttl_remove_s: float = 10.0
     verbose: bool = False

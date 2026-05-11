@@ -8,7 +8,7 @@ tak-client-sim (subscriber) to exchange CoT XML without a real TAK Server.
 Usage:
     python3 scripts/tak_relay.py [--host HOST] [--port PORT]
 
-Default: 127.0.0.1:8089 (matches cot-gateway tak_server config)
+Default: 127.0.0.1:18089 (matches cot-gateway tak_server config)
 """
 from __future__ import annotations
 

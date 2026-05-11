@@ -4,19 +4,19 @@
 #
 # Usage with full demo pipeline:
 #   1. scripts/demo-cot-gateway-map.sh          # start cot-gateway pipeline
-#   2. python3 scripts/tak_relay.py             # start TCP relay on :8089
+#   2. python3 scripts/tak_relay.py             # start TCP relay on :18089
 #   3. python3 -m tak_client_sim --config services/tak-client-sim/config/demo.yaml
-#   4. open http://127.0.0.1:8093/map
+#   4. open http://127.0.0.1:18093/map
 
 host: 127.0.0.1
 port: 18089
 use_ssl_verify: false
-use_ssl: false  # connects to tak_relay.py (plaintext TCP on :8089)
+use_ssl: false  # connects to tak_relay.py (plaintext TCP on :18089)
 max_retries: 9999             # retry indefinitely — keeps running without TAK server
 
 web_enabled: true
 web_host: 0.0.0.0
-web_port: 18093                # separate from cot-gateway (:8092) to avoid conflict
+web_port: 18093                # separate from cot-gateway (:18092) to avoid conflict
 
 # SP and HP coordinates are received dynamically from the TAK Server as CoT messages
 # broadcast by cot-gateway (feature 014). No static coordinates needed here.

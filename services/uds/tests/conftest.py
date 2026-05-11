@@ -116,7 +116,7 @@ scenario:
   description: ""
   update_hz: 10
   servers:
-    command_api_port: 8080
+    command_api_port: 18080
   drones:
     - drone_id: "TRK-001"
       model: "DJI Mavic 3"

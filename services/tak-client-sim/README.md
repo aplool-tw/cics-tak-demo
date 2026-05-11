@@ -8,13 +8,13 @@ TAK Client Simulator — receives newline-delimited CoT XML from TAK Server over
 pip install -e ".[dev]" --break-system-packages
 
 # Connect to local TAK Server (no SSL verification, PoC mode)
-python -m tak_client_sim --host localhost --port 8089
+python -m tak_client_sim --host localhost --port 18089
 
 # Filter to FUSED events only
-python -m tak_client_sim --host localhost --port 8089 --filter FUSED
+python -m tak_client_sim --host localhost --port 18089 --filter FUSED
 
 # Write all events to a log file (JSONL)
-python -m tak_client_sim --host localhost --port 8089 --log-file /tmp/tak-events.jsonl
+python -m tak_client_sim --host localhost --port 18089 --log-file /tmp/tak-events.jsonl
 ```
 
 ## Web Map Viewer
@@ -52,10 +52,10 @@ python3 scripts/tak_relay.py
 python3 -m tak_client_sim --config services/tak-client-sim/config/demo.yaml
 
 # Open browser
-open http://127.0.0.1:8093/map
+open http://127.0.0.1:18093/map
 ```
 
-The relay (`scripts/tak_relay.py`) listens on `:8089` and broadcasts any CoT XML received from cot-gateway to all connected subscribers (including tak-client-sim).
+The relay (`scripts/tak_relay.py`) listens on `:18089` and broadcasts any CoT XML received from cot-gateway to all connected subscribers (including tak-client-sim).
 
 ## Configuration
 
@@ -64,7 +64,7 @@ Configuration can be provided via YAML file (`--config path/to/config.yaml`) or 
 ```yaml
 # config.yaml example
 host: tak-server
-port: 8089
+port: 18089
 use_ssl: true              # set false for local demo with tak_relay.py (plaintext TCP)
 use_ssl_verify: false      # PoC default; set true with ca_bundle in production
 max_retries: 5             # 0 = unlimited
@@ -74,7 +74,7 @@ log_file: "/tmp/tak.jsonl" # optional structured JSONL log
 # Web map viewer
 web_enabled: true
 web_host: 0.0.0.0
-web_port: 8093             # default 8091; use 8093 to avoid conflict with cot-gateway (:8092)
+web_port: 18093            # default 18091; use 18093 to avoid conflict with cot-gateway (:18092)
 sp_lat: 24.725806
 sp_lon: 121.033750
 hp_lat: 24.725806
@@ -84,8 +84,8 @@ hp_lon: 121.071889
 CLI SSL flags:
 
 ```bash
-python -m tak_client_sim --host localhost --port 8089 --no-ssl   # plaintext TCP (demo mode)
-python -m tak_client_sim --host tak-server --port 8089 --ssl     # TLS (production)
+python -m tak_client_sim --host localhost --port 18089 --no-ssl   # plaintext TCP (demo mode)
+python -m tak_client_sim --host tak-server --port 18089 --ssl     # TLS (production)
 ```
 
 ## Console Output Format
@@ -138,7 +138,7 @@ CE, WinTAK, ATAK) to receive and display CoT tracks.
 scripts/demo-1drone-remote-tak.sh
 ```
 
-Open `http://localhost:8093/map` to view the received tracks on a live Leaflet map.
+Open `http://localhost:18093/map` to view the received tracks on a live Leaflet map.
 
 ### CA bundle (production TLS)
 

@@ -29,8 +29,8 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     p.add_argument("--api-port", type=int, default=None, help="REST API port (default 18080)")
     p.add_argument(
         "--map-sim-url",
-        default="http://127.0.0.1:8090",
-        help="Map Simulator base URL (default http://127.0.0.1:8090)",
+        default="http://127.0.0.1:18090",
+        help="Map Simulator base URL (default http://127.0.0.1:18090)",
     )
     p.add_argument("--hz", type=int, default=None, help="Main loop frequency [1..20]")
     p.add_argument("--verbose", action="store_true", help="Log level = DEBUG")

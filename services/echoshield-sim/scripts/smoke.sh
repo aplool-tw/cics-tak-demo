@@ -2,7 +2,7 @@
 # Smoke: tail TCP feed for a few seconds + sanity-check Map Sim reachable.
 set -euo pipefail
 
-MAP_SIM_URL="${MAP_SIM_URL:-http://localhost:8090}"
+MAP_SIM_URL="${MAP_SIM_URL:-http://localhost:18090}"
 FEED_HOST="${FEED_HOST:-localhost}"
 FEED_PORT="${FEED_PORT:-9000}"
 SECONDS_TO_TAIL="${SECONDS_TO_TAIL:-3}"

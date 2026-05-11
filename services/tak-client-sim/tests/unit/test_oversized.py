@@ -32,7 +32,7 @@ def _make_event(uid: str = "ECHO-TRK-001") -> CotEvent:
 
 async def test_cot_oversized_handling() -> None:
     """Event >65536 bytes increments total_oversized and logs cot_oversized; loop continues."""
-    config = ClientConfig(host="127.0.0.1", port=8089, use_ssl_verify=False)
+    config = ClientConfig(host="127.0.0.1", port=18089, use_ssl_verify=False)
     stats = ConnectionStats()
     stop = asyncio.Event()
 
