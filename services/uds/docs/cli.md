@@ -6,8 +6,8 @@ per FR-UDS-011 / quickstart.md §2.2.
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--scenario <path>` | (required) | YAML scenario file |
-| `--api-port <int>` | 8080 | REST API port (CLI > `scenario.servers.command_api_port` > 8080) |
-| `--map-sim-url <url>` | `http://127.0.0.1:8090` | Map Simulator base URL |
+| `--api-port <int>` | 18080 | REST API port (CLI > `scenario.servers.command_api_port` > 18080) |
+| `--map-sim-url <url>` | `http://127.0.0.1:18090` | Map Simulator base URL |
 | `--hz <int>` | 10 | Main loop frequency in Hz (1–20); CLI > `scenario.update_hz` > 10 |
 | `--verbose` | off | Set log level to DEBUG |
 | `--debug` | off | Register non-contract `GET /status/{drone_id}` and `GET /drones` |
